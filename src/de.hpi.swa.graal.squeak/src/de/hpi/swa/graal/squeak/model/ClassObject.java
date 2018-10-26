@@ -44,8 +44,8 @@ public final class ClassObject extends AbstractSqueakObject {
         superclass = original.superclass;
         methodDict = original.methodDict.shallowCopy();
         format = original.format;
-        instanceVariables = original.instanceVariables.shallowCopy();
-        organization = original.organization.shallowCopy();
+        instanceVariables = original.instanceVariables == null ? null : original.instanceVariables.shallowCopy();
+        organization = original.organization == null ? null : original.organization.shallowCopy();
         pointers = original.pointers.clone();
     }
 
@@ -155,12 +155,20 @@ public final class ClassObject extends AbstractSqueakObject {
         return instanceVariables == null ? image.nil : instanceVariables;
     }
 
+    public ArrayObject getInstanceVariablesOrNull() {
+        return instanceVariables;
+    }
+
     public void setInstanceVariables(final ArrayObject instanceVariables) {
         this.instanceVariables = instanceVariables;
     }
 
     public AbstractSqueakObject getOrganization() {
         return organization == null ? image.nil : organization;
+    }
+
+    public PointersObject getOrganizationOrNull() {
+        return organization;
     }
 
     public void setOrganization(final PointersObject organization) {
@@ -173,6 +181,10 @@ public final class ClassObject extends AbstractSqueakObject {
 
     public void setOtherPointer(final int index, final Object value) {
         pointers[index - CLASS_DESCRIPTION.SIZE] = value;
+    }
+
+    public Object[] getOtherPointers() {
+        return pointers;
     }
 
     private void setOtherPointers(final Object[] pointers) {
@@ -240,8 +252,8 @@ public final class ClassObject extends AbstractSqueakObject {
         if (methodDict == thang) {
             return true;
         }
-        if (Long.valueOf(format) == thang) { // TODO: check whether format needs to be checked
-            return true;
+        if (thang instanceof Number && format == (long) thang) {
+            return true; // TODO: check whether format needs to be checked
         }
         if (instanceVariables == thang) {
             return true;
