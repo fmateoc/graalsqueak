@@ -68,7 +68,8 @@ public abstract class SqueakObjectPointersBecomeOneWayNode extends Node {
 
     @Specialization
     protected final void doClass(final ClassObject obj, final Object[] from, final Object[] to, final boolean copyHash) {
-        pointersBecomeOneWay(obj.getPointers(), from, to, copyHash);
+        // TODO: getTraceableObjects might be wrong here. Check inlined fields of ClassObjects?
+        pointersBecomeOneWay(obj.getTraceableObjects(), from, to, copyHash);
     }
 
     @Specialization
