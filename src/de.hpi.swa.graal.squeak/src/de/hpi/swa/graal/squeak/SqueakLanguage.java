@@ -19,6 +19,7 @@ import com.oracle.truffle.api.source.SourceSection;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageReaderNode;
+import de.hpi.swa.graal.squeak.interop.InteropMap;
 import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.context.LookupClassNode;
@@ -48,11 +49,7 @@ public final class SqueakLanguage extends TruffleLanguage<SqueakImageContext> {
             image.setImagePath(source.getPath());
             return Truffle.getRuntime().createCallTarget(new SqueakImageReaderNode(image));
         } else {
-            if (image.getImagePath() == null) {
-                final String imagePath = SqueakOptions.getOption(image.env, SqueakOptions.ImagePath);
-                image.setImagePath(imagePath);
-                image.load();
-            }
+            image.ensureLoaded();
             if (source.isInternal()) {
                 image.printToStdOut(MiscUtils.format("Evaluating '%s'...", source.getCharacters().toString()));
             }
@@ -76,10 +73,8 @@ public final class SqueakLanguage extends TruffleLanguage<SqueakImageContext> {
 
     @Override
     protected Iterable<Scope> findTopScopes(final SqueakImageContext context) {
-        if (!context.smalltalk.hasSqueakClass()) {
-            context.load();
-        }
-        return Arrays.asList(Scope.newBuilder("Smalltalk", context.getSmalltalkDictionary()).build());
+        context.ensureLoaded();
+        return Arrays.asList(Scope.newBuilder("Smalltalk", new InteropMap(context.getSmalltalkDictionary())).build());
     }
 
     @Override

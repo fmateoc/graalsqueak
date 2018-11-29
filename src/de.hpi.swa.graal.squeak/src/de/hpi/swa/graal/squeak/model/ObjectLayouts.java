@@ -1,5 +1,10 @@
 package de.hpi.swa.graal.squeak.model;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import de.hpi.swa.graal.squeak.image.SqueakImageContext;
+
 public final class ObjectLayouts {
 
     public static final class ADDITIONAL_METHOD_STATE {
@@ -59,6 +64,11 @@ public final class ObjectLayouts {
         public static final int NAME = 1;
     }
 
+    public static final class CLASS_BINDING {
+        public static final int KEY = 0;
+        public static final int VALUE = 1;
+    }
+
     public static final class CLASS_DESCRIPTION {
         public static final int SUPERCLASS = 0;
         public static final int METHOD_DICT = 1;
@@ -79,6 +89,28 @@ public final class ObjectLayouts {
         public static final int SMALL_FRAMESIZE = 16;
         public static final int LARGE_FRAMESIZE = 56;
         public static final int MAX_STACK_SIZE = LARGE_FRAMESIZE - TEMP_FRAME_START;
+    }
+
+    public static final class DICTIONARY {
+        public static Map<Object, Object> toJavaMap(final PointersObject dictionary) {
+            final ArrayObject classBindings = (ArrayObject) dictionary.at0(HASHED_COLLECTION.ARRAY);
+            if (classBindings.isAbstractSqueakObjectType()) {
+                return extractKeyValuesFromClassBindings(dictionary.image, classBindings.getAbstractSqueakObjectStorage());
+            } else {
+                return extractKeyValuesFromClassBindings(dictionary.image, classBindings.getObjectStorage());
+            }
+        }
+
+        private static Map<Object, Object> extractKeyValuesFromClassBindings(final SqueakImageContext image, final Object[] classBindings) {
+            final Map<Object, Object> keyValues = new HashMap<>();
+            for (Object classBinding : classBindings) {
+                if (classBinding != image.nil) {
+                    final PointersObject classBindingPointer = (PointersObject) classBinding;
+                    keyValues.put(classBindingPointer.at0(CLASS_BINDING.KEY), classBindingPointer.at0(CLASS_BINDING.VALUE));
+                }
+            }
+            return keyValues;
+        }
     }
 
     public static final class ERROR_TABLE {
@@ -119,6 +151,11 @@ public final class ObjectLayouts {
         public static final int HEIGHT = 2;
         public static final int DEPTH = 3;
         public static final int OFFSET = 4;
+    }
+
+    public static final class HASHED_COLLECTION {
+        public static final int TALLY = 0;
+        public static final int ARRAY = 1;
     }
 
     public static final class LINK {

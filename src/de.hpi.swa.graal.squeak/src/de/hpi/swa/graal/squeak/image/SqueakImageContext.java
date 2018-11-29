@@ -19,6 +19,7 @@ import com.oracle.truffle.api.instrumentation.AllocationReporter;
 import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.source.Source;
 
+import de.hpi.swa.graal.squeak.SqueakImage;
 import de.hpi.swa.graal.squeak.SqueakLanguage;
 import de.hpi.swa.graal.squeak.SqueakOptions;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakAbortException;
@@ -160,6 +161,7 @@ public final class SqueakImageContext {
     @CompilationFinal private NativeObject debugSyntaxErrorSelector = null; // for testing
 
     private Source lastParseRequestSource;
+    @CompilationFinal private SqueakImage squeakImage;
 
     public SqueakImageContext(final SqueakLanguage squeakLanguage, final SqueakLanguage.Env environment) {
         language = squeakLanguage;
@@ -168,8 +170,14 @@ public final class SqueakImageContext {
         allocationReporter = env.lookup(AllocationReporter.class);
     }
 
-    public void load() {
-        Truffle.getRuntime().createCallTarget(new SqueakImageReaderNode(this)).call();
+    public void ensureLoaded() {
+        if (!loaded()) {
+            squeakImage = (SqueakImage) Truffle.getRuntime().createCallTarget(new SqueakImageReaderNode(this)).call();
+        }
+    }
+
+    public boolean loaded() {
+        return squeakImage != null;
     }
 
     public boolean patch(final SqueakLanguage.Env newEnv) {

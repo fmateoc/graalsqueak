@@ -5,7 +5,7 @@ import com.oracle.truffle.api.interop.ForeignAccess;
 import com.oracle.truffle.api.interop.TruffleObject;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
-import de.hpi.swa.graal.squeak.instrumentation.SqueakObjectMessageResolutionForeign;
+import de.hpi.swa.graal.squeak.interop.SqueakObjectMessageResolutionForeign;
 
 public abstract class AbstractSqueakObject implements TruffleObject {
     public static final int IDENTITY_HASH_MASK = 0x400000 - 1;
