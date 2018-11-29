@@ -19,7 +19,6 @@ import com.oracle.truffle.api.source.SourceSection;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageReaderNode;
-import de.hpi.swa.graal.squeak.interop.InteropMap;
 import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.context.LookupClassNode;
@@ -74,7 +73,7 @@ public final class SqueakLanguage extends TruffleLanguage<SqueakImageContext> {
     @Override
     protected Iterable<Scope> findTopScopes(final SqueakImageContext context) {
         context.ensureLoaded();
-        return Arrays.asList(Scope.newBuilder("Smalltalk", new InteropMap(context.getSmalltalkDictionary())).build());
+        return Arrays.asList(Scope.newBuilder("Smalltalk", context.getGlobals()).build());
     }
 
     @Override

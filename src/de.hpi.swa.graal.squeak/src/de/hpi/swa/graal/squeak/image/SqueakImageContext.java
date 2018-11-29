@@ -25,6 +25,7 @@ import de.hpi.swa.graal.squeak.SqueakOptions;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakAbortException;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageReaderNode;
+import de.hpi.swa.graal.squeak.interop.InteropMap;
 import de.hpi.swa.graal.squeak.io.DisplayPoint;
 import de.hpi.swa.graal.squeak.io.SqueakDisplay;
 import de.hpi.swa.graal.squeak.io.SqueakDisplayInterface;
@@ -39,7 +40,9 @@ import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.ASSOCIATION;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
+import de.hpi.swa.graal.squeak.model.ObjectLayouts.ENVIRONMENT;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
+import de.hpi.swa.graal.squeak.model.ObjectLayouts.SMALLTALK_IMAGE;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.ExecuteTopLevelContextNode;
 import de.hpi.swa.graal.squeak.nodes.process.GetActiveProcessNode;
@@ -521,8 +524,10 @@ public final class SqueakImageContext {
         }
     }
 
-    public PointersObject getSmalltalkDictionary() {
-        return smalltalk; // TODO: turn into TruffleObject with support for keys etc
+    public TruffleObject getGlobals() {
+        final PointersObject environment = (PointersObject) smalltalk.at0(SMALLTALK_IMAGE.GLOBALS);
+        final PointersObject bindings = (PointersObject) environment.at0(ENVIRONMENT.BINDINGS);
+        return new InteropMap(bindings);
     }
 
     public void reportNewAllocationRequest() {

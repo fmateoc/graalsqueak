@@ -113,6 +113,15 @@ public final class ObjectLayouts {
         }
     }
 
+    public static final class ENVIRONMENT {
+        public static final int INFO = 0;
+        public static final int DECLARATIONS = 1;
+        public static final int BINDINGS = 2;
+        public static final int UNDECLARED = 3;
+        public static final int POLICIES = 4;
+        public static final int OBSERVERS = 5;
+    }
+
     public static final class ERROR_TABLE {
         public static final int GENERIC_ERROR = 0; // nil
         public static final int BAD_RECEIVER = 1;
@@ -208,6 +217,10 @@ public final class ObjectLayouts {
 
     public static final class SEMAPHORE {
         public static final int EXCESS_SIGNALS = 2;
+    }
+
+    public static final class SMALLTALK_IMAGE {
+        public static final int GLOBALS = 0;
     }
 
     public static final class SPECIAL_OBJECT {
