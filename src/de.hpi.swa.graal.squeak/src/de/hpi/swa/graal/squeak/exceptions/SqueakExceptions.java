@@ -82,7 +82,8 @@ public final class SqueakExceptions {
             @Override
             public SourceSection getSourceSection() {
                 if (sourceSection == null) {
-                    sourceSection = image.getLastParseRequestSource().createSection(sourceOffset, 1);
+                    // - 1 for previous character.
+                    sourceSection = image.getLastParseRequestSource().createSection(sourceOffset - 1, 1);
                 }
                 return sourceSection;
             }

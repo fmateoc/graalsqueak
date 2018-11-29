@@ -76,6 +76,9 @@ public final class SqueakLanguage extends TruffleLanguage<SqueakImageContext> {
 
     @Override
     protected Iterable<Scope> findTopScopes(final SqueakImageContext context) {
+        if (!context.smalltalk.hasSqueakClass()) {
+            context.load();
+        }
         return Arrays.asList(Scope.newBuilder("Smalltalk", context.getSmalltalkDictionary()).build());
     }
 

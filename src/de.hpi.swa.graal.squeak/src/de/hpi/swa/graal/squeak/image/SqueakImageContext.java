@@ -5,6 +5,8 @@ import java.io.PrintWriter;
 import java.math.BigInteger;
 import java.nio.file.Paths;
 
+import org.graalvm.options.OptionKey;
+
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
@@ -393,7 +395,14 @@ public final class SqueakImageContext {
     }
 
     public String getImagePath() {
+        if (imagePath == null) {
+            setImagePath(getOption(SqueakOptions.ImagePath));
+        }
         return imagePath;
+    }
+
+    private String getOption(final OptionKey<String> key) {
+        return SqueakOptions.getOption(env, key);
     }
 
     public void setImagePath(final String path) {
@@ -504,7 +513,7 @@ public final class SqueakImageContext {
         }
     }
 
-    public Object getSmalltalkDictionary() {
+    public PointersObject getSmalltalkDictionary() {
         return smalltalk; // TODO: turn into TruffleObject with support for keys etc
     }
 

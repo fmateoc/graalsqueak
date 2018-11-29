@@ -1,6 +1,7 @@
 package de.hpi.swa.graal.squeak.instrumentation;
 
 import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.interop.ForeignAccess;
 import com.oracle.truffle.api.interop.KeyInfo;
@@ -10,9 +11,11 @@ import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.interop.UnknownIdentifierException;
 import com.oracle.truffle.api.nodes.Node;
 
+import de.hpi.swa.graal.squeak.instrumentation.SqueakObjectMessageResolutionFactory.SqueakObjectPropertiesNodeFactory.SqueakKeysNodeGen;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.FrameMarker;
+import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.DispatchNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
@@ -121,8 +124,24 @@ public final class SqueakObjectMessageResolution {
 
     @Resolve(message = "KEYS")
     public abstract static class SqueakObjectPropertiesNode extends Node {
-        protected static final Object access(@SuppressWarnings("unused") final AbstractSqueakObject receiver) {
-            return new KeysArray(receiver.getSqueakClass().listMethods());
+        @Child private SqueakKeysNode squeakKeysNode = SqueakKeysNodeGen.create();
+
+        protected final Object access(final AbstractSqueakObject receiver) {
+            return new KeysArray(squeakKeysNode.execute(receiver));
+        }
+
+        protected abstract static class SqueakKeysNode extends Node {
+            protected abstract Object[] execute(AbstractSqueakObject object);
+
+            @Specialization(guards = "receiver.isSmalltalkDictionary()")
+            protected static final Object[] doSmalltalkDictionary(final PointersObject receiver) {
+                return receiver.getPointers();
+            }
+
+            @Specialization(guards = "!receiver.isSmalltalkDictionary()")
+            protected static final Object[] access(final AbstractSqueakObject receiver) {
+                return receiver.getSqueakClass().listMethods();
+            }
         }
     }
 
