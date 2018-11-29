@@ -105,6 +105,14 @@ public final class ObjectLayouts {
         public static final int OPERATING_SYSTEM_ERROR = 20;
     }
 
+    public static final class EXCEPTION {
+        public static final int MESSAGE_TEXT = 0;
+        public static final int TAG = 1;
+        public static final int SIGNAL_CONTEXT = 2;
+        public static final int HANDLER_CONTEXT = 3;
+        public static final int OUTER_CONTEXT = 4;
+    }
+
     public static final class FORM {
         public static final int BITS = 0;
         public static final int WIDTH = 1;
@@ -223,10 +231,24 @@ public final class ObjectLayouts {
         public static final int CLASS_WEAK_FINALIZER = 55;
     }
 
+    public static final class SYNTAX_ERROR_NOTIFICATION {
+        public static final int IN_CLASS = 1;
+        public static final int CODE = 2;
+        public static final int DOIT_FLAG = 3;
+        public static final int ERROR_MESSAGE = 3;
+        public static final int LOCATION = 3;
+        public static final int NEW_SOURCE = 3;
+    }
+
     public static final class TEST_RESULT {
         public static final int FAILURES = 1;
         public static final int ERRORS = 2;
         public static final int PASSES = 3;
+    }
+
+    public static final class TEXT {
+        public static final int STRING = 1;
+        public static final int RUNS = 2;
     }
 
     public static final class WEAK_FINALIZATION_LIST {
