@@ -232,12 +232,12 @@ public final class ObjectLayouts {
     }
 
     public static final class SYNTAX_ERROR_NOTIFICATION {
-        public static final int IN_CLASS = 1;
-        public static final int CODE = 2;
-        public static final int DOIT_FLAG = 3;
-        public static final int ERROR_MESSAGE = 3;
-        public static final int LOCATION = 3;
-        public static final int NEW_SOURCE = 3;
+        public static final int IN_CLASS = 5;
+        public static final int CODE = 6;
+        public static final int DOIT_FLAG = 7;
+        public static final int ERROR_MESSAGE = 8;
+        public static final int LOCATION = 9;
+        public static final int NEW_SOURCE = 10;
     }
 
     public static final class TEST_RESULT {
@@ -247,8 +247,8 @@ public final class ObjectLayouts {
     }
 
     public static final class TEXT {
-        public static final int STRING = 1;
-        public static final int RUNS = 2;
+        public static final int STRING = 0;
+        public static final int RUNS = 1;
     }
 
     public static final class WEAK_FINALIZATION_LIST {

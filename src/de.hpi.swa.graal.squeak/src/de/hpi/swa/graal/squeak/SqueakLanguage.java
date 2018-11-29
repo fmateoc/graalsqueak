@@ -53,11 +53,10 @@ public final class SqueakLanguage extends TruffleLanguage<SqueakImageContext> {
                 image.setImagePath(imagePath);
                 image.load();
             }
-            final String sourceCode = source.getCharacters().toString();
             if (source.isInternal()) {
-                image.printToStdOut(MiscUtils.format("Evaluating '%s'...", sourceCode));
+                image.printToStdOut(MiscUtils.format("Evaluating '%s'...", source.getCharacters().toString()));
             }
-            return Truffle.getRuntime().createCallTarget(image.getCompilerEvaluateContext(sourceCode));
+            return Truffle.getRuntime().createCallTarget(image.getCompilerEvaluateContext(source));
         }
     }
 

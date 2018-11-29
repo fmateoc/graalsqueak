@@ -15,6 +15,7 @@ import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameInstanceVisitor;
 import com.oracle.truffle.api.instrumentation.AllocationReporter;
 import com.oracle.truffle.api.interop.TruffleObject;
+import com.oracle.truffle.api.source.Source;
 
 import de.hpi.swa.graal.squeak.SqueakLanguage;
 import de.hpi.swa.graal.squeak.SqueakOptions;
@@ -156,6 +157,8 @@ public final class SqueakImageContext {
                                                                                                   // testing
     @CompilationFinal private NativeObject debugSyntaxErrorSelector = null; // for testing
 
+    private Source lastParseRequestSource;
+
     public SqueakImageContext(final SqueakLanguage squeakLanguage, final SqueakLanguage.Env environment) {
         language = squeakLanguage;
         patch(environment);
@@ -184,7 +187,8 @@ public final class SqueakImageContext {
         return ExecuteTopLevelContextNode.create(getLanguage(), activeContext, true);
     }
 
-    public ExecuteTopLevelContextNode getCompilerEvaluateContext(final String code) {
+    public ExecuteTopLevelContextNode getCompilerEvaluateContext(final Source source) {
+        lastParseRequestSource = source;
         assert compilerClass != null;
         if (evaluateMethod == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
@@ -200,7 +204,7 @@ public final class SqueakImageContext {
         customContext.atput0(CONTEXT.STACKPOINTER, 0L);
         customContext.atput0(CONTEXT.CLOSURE_OR_NIL, nil);
         customContext.setSender(nil);
-        customContext.push(wrap(code));
+        customContext.push(wrap(source.getCharacters().toString()));
         return ExecuteTopLevelContextNode.create(getLanguage(), customContext, false);
     }
 
@@ -408,6 +412,10 @@ public final class SqueakImageContext {
     public void setImageArguments(final String[] args) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
         this.imageArguments = args;
+    }
+
+    public Source getLastParseRequestSource() {
+        return lastParseRequestSource;
     }
 
     public boolean interruptHandlerDisabled() {
