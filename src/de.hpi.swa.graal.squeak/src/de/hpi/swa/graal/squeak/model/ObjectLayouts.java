@@ -3,7 +3,7 @@ package de.hpi.swa.graal.squeak.model;
 import java.util.HashMap;
 import java.util.Map;
 
-import de.hpi.swa.graal.squeak.image.SqueakImageContext;
+import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.GetObjectArrayNode;
 
 public final class ObjectLayouts {
 
@@ -76,6 +76,25 @@ public final class ObjectLayouts {
         public static final int INSTANCE_VARIABLES = 3;
         public static final int ORGANIZATION = 4;
         public static final int SIZE = 5;
+
+        public static String getClassComment(final ClassObject compilerClass) {
+            final AbstractSqueakObject organization = compilerClass.getOrganization();
+            if (organization.isNil()) {
+                return null;
+            }
+            final AbstractSqueakObject classComment = (AbstractSqueakObject) ((PointersObject) organization).at0(CLASS_ORGANIZER.CLASS_COMMENT);
+            final NativeObject string = (NativeObject) classComment.send("string");
+            return string.asString();
+        }
+    }
+
+    public static final class CLASS_ORGANIZER {
+        public static final int CATEGORY_ARRAY = 0;
+        public static final int CATEGORY_STOPS = 1;
+        public static final int ELEMENT_ARRAY = 2;
+        public static final int SUBJECT = 3;
+        public static final int CLASS_COMMENT = 4;
+        public static final int COMMENT_STAMP = 5;
     }
 
     public static final class CONTEXT {
@@ -94,17 +113,10 @@ public final class ObjectLayouts {
     public static final class DICTIONARY {
         public static Map<Object, Object> toJavaMap(final PointersObject dictionary) {
             final ArrayObject classBindings = (ArrayObject) dictionary.at0(HASHED_COLLECTION.ARRAY);
-            if (classBindings.isAbstractSqueakObjectType()) {
-                return extractKeyValuesFromClassBindings(dictionary.image, classBindings.getAbstractSqueakObjectStorage());
-            } else {
-                return extractKeyValuesFromClassBindings(dictionary.image, classBindings.getObjectStorage());
-            }
-        }
-
-        private static Map<Object, Object> extractKeyValuesFromClassBindings(final SqueakImageContext image, final Object[] classBindings) {
             final Map<Object, Object> keyValues = new HashMap<>();
-            for (Object classBinding : classBindings) {
-                if (classBinding != image.nil) {
+            // TODO: Avoid node allocation in next line.
+            for (Object classBinding : GetObjectArrayNode.create().execute(classBindings)) {
+                if (classBinding != dictionary.image.nil) {
                     final PointersObject classBindingPointer = (PointersObject) classBinding;
                     keyValues.put(classBindingPointer.at0(CLASS_BINDING.KEY), classBindingPointer.at0(CLASS_BINDING.VALUE));
                 }
