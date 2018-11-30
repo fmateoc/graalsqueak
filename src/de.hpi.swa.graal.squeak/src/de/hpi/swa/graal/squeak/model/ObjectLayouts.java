@@ -3,6 +3,8 @@ package de.hpi.swa.graal.squeak.model;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.oracle.truffle.api.CompilerAsserts;
+
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.GetObjectArrayNode;
 
 public final class ObjectLayouts {
@@ -77,8 +79,9 @@ public final class ObjectLayouts {
         public static final int ORGANIZATION = 4;
         public static final int SIZE = 5;
 
-        public static String getClassComment(final ClassObject compilerClass) {
-            final AbstractSqueakObject organization = compilerClass.getOrganization();
+        public static String getClassComment(final ClassObject squeakClass) {
+            CompilerAsserts.neverPartOfCompilation("For instrumentation access only.");
+            final AbstractSqueakObject organization = squeakClass.getOrganization();
             if (organization.isNil()) {
                 return null;
             }

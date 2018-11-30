@@ -176,12 +176,33 @@ public final class SqueakImageContext {
 
     public void ensureLoaded() {
         if (!loaded()) {
+            // Load image.
             squeakImage = (SqueakImage) Truffle.getRuntime().createCallTarget(new SqueakImageReaderNode(this)).call();
+            // Remove active context.
+            final PointersObject activeProcess = GetActiveProcessNode.create(this).executeGet();
+            activeProcess.atput0(PROCESS.SUSPENDED_CONTEXT, nil);
+            // Modify StartUpList for headless execution.
+            // TODO: Also start ProcessorScheduler and WeakArray (see SqueakSUnitTest).
+            evaluate("{EventSensor. ProcessorScheduler. Project. WeakArray} do: [:ea | Smalltalk removeFromStartUpList: ea]");
+            try {
+                evaluate("[Smalltalk processStartUpList: true] value");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            // Set author information.
+            evaluate("Utilities authorName: 'GraalSqueak'");
+            evaluate("Utilities setAuthorInitials: 'GraalSqueak'");
+            // Initialize fresh MorphicUIManager.
+            evaluate("Project current instVarNamed: #uiManager put: MorphicUIManager new");
         }
     }
 
     public boolean loaded() {
         return squeakImage != null;
+    }
+
+    private Object evaluate(final String sourceCode) {
+        return compilerClass.send("evaluate:", wrap(sourceCode));
     }
 
     public boolean patch(final SqueakLanguage.Env newEnv) {
@@ -195,13 +216,14 @@ public final class SqueakImageContext {
     }
 
     public ExecuteTopLevelContextNode getActiveContext() {
+        assert lastParseRequestSource == null : "Image should not have been executed manually before.";
         final PointersObject activeProcess = GetActiveProcessNode.create(this).executeGet();
         final ContextObject activeContext = (ContextObject) activeProcess.at0(PROCESS.SUSPENDED_CONTEXT);
         activeProcess.atput0(PROCESS.SUSPENDED_CONTEXT, nil);
         return ExecuteTopLevelContextNode.create(getLanguage(), activeContext, true);
     }
 
-    public ExecuteTopLevelContextNode getCompilerEvaluateContext(final Source source) {
+    public ExecuteTopLevelContextNode getDoItContext(final Source source) {
         /*
          * (Parser new parse: '1 + 2 * 3' class: UndefinedObject noPattern: true notifying: nil
          * ifFail: [^nil]) generate
