@@ -22,7 +22,6 @@ import com.oracle.truffle.api.source.Source;
 import de.hpi.swa.graal.squeak.SqueakImage;
 import de.hpi.swa.graal.squeak.SqueakLanguage;
 import de.hpi.swa.graal.squeak.SqueakOptions;
-import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakAbortException;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageReaderNode;
 import de.hpi.swa.graal.squeak.interop.InteropMap;
@@ -31,6 +30,7 @@ import de.hpi.swa.graal.squeak.io.SqueakDisplay;
 import de.hpi.swa.graal.squeak.io.SqueakDisplayInterface;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
+import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
@@ -151,6 +151,7 @@ public final class SqueakImageContext {
     @CompilationFinal private SqueakDisplayInterface display;
 
     @CompilationFinal private ClassObject compilerClass = null;
+    @CompilationFinal private ClassObject parserClass = null;
     @CompilationFinal private CompiledMethodObject evaluateMethod;
     @CompilationFinal private NativeObject simulatePrimitiveArgsSelector = null;
     @CompilationFinal private PointersObject scheduler = null;
@@ -201,23 +202,26 @@ public final class SqueakImageContext {
     }
 
     public ExecuteTopLevelContextNode getCompilerEvaluateContext(final Source source) {
+        /*
+         * (Parser new parse: '1 + 2 * 3' class: UndefinedObject noPattern: true notifying: nil
+         * ifFail: [^nil]) generate
+         */
         lastParseRequestSource = source;
+        assert parserClass != null;
         assert compilerClass != null;
-        if (evaluateMethod == null) {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
-            evaluateMethod = (CompiledMethodObject) compilerClass.lookup("evaluate:");
-            if (evaluateMethod.getCompiledInSelector() == doesNotUnderstand) {
-                throw new SqueakAbortException("Compiler>>#evaluate: could not be found!");
-            }
-        }
-        final ContextObject customContext = ContextObject.create(this, evaluateMethod.sqContextSize());
-        customContext.atput0(CONTEXT.METHOD, evaluateMethod);
-        customContext.atput0(CONTEXT.INSTRUCTION_POINTER, (long) evaluateMethod.getInitialPC());
-        customContext.atput0(CONTEXT.RECEIVER, compilerClass);
+
+        final AbstractSqueakObject parser = (AbstractSqueakObject) parserClass.send("new");
+        final AbstractSqueakObject methodNode = (AbstractSqueakObject) parser.send(
+                        "parse:class:noPattern:notifying:ifFail:", wrap(source.getCharacters().toString()), nilClass, sqTrue, nil, new BlockClosureObject(this));
+        final CompiledMethodObject doItMethod = (CompiledMethodObject) methodNode.send("generate");
+
+        final ContextObject customContext = ContextObject.create(this, doItMethod.sqContextSize());
+        customContext.atput0(CONTEXT.METHOD, doItMethod);
+        customContext.atput0(CONTEXT.INSTRUCTION_POINTER, (long) doItMethod.getInitialPC());
+        customContext.atput0(CONTEXT.RECEIVER, nilClass);
         customContext.atput0(CONTEXT.STACKPOINTER, 0L);
         customContext.atput0(CONTEXT.CLOSURE_OR_NIL, nil);
         customContext.setSender(nil);
-        customContext.push(wrap(source.getCharacters().toString()));
         return ExecuteTopLevelContextNode.create(getLanguage(), customContext, false);
     }
 
@@ -267,6 +271,15 @@ public final class SqueakImageContext {
     public void setCompilerClass(final ClassObject compilerClass) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
         this.compilerClass = compilerClass;
+    }
+
+    public ClassObject getParserClass() {
+        return parserClass;
+    }
+
+    public void setParserClass(final ClassObject parserClass) {
+        CompilerDirectives.transferToInterpreterAndInvalidate();
+        this.parserClass = parserClass;
     }
 
     public NativeObject getSimulatePrimitiveArgsSelector() {
