@@ -3,7 +3,6 @@ package de.hpi.swa.graal.squeak.model;
 import java.util.Arrays;
 
 import com.oracle.truffle.api.CompilerDirectives;
-import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.Frame;
@@ -19,8 +18,8 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
 public final class ContextObject extends AbstractPointersObject {
-    @CompilationFinal private MaterializedFrame truffleFrame;
-    @CompilationFinal private FrameMarker frameMarker;
+    private final MaterializedFrame truffleFrame;
+    private final FrameMarker frameMarker;
     private boolean hasModifiedSender = false;
     private boolean isDirty = false;
     private boolean escaped = false;
@@ -32,6 +31,8 @@ public final class ContextObject extends AbstractPointersObject {
     private ContextObject(final SqueakImageContext image, final long hash) {
         super(image, hash, image.methodContextClass);
         isDirty = true;
+        truffleFrame = null;
+        frameMarker = null;
     }
 
     public static ContextObject create(final SqueakImageContext image, final int size) {
@@ -41,11 +42,9 @@ public final class ContextObject extends AbstractPointersObject {
     private ContextObject(final SqueakImageContext image, final int size) {
         super(image, image.methodContextClass);
         this.isDirty = true;
-        /*
-         * Size of pointers array is too small, because method is unknown, so we cannot call
-         * CompiledCodeObject.getNumArgsAndCopied() here. Add 8 additional slots for now.
-         */
-        setPointersUnsafe(new Object[CONTEXT.TEMP_FRAME_START + size + 8]);
+        truffleFrame = null;
+        frameMarker = null;
+        initializePointers(size);
     }
 
     public static ContextObject create(final SqueakImageContext image, final int size, final MaterializedFrame frame, final FrameMarker frameMarker) {
@@ -53,17 +52,27 @@ public final class ContextObject extends AbstractPointersObject {
     }
 
     private ContextObject(final SqueakImageContext image, final int size, final MaterializedFrame frame, final FrameMarker frameMarker) {
-        this(image, size);
+        super(image, image.methodContextClass);
         isDirty = false;
         truffleFrame = frame;
         this.frameMarker = frameMarker;
+        initializePointers(size);
     }
 
     public ContextObject(final ContextObject original) {
         super(original.image, original.image.methodContextClass);
         setPointers(original.getPointers().clone());
         truffleFrame = original.truffleFrame;
+        frameMarker = original.frameMarker;
         hasModifiedSender = original.hasModifiedSender;
+    }
+
+    private void initializePointers(final int size) {
+        /*
+         * Size of pointers array is too small, because method is unknown, so we cannot call
+         * CompiledCodeObject.getNumArgsAndCopied() here. Add 8 additional slots for now.
+         */
+        setPointersUnsafe(new Object[CONTEXT.TEMP_FRAME_START + size + 8]);
     }
 
     public void terminate() {
