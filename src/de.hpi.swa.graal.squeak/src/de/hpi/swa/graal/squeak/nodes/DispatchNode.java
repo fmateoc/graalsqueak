@@ -44,10 +44,11 @@ public abstract class DispatchNode extends Node {
     }
 
     @Specialization(guards = {"isQuickReturnReceiverVariable(method.primitiveIndex())"})
-    protected static final Object doPrimitiveQuickReturnReceiver(final CompiledMethodObject method, final Object[] receiverAndArguments, @SuppressWarnings("unused") final Object contextOrMarker,
+    protected static final Object doPrimitiveQuickReturnReceiver(final VirtualFrame frame, final CompiledMethodObject method, final Object[] receiverAndArguments,
+                    @SuppressWarnings("unused") final Object contextOrMarker,
                     @Cached("create()") final SqueakObjectAt0Node at0Node) {
         assert receiverAndArguments[0] instanceof AbstractSqueakObject;
-        return at0Node.execute(receiverAndArguments[0], method.primitiveIndex() - 264);
+        return at0Node.execute(frame, receiverAndArguments[0], method.primitiveIndex() - 264);
     }
 
     @SuppressWarnings("unused")

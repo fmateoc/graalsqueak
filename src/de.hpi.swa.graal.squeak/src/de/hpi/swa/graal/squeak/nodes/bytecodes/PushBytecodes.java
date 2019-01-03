@@ -47,16 +47,13 @@ public final class PushBytecodes {
 
     @NodeInfo(cost = NodeCost.NONE)
     public static final class PushActiveContextNode extends AbstractPushNode {
-        @Child private GetOrCreateContextNode getContextNode;
-
         public PushActiveContextNode(final CompiledCodeObject code, final int index) {
             super(code, index);
-            getContextNode = GetOrCreateContextNode.create(code);
         }
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            pushNode.executeWrite(frame, getContextNode.executeGet(frame));
+            pushNode.executeWrite(frame, FrameAccess.getContextOrMarker(frame));
         }
 
         @Override
@@ -182,7 +179,7 @@ public final class PushBytecodes {
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            pushNode.executeWrite(frame, at0Node.execute(code.getLiteral(literalIndex), 1));
+            pushNode.executeWrite(frame, at0Node.execute(frame, code.getLiteral(literalIndex), 1));
         }
 
         @Override
@@ -269,12 +266,12 @@ public final class PushBytecodes {
 
         @Specialization(guards = {"isVirtualized(frame)"})
         protected final void doReceiverVirtualized(final VirtualFrame frame) {
-            pushNode.executeWrite(frame, at0Node.execute(FrameAccess.getReceiver(frame), variableIndex));
+            pushNode.executeWrite(frame, at0Node.execute(frame, FrameAccess.getReceiver(frame), variableIndex));
         }
 
         @Fallback
         protected final void doReceiver(final VirtualFrame frame) {
-            pushNode.executeWrite(frame, at0Node.execute(getContext(frame).getReceiver(), variableIndex));
+            pushNode.executeWrite(frame, at0Node.execute(frame, getContext(frame).getReceiver(), variableIndex));
         }
 
         @Override
@@ -299,7 +296,7 @@ public final class PushBytecodes {
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            pushNode.executeWrite(frame, at0Node.execute(readTempNode.executeRead(frame), indexInArray));
+            pushNode.executeWrite(frame, at0Node.execute(frame, readTempNode.executeRead(frame), indexInArray));
         }
 
         @Override

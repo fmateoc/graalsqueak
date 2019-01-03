@@ -2,6 +2,7 @@ package de.hpi.swa.graal.squeak.nodes.process;
 
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
@@ -21,11 +22,11 @@ public abstract class IsEmptyListNode extends AbstractNodeWithImage {
         super(image);
     }
 
-    public abstract boolean executeIsEmpty(Object list);
+    public abstract boolean executeIsEmpty(VirtualFrame frame, Object list);
 
     @Specialization
-    protected final boolean executeIsEmpty(final AbstractSqueakObject list) {
-        return at0Node.execute(list, LINKED_LIST.FIRST_LINK) == image.nil;
+    protected final boolean executeIsEmpty(final VirtualFrame frame, final AbstractSqueakObject list) {
+        return at0Node.execute(frame, list, LINKED_LIST.FIRST_LINK) == image.nil;
     }
 
     @Fallback

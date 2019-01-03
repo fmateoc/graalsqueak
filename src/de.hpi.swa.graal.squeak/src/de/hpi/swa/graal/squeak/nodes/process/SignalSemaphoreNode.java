@@ -29,14 +29,14 @@ public abstract class SignalSemaphoreNode extends AbstractNodeWithImage {
 
     public abstract void executeSignal(VirtualFrame frame, Object semaphore);
 
-    @Specialization(guards = {"semaphore.isSemaphore()", "isEmptyListNode.executeIsEmpty(semaphore)"})
-    public static final void doSignalEmpty(final PointersObject semaphore) {
+    @Specialization(guards = {"semaphore.isSemaphore()", "isEmptyListNode.executeIsEmpty(frame, semaphore)"})
+    public static final void doSignalEmpty(final VirtualFrame frame, final PointersObject semaphore) {
         semaphore.atput0(SEMAPHORE.EXCESS_SIGNALS, (long) semaphore.at0(SEMAPHORE.EXCESS_SIGNALS) + 1);
     }
 
-    @Specialization(guards = {"semaphore.isSemaphore()", "!isEmptyListNode.executeIsEmpty(semaphore)"})
+    @Specialization(guards = {"semaphore.isSemaphore()", "!isEmptyListNode.executeIsEmpty(frame, semaphore)"})
     public final void doSignal(final VirtualFrame frame, final PointersObject semaphore) {
-        resumeProcessNode.executeResume(frame, removeFirstLinkOfListNode.executeRemove(semaphore));
+        resumeProcessNode.executeResume(frame, removeFirstLinkOfListNode.executeRemove(frame, semaphore));
     }
 
     @Specialization

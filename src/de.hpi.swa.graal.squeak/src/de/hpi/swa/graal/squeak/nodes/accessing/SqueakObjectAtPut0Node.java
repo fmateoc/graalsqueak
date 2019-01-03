@@ -4,6 +4,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.Node;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
@@ -14,6 +15,7 @@ import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.EmptyObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
@@ -22,6 +24,7 @@ import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.WriteArrayObjectNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.WriteClassObjectNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.WriteNativeObjectNode;
 
 @ImportStatic({NativeObject.class, SqueakGuards.class})
@@ -31,7 +34,7 @@ public abstract class SqueakObjectAtPut0Node extends Node {
         return SqueakObjectAtPut0NodeGen.create();
     }
 
-    public abstract void execute(Object obj, long index, Object value);
+    public abstract void execute(VirtualFrame frame, Object obj, long index, Object value);
 
     @Specialization
     protected static final void doArray(final ArrayObject obj, final long index, final Object value,
@@ -47,6 +50,12 @@ public abstract class SqueakObjectAtPut0Node extends Node {
     @Specialization
     protected static final void doContext(final ContextObject obj, final long index, final Object value) {
         obj.atput0(index, value);
+    }
+
+    @Specialization
+    protected static final void doContextVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index, final Object value,
+                    @Cached("create()") final ContextObjectWriteNode writeNode) {
+        writeNode.execute(frame, obj, index, value);
     }
 
     @Specialization

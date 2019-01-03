@@ -17,6 +17,7 @@ import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
@@ -360,15 +361,15 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        @TruffleBoundary
-        protected final Object doRead(@SuppressWarnings("unused") final PointersObject receiver, final long fileDescriptor, final AbstractSqueakObject target, final long startIndex,
+        protected final Object doRead(final VirtualFrame frame, @SuppressWarnings("unused") final PointersObject receiver, final long fileDescriptor, final AbstractSqueakObject target,
+                        final long startIndex,
                         final long longCount) {
             final int count = (int) longCount;
             final ByteBuffer dst = ByteBuffer.allocate(count);
             try {
                 final long read = getFileOrPrimFail(fileDescriptor).read(dst);
                 for (int index = 0; index < read; index++) {
-                    atPut0Node.execute(target, startIndex - 1 + index, dst.get(index) & 0xFFL);
+                    atPut0Node.execute(frame, target, startIndex - 1 + index, dst.get(index) & 0xFFL);
                 }
                 return Math.max(read, 0); // `read` can be `-1`, Squeak expects zero.
             } catch (IOException e) {

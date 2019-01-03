@@ -33,13 +33,13 @@ public abstract class ResumeProcessNode extends AbstractNodeWithImage {
     @Specialization
     protected final void executeResume(final VirtualFrame frame, final AbstractSqueakObject newProcess) {
         final AbstractSqueakObject activeProcess = getActiveProcessNode.executeGet();
-        final long activePriority = (long) at0Node.execute(activeProcess, PROCESS.PRIORITY);
-        final long newPriority = (long) at0Node.execute(newProcess, PROCESS.PRIORITY);
+        final long activePriority = (long) at0Node.execute(frame, activeProcess, PROCESS.PRIORITY);
+        final long newPriority = (long) at0Node.execute(frame, newProcess, PROCESS.PRIORITY);
         if (newPriority > activePriority) {
-            putToSleepNode.executePutToSleep(activeProcess);
+            putToSleepNode.executePutToSleep(frame, activeProcess);
             transferToNode.executeTransferTo(frame, activeProcess, newProcess);
         } else {
-            putToSleepNode.executePutToSleep(newProcess);
+            putToSleepNode.executePutToSleep(frame, newProcess);
         }
     }
 

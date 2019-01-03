@@ -3,9 +3,12 @@ package de.hpi.swa.graal.squeak.model;
 import com.oracle.truffle.api.Assumption;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.Truffle;
+import com.oracle.truffle.api.frame.Frame;
+import com.oracle.truffle.api.frame.FrameInstance;
+import com.oracle.truffle.api.frame.FrameInstanceVisitor;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.utilities.CyclicAssumption;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
@@ -13,6 +16,7 @@ import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.BLOCK_CLOSURE;
 import de.hpi.swa.graal.squeak.nodes.EnterCodeNode;
+import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public final class BlockClosureObject extends AbstractSqueakObject {
     @CompilationFinal private Object receiver;
@@ -192,17 +196,50 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         return block;
     }
 
-    @TruffleBoundary
-    public ContextObject getHomeContext() {
+    public ContextObject getHomeContext(final VirtualFrame frame) {
         if (outerContext.isTerminated()) {
             throw new SqueakException("BlockCannotReturnError");
         }
-        // recursively unpack closures until home context is reached
-        final BlockClosureObject closure = outerContext.getClosure();
-        if (closure != null) {
-            return closure.getHomeContext();
+        if (outerContext.isFullyVirtualized()) {
+            final BlockClosureObject closure = FrameAccess.getClosure(frame);
+            if (closure != null) {
+                return Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<ContextObject>() {
+                    boolean foundMyself = false;
+
+                    public ContextObject visitFrame(final FrameInstance frameInstance) {
+                        final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                        if (!FrameAccess.isGraalSqueakFrame(current)) {
+                            return null;
+                        }
+                        if (foundMyself) {
+                            final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+                            if (contextOrMarker instanceof FrameMarker) {
+                                image.printToStdErr("Materializing...");
+                                final CompiledCodeObject method = (CompiledCodeObject) current.getArguments()[FrameAccess.METHOD];
+                                final ContextObject context = ContextObject.create(method.image, method.sqContextSize(), current.materialize(), (FrameMarker) contextOrMarker);
+                                current.setObject(method.thisContextOrMarkerSlot, context);
+                                return context;
+                            } else {
+                                return (ContextObject) contextOrMarker;
+                            }
+                        } else if (current == frame) {
+                            foundMyself = true;
+                        }
+                        return null;
+                    }
+                });
+            } else {
+                return outerContext;
+            }
+        } else {
+            // recursively unpack closures until home context is reached
+            final BlockClosureObject closure = outerContext.getClosure();
+            if (closure != null) {
+                return closure.getHomeContext(frame);
+            } else {
+                return outerContext;
+            }
         }
-        return outerContext;
     }
 
     public ContextObject getOuterContext() {

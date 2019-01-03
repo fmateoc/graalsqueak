@@ -39,6 +39,9 @@ public abstract class MaterializeContextOnMethodExitNode extends AbstractNodeWit
                     @Cached("create()") final SetSenderNode setSenderNode) {
         final ContextObject context = getOrCreateContextNode.executeGet(frame);
         if (context != lastSeenContext) {
+            if (!context.hasTruffleFrame()) {
+                context.setTruffleFrame(frame.materialize());
+            }
             setSenderNode.execute(lastSeenContext, context);
             if (context.hasEscaped()) {
                 // Materialization needs to continue in parent frame.

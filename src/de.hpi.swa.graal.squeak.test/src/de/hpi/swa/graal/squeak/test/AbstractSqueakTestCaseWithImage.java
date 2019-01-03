@@ -246,7 +246,7 @@ public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
         final SqueakObjectSizeNode sizeNode = SqueakObjectSizeNode.create();
         final SqueakObjectAt0Node at0Node = SqueakObjectAt0Node.create();
         for (int i = 0; i < sizeNode.execute(array); i++) {
-            final AbstractSqueakObject value = (AbstractSqueakObject) at0Node.execute(array, i);
+            final AbstractSqueakObject value = (AbstractSqueakObject) at0Node.execute(null, array, i);
             assert value != image.nil;
             output.add(((PointersObject) value).at0(0) + suffix);
         }

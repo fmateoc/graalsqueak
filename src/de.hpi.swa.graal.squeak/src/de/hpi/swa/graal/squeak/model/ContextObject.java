@@ -8,6 +8,7 @@ import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameUtil;
 import com.oracle.truffle.api.frame.MaterializedFrame;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.source.Source;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
@@ -18,8 +19,8 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
 public final class ContextObject extends AbstractPointersObject {
-    private final MaterializedFrame truffleFrame;
-    private final FrameMarker frameMarker;
+    private MaterializedFrame truffleFrame;
+    private FrameMarker frameMarker;
     private boolean hasModifiedSender = false;
     private boolean isDirty = false;
     private boolean escaped = false;
@@ -65,6 +66,15 @@ public final class ContextObject extends AbstractPointersObject {
         truffleFrame = original.truffleFrame;
         frameMarker = original.frameMarker;
         hasModifiedSender = original.hasModifiedSender;
+    }
+
+    public boolean isFullyVirtualized() {
+        return truffleFrame == null && !isDirty;
+    }
+
+    public boolean isMatchingFrame(final VirtualFrame frame) {
+        final Object contextOrMarker = FrameAccess.getContextOrMarker(frame);
+        return this == contextOrMarker || frameMarker == contextOrMarker;
     }
 
     private void initializePointers(final int size) {
@@ -236,7 +246,7 @@ public final class ContextObject extends AbstractPointersObject {
         return actualSender;
     }
 
-    private static ContextObject getOrCreateContextFor(final MaterializedFrame frame) {
+    public static ContextObject getOrCreateContextFor(final MaterializedFrame frame) {
         final Object contextOrMarker = FrameAccess.getContextOrMarker(frame);
         if (contextOrMarker instanceof FrameMarker) {
             final CompiledCodeObject method = (CompiledCodeObject) frame.getArguments()[FrameAccess.METHOD];
@@ -404,6 +414,19 @@ public final class ContextObject extends AbstractPointersObject {
 
     public MaterializedFrame getTruffleFrame() {
         return truffleFrame;
+    }
+
+    public void setTruffleFrame(final MaterializedFrame frame) {
+        truffleFrame = frame;
+    }
+
+    public void findAndSetTruffleFrame() {
+        assert frameMarker != null;
+        final Frame frame = FrameAccess.findFrameForMarker(frameMarker);
+        if (frame == null) {
+            throw new SqueakException("Unable to find frame for marker:", frameMarker);
+        }
+        truffleFrame = frame.materialize();
     }
 
     public boolean hasTruffleFrame() {

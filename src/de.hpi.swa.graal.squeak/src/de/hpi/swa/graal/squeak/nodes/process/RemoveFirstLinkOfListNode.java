@@ -2,6 +2,7 @@ package de.hpi.swa.graal.squeak.nodes.process;
 
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
@@ -24,20 +25,20 @@ public abstract class RemoveFirstLinkOfListNode extends AbstractNodeWithImage {
         super(image);
     }
 
-    public abstract Object executeRemove(Object list);
+    public abstract Object executeRemove(VirtualFrame frame, Object list);
 
     @Specialization
-    protected final Object executeRemove(final AbstractSqueakObject list) {
+    protected final Object executeRemove(final VirtualFrame frame, final AbstractSqueakObject list) {
         // Remove the first process from the given linked list.
-        final Object first = at0Node.execute(list, LINKED_LIST.FIRST_LINK);
-        final Object last = at0Node.execute(list, LINKED_LIST.LAST_LINK);
+        final Object first = at0Node.execute(frame, list, LINKED_LIST.FIRST_LINK);
+        final Object last = at0Node.execute(frame, list, LINKED_LIST.LAST_LINK);
         if (first == last) {
-            atPut0Node.execute(list, LINKED_LIST.FIRST_LINK, image.nil);
-            atPut0Node.execute(list, LINKED_LIST.LAST_LINK, image.nil);
+            atPut0Node.execute(frame, list, LINKED_LIST.FIRST_LINK, image.nil);
+            atPut0Node.execute(frame, list, LINKED_LIST.LAST_LINK, image.nil);
         } else {
-            atPut0Node.execute(list, LINKED_LIST.FIRST_LINK, at0Node.execute(first, PROCESS.NEXT_LINK));
+            atPut0Node.execute(frame, list, LINKED_LIST.FIRST_LINK, at0Node.execute(frame, first, PROCESS.NEXT_LINK));
         }
-        atPut0Node.execute(first, PROCESS.NEXT_LINK, image.nil);
+        atPut0Node.execute(frame, first, PROCESS.NEXT_LINK, image.nil);
         return first;
     }
 

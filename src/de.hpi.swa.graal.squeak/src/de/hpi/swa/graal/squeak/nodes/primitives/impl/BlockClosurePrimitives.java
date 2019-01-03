@@ -222,6 +222,9 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         protected final Object findNext(final ContextObject receiver) {
             ContextObject context = receiver;
             while (true) {
+                if (context.isFullyVirtualized()) {
+                    return findNextVirtualized(context);
+                }
                 if (context.getMethod().isExceptionHandlerMarked()) {
                     return context;
                 }

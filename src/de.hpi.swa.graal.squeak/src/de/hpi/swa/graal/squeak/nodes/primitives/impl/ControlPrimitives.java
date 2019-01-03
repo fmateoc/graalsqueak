@@ -268,7 +268,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         @Specialization(guards = {"receiver.isSemaphore()", "!hasExcessSignals(receiver)"})
         protected final AbstractSqueakObject doWait(final VirtualFrame frame, final PointersObject receiver) {
             pushNode.executeWrite(frame, receiver); // keep receiver on stack
-            linkProcessToListNode.executeLink(getActiveProcessNode.executeGet(), receiver);
+            linkProcessToListNode.executeLink(frame, getActiveProcessNode.executeGet(), receiver);
             wakeHighestPriorityNode.executeWake(frame);
             throw new PrimitiveWithoutResultException();
         }
@@ -317,14 +317,14 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "receiver != getActiveProcessNode.executeGet()")
-        protected final Object doSuspendOtherProcess(final PointersObject receiver,
+        protected final Object doSuspendOtherProcess(final VirtualFrame frame, final PointersObject receiver,
                         @Cached("create()") final SqueakObjectAt0Node at0Node,
                         @Cached("create(code.image)") final RemoveProcessFromListNode removeProcessNode) {
-            final Object oldList = at0Node.execute(receiver, PROCESS.LIST);
+            final Object oldList = at0Node.execute(frame, receiver, PROCESS.LIST);
             if (oldList == code.image.nil) {
                 throw new PrimitiveFailed(ERROR_TABLE.BAD_RECEIVER);
             }
-            removeProcessNode.executeRemove(receiver, oldList);
+            removeProcessNode.executeRemove(frame, receiver, oldList);
             receiver.atput0(PROCESS.LIST, code.image.nil);
             return oldList;
         }
@@ -880,19 +880,19 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             isEmptyListNode = IsEmptyListNode.create(method.image);
         }
 
-        @Specialization(guards = "isEmptyListNode.executeIsEmpty(mutex)")
-        protected final Object doExitEmpty(final PointersObject mutex) {
+        @Specialization(guards = "isEmptyListNode.executeIsEmpty(frame,mutex)")
+        protected final Object doExitEmpty(final VirtualFrame frame, final PointersObject mutex) {
             mutex.atput0(MUTEX.OWNER, code.image.nil);
             return mutex;
         }
 
-        @Specialization(guards = "!isEmptyListNode.executeIsEmpty(mutex)")
+        @Specialization(guards = "!isEmptyListNode.executeIsEmpty(frame, mutex)")
         protected static final Object doExitNonEmpty(final VirtualFrame frame, final PointersObject mutex,
                         @Cached("create()") final StackPushForPrimitivesNode pushNode,
                         @Cached("create(code.image)") final RemoveFirstLinkOfListNode removeFirstLinkOfListNode,
                         @Cached("create(code)") final ResumeProcessNode resumeProcessNode) {
             pushNode.executeWrite(frame, mutex); // keep receiver on stack
-            final Object owningProcess = removeFirstLinkOfListNode.executeRemove(mutex);
+            final Object owningProcess = removeFirstLinkOfListNode.executeRemove(frame, mutex);
             mutex.atput0(MUTEX.OWNER, owningProcess);
             resumeProcessNode.executeResume(frame, owningProcess);
             throw new PrimitiveWithoutResultException();
@@ -925,7 +925,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         @Specialization(guards = {"!ownerIsNil(mutex)", "!activeProcessMutexOwner(mutex)"})
         protected final Object doEnter(final VirtualFrame frame, final PointersObject mutex, @SuppressWarnings("unused") final NotProvided notProvided) {
             getPushNode().executeWrite(frame, code.image.sqFalse);
-            getLinkProcessToListNode().executeLink(getGetActiveProcessNode().executeGet(), mutex);
+            getLinkProcessToListNode().executeLink(frame, getGetActiveProcessNode().executeGet(), mutex);
             getWakeHighestPriorityNode().executeWake(frame);
             throw new PrimitiveWithoutResultException();
         }
@@ -945,7 +945,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         @Specialization(guards = {"!ownerIsNil(mutex)", "!isMutexOwner(mutex, effectiveProcess)"})
         protected final Object doEnter(final VirtualFrame frame, final PointersObject mutex, @SuppressWarnings("unused") final PointersObject effectiveProcess) {
             getPushNode().executeWrite(frame, code.image.sqFalse);
-            getLinkProcessToListNode().executeLink(effectiveProcess, mutex);
+            getLinkProcessToListNode().executeLink(frame, effectiveProcess, mutex);
             getWakeHighestPriorityNode().executeWake(frame);
             throw new PrimitiveWithoutResultException();
         }
@@ -1264,7 +1264,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
 
         @Specialization
         protected final Object receiverVariable(final VirtualFrame frame) {
-            return at0Node.execute(receiverNode.executeRead(frame), variableIndex);
+            return at0Node.execute(frame, receiverNode.executeRead(frame), variableIndex);
         }
     }
 }

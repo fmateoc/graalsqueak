@@ -328,13 +328,13 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "inBounds(index, receiver)")
-        protected final Object doAt(final AbstractSqueakObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided) {
-            return at0Node.execute(receiver, index - 1);
+        protected final Object doAt(final VirtualFrame frame, final AbstractSqueakObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided) {
+            return at0Node.execute(frame, receiver, index - 1);
         }
 
         @Specialization(guards = "inBounds(index, target)") // Context>>#object:instVarAt:
-        protected final Object doAt(@SuppressWarnings("unused") final Object receiver, final AbstractSqueakObject target, final long index) {
-            return at0Node.execute(target, index - 1);
+        protected final Object doAt(final VirtualFrame frame, @SuppressWarnings("unused") final Object receiver, final AbstractSqueakObject target, final long index) {
+            return at0Node.execute(frame, target, index - 1);
         }
     }
 
@@ -348,14 +348,15 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "inBounds(index, receiver)")
-        protected final Object doAtPut(final AbstractSqueakObject receiver, final long index, final Object value, @SuppressWarnings("unused") final NotProvided notProvided) {
-            atPut0Node.execute(receiver, index - 1, value);
+        protected final Object doAtPut(final VirtualFrame frame, final AbstractSqueakObject receiver, final long index, final Object value, @SuppressWarnings("unused") final NotProvided notProvided) {
+            atPut0Node.execute(frame, receiver, index - 1, value);
             return value;
         }
 
         @Specialization(guards = "inBounds(index, target)") // Context>>#object:instVarAt:put:
-        protected final Object doAtPut(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final AbstractSqueakObject target, final long index, final Object value) {
-            atPut0Node.execute(target, index - 1, value);
+        protected final Object doAtPut(final VirtualFrame frame, @SuppressWarnings("unused") final AbstractSqueakObject receiver, final AbstractSqueakObject target, final long index,
+                        final Object value) {
+            atPut0Node.execute(frame, target, index - 1, value);
             return value;
         }
     }
@@ -605,8 +606,8 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "inBounds1(index, sizeNode.execute(receiver))")
-        protected final Object doSlotAt(final AbstractSqueakObject receiver, final long index) {
-            return at0Node.execute(receiver, index - 1);
+        protected final Object doSlotAt(final VirtualFrame frame, final AbstractSqueakObject receiver, final long index) {
+            return at0Node.execute(frame, receiver, index - 1);
         }
     }
 
@@ -621,8 +622,8 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "inBounds1(index, sizeNode.execute(receiver))")
-        protected final Object doSlotAtPut(final AbstractSqueakObject receiver, final long index, final Object value) {
-            atPut0Node.execute(receiver, index - 1, value);
+        protected final Object doSlotAtPut(final VirtualFrame frame, final AbstractSqueakObject receiver, final long index, final Object value) {
+            atPut0Node.execute(frame, receiver, index - 1, value);
             return value;
         }
     }

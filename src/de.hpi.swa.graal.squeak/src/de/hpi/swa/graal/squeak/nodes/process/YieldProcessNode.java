@@ -32,8 +32,8 @@ public final class YieldProcessNode extends AbstractNodeWithImage {
         final long priority = (long) activeProcess.at0(PROCESS.PRIORITY);
         final ArrayObject processLists = (ArrayObject) scheduler.at0(PROCESS_SCHEDULER.PROCESS_LISTS);
         final PointersObject processList = (PointersObject) processLists.at0Object(priority - 1);
-        if (!isEmptyListNode.executeIsEmpty(processList)) {
-            linkProcessToListNode.executeLink(activeProcess, processList);
+        if (!isEmptyListNode.executeIsEmpty(frame, processList)) {
+            linkProcessToListNode.executeLink(frame, activeProcess, processList);
             wakeHighestPriorityNode.executeWake(frame);
         }
     }

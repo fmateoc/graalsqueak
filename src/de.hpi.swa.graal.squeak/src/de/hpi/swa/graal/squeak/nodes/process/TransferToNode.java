@@ -40,9 +40,9 @@ public abstract class TransferToNode extends AbstractNodeWithImage {
         final PointersObject scheduler = image.getScheduler();
         assert newProcess != scheduler.at0(PROCESS_SCHEDULER.ACTIVE_PROCESS) : "trying to switch to already active process";
         scheduler.atput0(PROCESS_SCHEDULER.ACTIVE_PROCESS, newProcess);
-        atPut0Node.execute(activeProcess, PROCESS.SUSPENDED_CONTEXT, activeContext);
-        final ContextObject newActiveContext = (ContextObject) at0Node.execute(newProcess, PROCESS.SUSPENDED_CONTEXT);
-        atPut0Node.execute(newProcess, PROCESS.SUSPENDED_CONTEXT, image.nil);
+        atPut0Node.execute(frame, activeProcess, PROCESS.SUSPENDED_CONTEXT, activeContext);
+        final ContextObject newActiveContext = (ContextObject) at0Node.execute(frame, newProcess, PROCESS.SUSPENDED_CONTEXT);
+        atPut0Node.execute(frame, newProcess, PROCESS.SUSPENDED_CONTEXT, image.nil);
         throw new ProcessSwitch(newActiveContext);
     }
 

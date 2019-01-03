@@ -15,6 +15,7 @@ import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
@@ -597,12 +598,12 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
         @Specialization(guards = {"receiver.getSqueakClass() == anotherObject.getSqueakClass()",
                         "!isNativeObject(receiver)", "!isPointersObject(receiver)", "!isContextObject(receiver)",
                         "sizeNode.execute(receiver) == sizeNode.execute(anotherObject)"}, limit = "1")
-        protected static final Object doCopy(final AbstractSqueakObject receiver, final AbstractSqueakObject anotherObject,
+        protected static final Object doCopy(final VirtualFrame frame, final AbstractSqueakObject receiver, final AbstractSqueakObject anotherObject,
                         @Cached("create()") final SqueakObjectSizeNode sizeNode,
                         @Cached("create()") final SqueakObjectAtPut0Node atput0Node,
                         @Cached("create()") final SqueakObjectAt0Node at0Node) {
             for (int i = 0; i < sizeNode.execute(receiver); i++) {
-                atput0Node.execute(receiver, i, at0Node.execute(anotherObject, i));
+                atput0Node.execute(frame, receiver, i, at0Node.execute(frame, anotherObject, i));
             }
             return receiver;
         }

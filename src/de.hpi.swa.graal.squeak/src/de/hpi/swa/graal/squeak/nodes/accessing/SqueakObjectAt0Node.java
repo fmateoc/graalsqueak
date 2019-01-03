@@ -3,6 +3,7 @@ package de.hpi.swa.graal.squeak.nodes.accessing;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.Node;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
@@ -14,6 +15,7 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.EmptyObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
@@ -21,6 +23,7 @@ import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ReadArrayObjectNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ReadClassObjectNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.ReadNativeObjectNode;
 
 public abstract class SqueakObjectAt0Node extends Node {
@@ -29,7 +32,7 @@ public abstract class SqueakObjectAt0Node extends Node {
         return SqueakObjectAt0NodeGen.create();
     }
 
-    public abstract Object execute(Object obj, long index);
+    public abstract Object execute(VirtualFrame frame, Object obj, long index);
 
     @Specialization
     protected static final Object doArray(final ArrayObject obj, final long index,
@@ -45,6 +48,12 @@ public abstract class SqueakObjectAt0Node extends Node {
     @Specialization
     protected static final Object doContext(final ContextObject obj, final long index) {
         return obj.at0(index);
+    }
+
+    @Specialization
+    protected static final Object doContextVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index,
+                    @Cached("create()") final ContextObjectReadNode readNode) {
+        return readNode.execute(frame, obj, index);
     }
 
     @Specialization

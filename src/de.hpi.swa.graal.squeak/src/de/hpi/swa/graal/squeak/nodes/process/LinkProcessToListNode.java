@@ -2,6 +2,7 @@ package de.hpi.swa.graal.squeak.nodes.process;
 
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
@@ -25,22 +26,22 @@ public abstract class LinkProcessToListNode extends AbstractNodeWithCode {
         isEmptyListNode = IsEmptyListNode.create(code.image);
     }
 
-    public abstract void executeLink(Object process, Object list);
+    public abstract void executeLink(VirtualFrame frame, Object process, Object list);
 
-    @Specialization(guards = "isEmptyListNode.executeIsEmpty(list)")
-    protected void doLinkEmptyList(final AbstractSqueakObject process, final PointersObject list) {
+    @Specialization(guards = "isEmptyListNode.executeIsEmpty(frame, list)")
+    protected void doLinkEmptyList(final VirtualFrame frame, final AbstractSqueakObject process, final PointersObject list) {
         // Add the given process to the given linked list and set the backpointer
         // of process to its new list.
         list.atput0(LINKED_LIST.FIRST_LINK, process);
         list.atput0(LINKED_LIST.LAST_LINK, process);
-        atPut0Node.execute(process, PROCESS.LIST, list);
+        atPut0Node.execute(frame, process, PROCESS.LIST, list);
     }
 
-    @Specialization(guards = "!isEmptyListNode.executeIsEmpty(list)")
-    protected void doLinkNotEmptyList(final AbstractSqueakObject process, final PointersObject list) {
-        atPut0Node.execute(list.at0(LINKED_LIST.LAST_LINK), PROCESS.NEXT_LINK, process);
+    @Specialization(guards = "!isEmptyListNode.executeIsEmpty(frame, list)")
+    protected void doLinkNotEmptyList(final VirtualFrame frame, final AbstractSqueakObject process, final PointersObject list) {
+        atPut0Node.execute(frame, list.at0(LINKED_LIST.LAST_LINK), PROCESS.NEXT_LINK, process);
         list.atput0(LINKED_LIST.LAST_LINK, process);
-        atPut0Node.execute(process, PROCESS.LIST, list);
+        atPut0Node.execute(frame, process, PROCESS.LIST, list);
     }
 
     @Fallback

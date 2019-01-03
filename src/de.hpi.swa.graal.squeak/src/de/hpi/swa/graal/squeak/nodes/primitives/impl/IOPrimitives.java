@@ -274,13 +274,13 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"startIndex > 0", "stopIndex > 0", "sourceString.isByteType()", "receiver.size() >= 4", "sizeNode.execute(stops) >= 258"})
-        protected final Object doScan(final PointersObject receiver, final long startIndex, final long stopIndex, final NativeObject sourceString, final long rightX,
+        protected final Object doScan(final VirtualFrame frame, final PointersObject receiver, final long startIndex, final long stopIndex, final NativeObject sourceString, final long rightX,
                         final ArrayObject stops, final long kernData,
                         @Cached("createScanCharactersHelperNode()") final ScanCharactersHelperNode scanNode) {
-            final Object scanDestX = at0Node.execute(receiver, CHARACTER_SCANNER.DEST_X);
-            final Object scanXTable = at0Node.execute(receiver, CHARACTER_SCANNER.XTABLE);
-            final Object scanMap = at0Node.execute(receiver, CHARACTER_SCANNER.MAP);
-            return scanNode.executeScan(receiver, startIndex, stopIndex, sourceString.getByteStorage(), rightX, stops, kernData, scanDestX, scanXTable, scanMap);
+            final Object scanDestX = at0Node.execute(frame, receiver, CHARACTER_SCANNER.DEST_X);
+            final Object scanXTable = at0Node.execute(frame, receiver, CHARACTER_SCANNER.XTABLE);
+            final Object scanMap = at0Node.execute(frame, receiver, CHARACTER_SCANNER.MAP);
+            return scanNode.executeScan(frame, receiver, startIndex, stopIndex, sourceString.getByteStorage(), rightX, stops, kernData, scanDestX, scanXTable, scanMap);
         }
 
         protected final ScanCharactersHelperNode createScanCharactersHelperNode() {
@@ -299,7 +299,7 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
                 return ScanCharactersHelperNodeGen.create(image);
             }
 
-            protected abstract Object executeScan(PointersObject receiver, long startIndex, long stopIndex, byte[] sourceBytes, long rightX, ArrayObject stops, long kernData,
+            protected abstract Object executeScan(VirtualFrame frame, PointersObject receiver, long startIndex, long stopIndex, byte[] sourceBytes, long rightX, ArrayObject stops, long kernData,
                             Object scanDestX, Object scanXTable, Object scanMap);
 
             protected ScanCharactersHelperNode(final SqueakImageContext image) {
@@ -307,7 +307,8 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
             }
 
             @Specialization(guards = {"sizeNode.execute(scanMap) == 256", "stopIndex <= sourceBytes.length"})
-            protected final Object doScan(final PointersObject receiver, final long startIndex, final long stopIndex, final byte[] sourceBytes, final long rightX, final ArrayObject stops,
+            protected final Object doScan(final VirtualFrame frame, final PointersObject receiver, final long startIndex, final long stopIndex, final byte[] sourceBytes, final long rightX,
+                            final ArrayObject stops,
                             final long kernData, final long startScanDestX, final ArrayObject scanXTable, final ArrayObject scanMap) {
                 final int maxGlyph = sizeNode.execute(scanXTable) - 2;
                 long scanDestX = startScanDestX;
@@ -316,7 +317,7 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
                     final long ascii = (sourceBytes[(int) (scanLastIndex - 1)] & 0xFF);
                     final Object stopReason = readNode.execute(stops, ascii);
                     if (stopReason != image.nil) {
-                        storeStateInReceiver(receiver, scanDestX, scanLastIndex);
+                        storeStateInReceiver(frame, receiver, scanDestX, scanLastIndex);
                         return stopReason;
                     }
                     if (ascii < 0 || sizeNode.execute(scanMap) <= ascii) {
@@ -336,13 +337,13 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
                     }
                     final long nextDestX = scanDestX + sourceX2 - sourceX1;
                     if (nextDestX > rightX) {
-                        storeStateInReceiver(receiver, scanDestX, scanLastIndex);
+                        storeStateInReceiver(frame, receiver, scanDestX, scanLastIndex);
                         return readNode.execute(stops, CROSSED_X);
                     }
                     scanDestX = nextDestX + kernData;
                     scanLastIndex++;
                 }
-                storeStateInReceiver(receiver, scanDestX, stopIndex);
+                storeStateInReceiver(frame, receiver, scanDestX, stopIndex);
                 return readNode.execute(stops, END_OF_RUN);
             }
 
@@ -353,9 +354,9 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
                 throw new PrimitiveFailed();
             }
 
-            private void storeStateInReceiver(final PointersObject receiver, final long scanDestX, final long scanLastIndex) {
-                atPut0Node.execute(receiver, 0, scanDestX);
-                atPut0Node.execute(receiver, 1, scanLastIndex);
+            private void storeStateInReceiver(final VirtualFrame frame, final PointersObject receiver, final long scanDestX, final long scanLastIndex) {
+                atPut0Node.execute(frame, receiver, 0, scanDestX);
+                atPut0Node.execute(frame, receiver, 1, scanLastIndex);
             }
         }
     }

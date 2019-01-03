@@ -8,6 +8,7 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.EmptyObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
@@ -74,6 +75,10 @@ public final class SqueakGuards {
 
     public static boolean isFloatObject(final Object object) {
         return object instanceof FloatObject;
+    }
+
+    public static boolean isFrameMarker(final Object object) {
+        return object instanceof FrameMarker;
     }
 
     public static boolean isIntegralWhenDividedBy(final long a, final long b) {

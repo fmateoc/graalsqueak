@@ -481,7 +481,7 @@ public class SqueakBytecodeTest extends AbstractSqueakTestCaseWithDummyImage {
         resultList = ((ArrayObject) result);
         assertEquals(arraySize, sizeNode.execute(resultList));
         for (int i = 0; i < arraySize; i++) {
-            assertEquals(i % 2 == 0 ? image.sqTrue : image.sqFalse, at0Node.execute(resultList, i));
+            assertEquals(i % 2 == 0 ? image.sqTrue : image.sqFalse, at0Node.execute(null, resultList, i));
         }
     }
 
@@ -534,8 +534,8 @@ public class SqueakBytecodeTest extends AbstractSqueakTestCaseWithDummyImage {
             assertTrue(result instanceof ArrayObject);
             final ArrayObject resultList = ((ArrayObject) result);
             assertEquals(2, sizeNode.execute(resultList));
-            assertEquals(image.sqFalse, at0Node.execute(resultList, 0));
-            assertEquals(image.sqFalse, at0Node.execute(resultList, 1));
+            assertEquals(image.sqFalse, at0Node.execute(frame, resultList, 0));
+            assertEquals(image.sqFalse, at0Node.execute(frame, resultList, 1));
         } catch (NonLocalReturn | NonVirtualReturn | ProcessSwitch e) {
             fail("broken test");
         }
@@ -559,8 +559,8 @@ public class SqueakBytecodeTest extends AbstractSqueakTestCaseWithDummyImage {
             assertTrue(result instanceof ArrayObject);
             final ArrayObject resultList = ((ArrayObject) result);
             assertEquals(2, sizeNode.execute(resultList));
-            assertEquals(image.sqFalse, at0Node.execute(resultList, 0));
-            assertEquals(image.sqTrue, at0Node.execute(resultList, 1));
+            assertEquals(image.sqFalse, at0Node.execute(frame, resultList, 0));
+            assertEquals(image.sqTrue, at0Node.execute(frame, resultList, 1));
         } catch (NonLocalReturn | NonVirtualReturn | ProcessSwitch e) {
             fail("broken test");
         }

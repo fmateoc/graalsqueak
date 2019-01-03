@@ -41,14 +41,14 @@ public abstract class SqueakObjectAtPutAndMarkContextsNode extends Node {
     public abstract void executeWrite(VirtualFrame frame);
 
     @Specialization(guards = {"!isNativeObject(object)"})
-    protected final void doContext(final AbstractSqueakObject object, final ContextObject value) {
+    protected final void doContext(final VirtualFrame frame, final AbstractSqueakObject object, final ContextObject value) {
         value.markEscaped();
-        atPut0Node.execute(object, index, value);
+        atPut0Node.execute(frame, object, index, value);
     }
 
     @Specialization(guards = {"!isNativeObject(object)", "!isContextObject(value)"})
-    protected final void doSqueakObject(final AbstractSqueakObject object, final Object value) {
-        atPut0Node.execute(object, index, value);
+    protected final void doSqueakObject(final VirtualFrame frame, final AbstractSqueakObject object, final Object value) {
+        atPut0Node.execute(frame, object, index, value);
     }
 
     @Fallback

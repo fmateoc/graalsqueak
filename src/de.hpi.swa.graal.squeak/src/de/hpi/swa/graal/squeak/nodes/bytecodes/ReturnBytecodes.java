@@ -65,7 +65,7 @@ public final class ReturnBytecodes {
 
         @Specialization(guards = {"closure != null"})
         protected final void doNonLocalReturn(final VirtualFrame frame, final BlockClosureObject closure) {
-            throw new NonLocalReturn(getReturnValue(frame), closure.getHomeContext());
+            throw new NonLocalReturn(getReturnValue(frame), closure.getHomeContext(frame));
         }
 
         @Fallback
@@ -152,7 +152,7 @@ public final class ReturnBytecodes {
 
         @Specialization(guards = {"closure != null", "!isVirtualized(frame)", "hasModifiedSender(frame)"})
         protected final void doNonLocalReturn(final VirtualFrame frame, final BlockClosureObject closure) {
-            throw new NonLocalReturn(getReturnValue(frame), closure.getHomeContext());
+            throw new NonLocalReturn(getReturnValue(frame), closure.getHomeContext(frame));
         }
 
         @Fallback

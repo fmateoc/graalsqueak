@@ -3,10 +3,12 @@ package de.hpi.swa.graal.squeak.nodes.primitives.impl;
 import java.util.List;
 
 import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
@@ -17,13 +19,17 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.EmptyObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
+import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ReadArrayObjectNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.WriteArrayObjectNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeAcceptsValueNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.ReadNativeObjectNode;
@@ -40,6 +46,7 @@ import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.QuaternaryPr
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.TernaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.UnaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
+import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder {
 
@@ -129,8 +136,8 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
 
         @Specialization(guards = {"inBoundsOfSqueakObject(index, receiver)",
                         "!isNativeObject(receiver)", "!isLargeIntegerObject(receiver)", "!isFloatObject(receiver)", "!isArrayObject(receiver)"})
-        protected final Object doSqueakObject(final AbstractSqueakObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided) {
-            return getAt0Node().execute(receiver, index - 1 + instSizeNode.execute(receiver));
+        protected final Object doSqueakObject(final VirtualFrame frame, final AbstractSqueakObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided) {
+            return getAt0Node().execute(frame, receiver, index - 1 + instSizeNode.execute(receiver));
         }
 
         /*
@@ -183,8 +190,8 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
 
         @Specialization(guards = {"inBoundsOfSqueakObject(index, target)",
                         "!isNativeObject(target)", "!isLargeIntegerObject(target)", "!isFloatObject(target)", "!isArrayObject(target)"})
-        protected final Object doSqueakObject(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final AbstractSqueakObject target, final long index) {
-            return getAt0Node().execute(target, index - 1 + getInstSizeNode().execute(target));
+        protected final Object doSqueakObject(final VirtualFrame frame, @SuppressWarnings("unused") final AbstractSqueakObject receiver, final AbstractSqueakObject target, final long index) {
+            return getAt0Node().execute(frame, target, index - 1 + getInstSizeNode().execute(target));
         }
 
         private SqueakObjectAt0Node getAt0Node() {
@@ -333,8 +340,9 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
 
         @Specialization(guards = {"inBoundsOfSqueakObject(index, receiver)",
                         "!isNativeObject(receiver)", "!isEmptyObject(receiver)", "!isArrayObject(receiver)"})
-        protected final Object doSqueakObject(final AbstractSqueakObject receiver, final long index, final Object value, @SuppressWarnings("unused") final NotProvided notProvided) {
-            getAtPut0Node().execute(receiver, index - 1 + getInstSizeNode().execute(receiver), value);
+        protected final Object doSqueakObject(final VirtualFrame frame, final AbstractSqueakObject receiver, final long index, final Object value,
+                        @SuppressWarnings("unused") final NotProvided notProvided) {
+            getAtPut0Node().execute(frame, receiver, index - 1 + getInstSizeNode().execute(receiver), value);
             return value;
         }
 
@@ -440,8 +448,9 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
 
         @Specialization(guards = {"inBoundsOfSqueakObject(index, target)",
                         "!isNativeObject(target)", "!isEmptyObject(target)", "!isArrayObject(target)"})
-        protected Object doSqueakObject(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final AbstractSqueakObject target, final long index, final Object value) {
-            getAtPut0Node().execute(target, index - 1 + getInstSizeNode().execute(target), value);
+        protected Object doSqueakObject(final VirtualFrame frame, @SuppressWarnings("unused") final AbstractSqueakObject receiver, final AbstractSqueakObject target, final long index,
+                        final Object value) {
+            getAtPut0Node().execute(frame, target, index - 1 + getInstSizeNode().execute(target), value);
             return value;
         }
 
@@ -829,6 +838,7 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         }
     }
 
+    @ImportStatic(FrameAccess.class)
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 210)
     protected abstract static class PrimContextAtNode extends AbstractPrimitiveNode implements BinaryPrimitive {
@@ -836,16 +846,22 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
             super(method);
         }
 
-        @Specialization(guards = "index < receiver.getStackSize()")
+        @Specialization(guards = {"index < receiver.getStackSize()"})
         protected static final Object doContextObject(final ContextObject receiver, final long index) {
             return receiver.atTemp(index - 1);
         }
+
+        @Specialization(guards = {"index < getMethod(frame).sqContextSize()"})
+        protected static final Object doFrameMarker(final VirtualFrame frame, final FrameMarker receiver, final long index,
+                        @Cached("create()") final ContextObjectReadNode readNode) {
+            return readNode.execute(frame, receiver, CONTEXT.TEMP_FRAME_START + index - 1);
+        }
     }
 
+    @ImportStatic(FrameAccess.class)
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 211)
     protected abstract static class PrimContextAtPutNode extends AbstractPrimitiveNode implements TernaryPrimitive {
-
         protected PrimContextAtPutNode(final CompiledMethodObject method) {
             super(method);
         }
@@ -853,6 +869,13 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         @Specialization(guards = "index < receiver.getStackSize()")
         protected static final Object doContextObject(final ContextObject receiver, final long index, final Object value) {
             receiver.atTempPut(index - 1, value);
+            return value;
+        }
+
+        @Specialization(guards = "index < getMethod(frame).sqContextSize()")
+        protected static final Object doFrameMarker(final VirtualFrame frame, final FrameMarker receiver, final long index, final Object value,
+                        @Cached("create()") final ContextObjectWriteNode writeNode) {
+            writeNode.execute(frame, receiver, CONTEXT.TEMP_FRAME_START + index - 1, value);
             return value;
         }
     }

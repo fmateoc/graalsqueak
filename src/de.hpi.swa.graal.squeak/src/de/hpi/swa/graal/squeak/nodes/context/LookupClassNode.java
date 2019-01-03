@@ -9,6 +9,7 @@ import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.CharacterObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
+import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithImage;
 
@@ -68,7 +69,12 @@ public abstract class LookupClassNode extends AbstractNodeWithImage {
         return value.getSqueakClass();
     }
 
-    @Specialization(guards = "!isAbstractSqueakObject(value)")
+    @Specialization
+    protected final ClassObject doFrameMarker(@SuppressWarnings("unused") final FrameMarker value) {
+        return image.methodContextClass;
+    }
+
+    @Specialization(guards = {"!isAbstractSqueakObject(value)", "!isFrameMarker(value)"})
     protected final ClassObject doTruffleObject(@SuppressWarnings("unused") final TruffleObject value) {
         return image.truffleObjectClass;
     }

@@ -43,10 +43,10 @@ public final class WakeHighestPriorityNode extends AbstractNodeWithImage {
                 errorProfile.enter();
                 throw new SqueakException("scheduler could not find a runnable process");
             }
-            processList = at0Node.execute(schedLists, p--);
-        } while (isEmptyListNode.executeIsEmpty(processList));
+            processList = at0Node.execute(frame, schedLists, p--);
+        } while (isEmptyListNode.executeIsEmpty(frame, processList));
         final PointersObject activeProcess = getActiveProcessNode.executeGet();
-        final Object newProcess = removeFirstLinkOfListNode.executeRemove(processList);
+        final Object newProcess = removeFirstLinkOfListNode.executeRemove(frame, processList);
         transferToNode.executeTransferTo(frame, activeProcess, newProcess);
     }
 }

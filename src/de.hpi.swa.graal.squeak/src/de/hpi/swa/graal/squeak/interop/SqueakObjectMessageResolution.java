@@ -26,8 +26,8 @@ public final class SqueakObjectMessageResolution {
         @Child private SqueakObjectAtPut0Node atput0Node = SqueakObjectAtPut0Node.create();
 
         @SuppressWarnings("unused")
-        protected final Object access(final AbstractSqueakObject receiver, final int index, final Object value) {
-            atput0Node.execute(receiver, index, value);
+        protected final Object access(final VirtualFrame frame, final AbstractSqueakObject receiver, final int index, final Object value) {
+            atput0Node.execute(frame, receiver, index, value);
             return value;
         }
     }
@@ -36,8 +36,8 @@ public final class SqueakObjectMessageResolution {
     public abstract static class SqueakObjectReadNode extends Node {
         @Child private SqueakObjectAt0Node at0Node = SqueakObjectAt0Node.create();
 
-        protected final Object access(final AbstractSqueakObject receiver, final int index) {
-            return at0Node.execute(receiver, index);
+        protected final Object access(final VirtualFrame frame, final AbstractSqueakObject receiver, final int index) {
+            return at0Node.execute(frame, receiver, index);
         }
 
         protected static final Object access(final AbstractSqueakObject receiver, final String identifier) {

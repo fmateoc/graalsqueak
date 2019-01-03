@@ -1,5 +1,7 @@
 package de.hpi.swa.graal.squeak.nodes.process;
 
+import com.oracle.truffle.api.frame.VirtualFrame;
+
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
@@ -20,11 +22,11 @@ public final class PutToSleepNode extends AbstractNodeWithCode {
         linkProcessToList = LinkProcessToListNode.create(code);
     }
 
-    public void executePutToSleep(final AbstractSqueakObject process) {
+    public void executePutToSleep(final VirtualFrame frame, final AbstractSqueakObject process) {
         // Save the given process on the scheduler process list for its priority.
-        final long priority = (long) at0Node.execute(process, PROCESS.PRIORITY);
-        final Object processLists = at0Node.execute(code.image.getScheduler(), PROCESS_SCHEDULER.PROCESS_LISTS);
-        final Object processList = at0Node.execute(processLists, priority - 1);
-        linkProcessToList.executeLink(process, processList);
+        final long priority = (long) at0Node.execute(frame, process, PROCESS.PRIORITY);
+        final Object processLists = at0Node.execute(frame, code.image.getScheduler(), PROCESS_SCHEDULER.PROCESS_LISTS);
+        final Object processList = at0Node.execute(frame, processLists, priority - 1);
+        linkProcessToList.executeLink(frame, process, processList);
     }
 }
