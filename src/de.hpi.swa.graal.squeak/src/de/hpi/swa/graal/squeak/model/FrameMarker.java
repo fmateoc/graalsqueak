@@ -1,6 +1,6 @@
 package de.hpi.swa.graal.squeak.model;
 
-import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.interop.ForeignAccess;
 import com.oracle.truffle.api.interop.TruffleObject;
 
@@ -14,7 +14,7 @@ public final class FrameMarker implements TruffleObject {
         return "FrameMarker@" + Integer.toHexString(System.identityHashCode(this));
     }
 
-    public boolean isMatchingFrame(final VirtualFrame frame) {
+    public boolean isMatchingFrame(final Frame frame) {
         return FrameAccess.getContextOrMarker(frame) == this;
     }
 

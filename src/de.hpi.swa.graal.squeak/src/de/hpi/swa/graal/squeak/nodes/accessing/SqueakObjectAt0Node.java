@@ -1,8 +1,12 @@
 package de.hpi.swa.graal.squeak.nodes.accessing;
 
+import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.Frame;
+import com.oracle.truffle.api.frame.FrameInstance;
+import com.oracle.truffle.api.frame.FrameInstanceVisitor;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.Node;
 
@@ -25,6 +29,7 @@ import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ReadArrayObjectN
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ReadClassObjectNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.ReadNativeObjectNode;
+import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public abstract class SqueakObjectAt0Node extends Node {
 
@@ -50,10 +55,29 @@ public abstract class SqueakObjectAt0Node extends Node {
         return obj.at0(index);
     }
 
-    @Specialization
-    protected static final Object doContextVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index,
+    @Specialization(guards = {"obj.isMatchingFrame(frame)"})
+    protected static final Object doContextVirtualizedMatching(final VirtualFrame frame, final FrameMarker obj, final long index,
                     @Cached("create()") final ContextObjectReadNode readNode) {
         return readNode.execute(frame, obj, index);
+    }
+
+    @Specialization(guards = {"!obj.isMatchingFrame(frame)"})
+    protected static final Object doContextVirtualizedNotMatching(final VirtualFrame frame, final FrameMarker obj, final long index,
+                    @Cached("create()") final ContextObjectReadNode readNode) {
+        return Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
+            @Override
+            public Object visitFrame(final FrameInstance frameInstance) {
+                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                if (!FrameAccess.isGraalSqueakFrame(current)) {
+                    return null;
+                }
+                final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+                if (obj == contextOrMarker) {
+                    return readNode.execute(current, obj, index);
+                }
+                return null;
+            }
+        });
     }
 
     @Specialization

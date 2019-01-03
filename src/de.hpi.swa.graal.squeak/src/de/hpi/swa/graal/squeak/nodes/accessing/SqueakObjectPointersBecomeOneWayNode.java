@@ -31,7 +31,7 @@ public abstract class SqueakObjectPointersBecomeOneWayNode extends Node {
         final Object[] oldCopied = obj.getCopied();
         final int numOldCopied = oldCopied.length;
         Object newReceiver = obj.getReceiver();
-        ContextObject newOuterContext = obj.getOuterContext();
+        Object newOuterContext = obj.getOuterContext();
         Object[] newCopied = null;
         for (int i = 0; i < from.length; i++) {
             final Object fromPointer = from[i];
@@ -40,7 +40,7 @@ public abstract class SqueakObjectPointersBecomeOneWayNode extends Node {
                 updateHashNode.executeUpdate(fromPointer, newReceiver, copyHash);
             }
             if (newOuterContext == fromPointer) {
-                newOuterContext = (ContextObject) to[i];
+                newOuterContext = to[i];
                 updateHashNode.executeUpdate(fromPointer, newOuterContext, copyHash);
             }
             for (int j = 0; j < oldCopied.length; j++) {

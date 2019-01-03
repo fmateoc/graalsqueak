@@ -16,11 +16,12 @@ import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.BLOCK_CLOSURE;
 import de.hpi.swa.graal.squeak.nodes.EnterCodeNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public final class BlockClosureObject extends AbstractSqueakObject {
     @CompilationFinal private Object receiver;
-    @CompilationFinal private ContextObject outerContext;
+    @CompilationFinal private Object outerContext;
     @CompilationFinal private CompiledBlockObject block;
     @CompilationFinal private long pc = -1;
     @CompilationFinal private long numArgs = -1;
@@ -39,11 +40,11 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         this.copied = new Object[0]; // ensure copied is set
     }
 
-    public BlockClosureObject(final CompiledBlockObject compiledBlock, final RootCallTarget callTarget, final Object receiver, final Object[] copied, final ContextObject outerContext) {
+    public BlockClosureObject(final CompiledBlockObject compiledBlock, final RootCallTarget callTarget, final Object receiver, final Object[] copied, final VirtualFrame frame) {
         super(compiledBlock.image, compiledBlock.image.blockClosureClass);
         this.block = compiledBlock;
         this.callTarget = callTarget;
-        this.outerContext = outerContext;
+        this.outerContext = FrameAccess.getContextOrMarker(frame);
         this.receiver = receiver;
         this.copied = copied;
         this.pc = block.getInitialPC();
@@ -65,7 +66,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         CompilerDirectives.transferToInterpreterAndInvalidate();
         final Object[] pointers = chunk.getPointers();
         assert pointers.length >= BLOCK_CLOSURE.FIRST_COPIED_VALUE;
-        outerContext = (ContextObject) pointers[BLOCK_CLOSURE.OUTER_CONTEXT];
+        outerContext = pointers[BLOCK_CLOSURE.OUTER_CONTEXT];
         pc = (long) pointers[BLOCK_CLOSURE.START_PC];
         numArgs = (long) pointers[BLOCK_CLOSURE.ARGUMENT_COUNT];
         copied = new Object[pointers.length - BLOCK_CLOSURE.FIRST_COPIED_VALUE];
@@ -157,7 +158,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
     public Object getReceiver() {
         if (receiver == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
-            receiver = outerContext.getReceiver();
+            receiver = ((ContextObject) outerContext).getReceiver();
         }
         return receiver;
     }
@@ -179,7 +180,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         if (block == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
             assert pc >= 0;
-            final CompiledCodeObject code = outerContext.getMethod();
+            final CompiledCodeObject code = ((ContextObject) outerContext).getMethod();
             final CompiledMethodObject method;
             if (code instanceof CompiledMethodObject) {
                 method = (CompiledMethodObject) code;
@@ -197,57 +198,33 @@ public final class BlockClosureObject extends AbstractSqueakObject {
     }
 
     public ContextObject getHomeContext(final VirtualFrame frame) {
-        if (outerContext.isTerminated()) {
+        final ContextObject context;
+        if (outerContext instanceof FrameMarker) {
+            context = ContextObjectNodes.getMaterializedContextForMarker((FrameMarker) outerContext);
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            outerContext = context;
+        } else {
+            context = (ContextObject) outerContext;
+        }
+        if (context.isTerminated()) {
             throw new SqueakException("BlockCannotReturnError");
         }
-        if (outerContext.isFullyVirtualized()) {
-            final BlockClosureObject closure = FrameAccess.getClosure(frame);
-            if (closure != null) {
-                return Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<ContextObject>() {
-                    boolean foundMyself = false;
-
-                    public ContextObject visitFrame(final FrameInstance frameInstance) {
-                        final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                        if (!FrameAccess.isGraalSqueakFrame(current)) {
-                            return null;
-                        }
-                        if (foundMyself) {
-                            final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                            if (contextOrMarker instanceof FrameMarker) {
-                                image.printToStdErr("Materializing...");
-                                final CompiledCodeObject method = (CompiledCodeObject) current.getArguments()[FrameAccess.METHOD];
-                                final ContextObject context = ContextObject.create(method.image, method.sqContextSize(), current.materialize(), (FrameMarker) contextOrMarker);
-                                current.setObject(method.thisContextOrMarkerSlot, context);
-                                return context;
-                            } else {
-                                return (ContextObject) contextOrMarker;
-                            }
-                        } else if (current == frame) {
-                            foundMyself = true;
-                        }
-                        return null;
-                    }
-                });
-            } else {
-                return outerContext;
-            }
+        // recursively unpack closures until home context is reached
+        final BlockClosureObject closure = context.getClosure();
+        if (closure != null) {
+            return closure.getHomeContext(frame);
         } else {
-            // recursively unpack closures until home context is reached
-            final BlockClosureObject closure = outerContext.getClosure();
-            if (closure != null) {
-                return closure.getHomeContext(frame);
-            } else {
-                return outerContext;
-            }
+            return context;
         }
     }
 
-    public ContextObject getOuterContext() {
+    public Object getOuterContext() {
         return outerContext;
     }
 
-    public void setOuterContext(final ContextObject outerContext) {
+    public void setOuterContext(final Object outerContext) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
+        assert outerContext instanceof ContextObject || outerContext instanceof FrameMarker;
         this.outerContext = outerContext;
     }
 

@@ -27,7 +27,7 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public final class ContextObjectNodes {
 
-    private static ContextObject getMaterializedContextForMarker(final FrameMarker obj) {
+    public static ContextObject getMaterializedContextForMarker(final FrameMarker obj) {
         final Frame targetFrame = FrameAccess.findFrameForMarker(obj);
         if (targetFrame == null) {
             throw new SqueakException("Could not find frame");
@@ -46,15 +46,15 @@ public final class ContextObjectNodes {
             return ContextObjectReadNodeGen.create();
         }
 
-        public abstract Object execute(VirtualFrame frame, FrameMarker obj, long index);
+        public abstract Object execute(Frame frame, FrameMarker obj, long index);
 
         @Specialization(guards = {"!obj.isMatchingFrame(frame)"})
-        protected static final Object doMaterialize(final VirtualFrame frame, final FrameMarker obj, final long index) {
+        protected static final Object doMaterialize(final Frame frame, final FrameMarker obj, final long index) {
             return getMaterializedContextForMarker(obj).at0(index);
         }
 
         @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == SENDER_OR_NIL"})
-        protected static final Object doSenderVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index) {
+        protected static final Object doSenderVirtualized(final Frame frame, final FrameMarker obj, final long index) {
             final Object senderOrMarker = frame.getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER];
             if (senderOrMarker instanceof FrameMarker) {
                 return doMaterialize(frame, obj, index);
@@ -64,7 +64,7 @@ public final class ContextObjectNodes {
         }
 
         @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == INSTRUCTION_POINTER"})
-        protected static final Object doPCVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index) {
+        protected static final Object doPCVirtualized(final Frame frame, final FrameMarker obj, final long index) {
             final CompiledCodeObject blockOrMethod = FrameAccess.getMethod(frame);
             final int pc = FrameUtil.getIntSafe(frame, blockOrMethod.instructionPointerSlot);
             if (pc < 0) {
@@ -81,17 +81,17 @@ public final class ContextObjectNodes {
         }
 
         @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == STACKPOINTER"})
-        protected static final Object doSPVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index) {
+        protected static final Object doSPVirtualized(final Frame frame, final FrameMarker obj, final long index) {
             return (long) FrameUtil.getIntSafe(frame, FrameAccess.getMethod(frame).stackPointerSlot);
         }
 
         @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == METHOD"})
-        protected static final CompiledCodeObject doMethodVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index) {
+        protected static final CompiledCodeObject doMethodVirtualized(final Frame frame, final FrameMarker obj, final long index) {
             return FrameAccess.getMethod(frame);
         }
 
         @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == CLOSURE_OR_NIL"})
-        protected static final Object doClosureVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index) {
+        protected static final Object doClosureVirtualized(final Frame frame, final FrameMarker obj, final long index) {
             final BlockClosureObject closure = FrameAccess.getClosure(frame);
             if (closure != null) {
                 return closure;
@@ -101,12 +101,12 @@ public final class ContextObjectNodes {
         }
 
         @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == RECEIVER"})
-        protected static final Object doReceiverVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index) {
+        protected static final Object doReceiverVirtualized(final Frame frame, final FrameMarker obj, final long index) {
             return FrameAccess.getReceiver(frame);
         }
 
         @Specialization(guards = {"obj.isMatchingFrame(frame)", "index >= TEMP_FRAME_START"})
-        protected static final Object doStackVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index) {
+        protected static final Object doStackVirtualized(final Frame frame, final FrameMarker obj, final long index) {
             final int stackIndex = (int) (index - CONTEXT.TEMP_FRAME_START);
             final CompiledCodeObject code = FrameAccess.getMethod(frame);
             if (stackIndex >= code.getNumStackSlots()) {
