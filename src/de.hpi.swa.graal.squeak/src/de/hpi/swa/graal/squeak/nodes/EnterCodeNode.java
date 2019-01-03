@@ -97,7 +97,7 @@ public abstract class EnterCodeNode extends Node implements InstrumentableNode {
                     @Cached("create(code)") final StackPushNode pushStackNode) {
         CompilerDirectives.ensureVirtualized(frame);
         initializeSlots(code, frame);
-        frame.setObject(code.thisContextOrMarkerSlot, new FrameMarker());
+        frame.setObject(code.thisContextOrMarkerSlot, new FrameMarker(frame));
         // Push arguments and copied values onto the newContext.
         final Object[] arguments = frame.getArguments();
         assert code.getNumArgsAndCopied() == (arguments.length - FrameAccess.ARGUMENTS_START);

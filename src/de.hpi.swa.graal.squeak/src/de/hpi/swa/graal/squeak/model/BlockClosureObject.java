@@ -197,12 +197,10 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         return block;
     }
 
-    public ContextObject getHomeContext(final VirtualFrame frame) {
+    public ContextObject getHomeContext() {
         final ContextObject context;
         if (outerContext instanceof FrameMarker) {
             context = ContextObjectNodes.getMaterializedContextForMarker((FrameMarker) outerContext);
-            CompilerDirectives.transferToInterpreterAndInvalidate();
-            outerContext = context;
         } else {
             context = (ContextObject) outerContext;
         }
@@ -212,7 +210,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         // recursively unpack closures until home context is reached
         final BlockClosureObject closure = context.getClosure();
         if (closure != null) {
-            return closure.getHomeContext(frame);
+            return closure.getHomeContext();
         } else {
             return context;
         }

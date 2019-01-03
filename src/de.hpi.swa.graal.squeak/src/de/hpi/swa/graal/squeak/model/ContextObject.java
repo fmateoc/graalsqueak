@@ -15,6 +15,7 @@ import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.MiscellaneousBytecodes.CallPrimitiveNode;
+import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
@@ -66,10 +67,6 @@ public final class ContextObject extends AbstractPointersObject {
         truffleFrame = original.truffleFrame;
         frameMarker = original.frameMarker;
         hasModifiedSender = original.hasModifiedSender;
-    }
-
-    public boolean isFullyVirtualized() {
-        return truffleFrame == null && !isDirty;
     }
 
     public boolean isMatchingFrame(final VirtualFrame frame) {
@@ -151,6 +148,7 @@ public final class ContextObject extends AbstractPointersObject {
     public void atput0(final long index, final Object value) {
         assert index >= 0 && value != null;
         if (index == CONTEXT.SENDER_OR_NIL) {
+            assert !(value instanceof FrameMarker) : "sender should not be a marker here anymore";
             image.printVerbose("Sender of", this, " set to", value);
             hasModifiedSender = true;
         }
@@ -230,6 +228,7 @@ public final class ContextObject extends AbstractPointersObject {
         } else if (sender instanceof NilObject) {
             return (AbstractSqueakObject) sender;
         }
+        assert !(sender instanceof FrameMarker) : "sender should not be a marker here anymore";
         final AbstractSqueakObject actualSender;
         final Object senderOrMarker = truffleFrame.getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER];
         if (senderOrMarker instanceof FrameMarker) {
@@ -267,6 +266,7 @@ public final class ContextObject extends AbstractPointersObject {
      * Set sender without flagging context as dirty.
      */
     public void setSender(final Object sender) {
+        assert !(sender instanceof FrameMarker) : "sender should not be a marker here anymore";
         setPointer(CONTEXT.SENDER_OR_NIL, sender);
     }
 
@@ -398,11 +398,7 @@ public final class ContextObject extends AbstractPointersObject {
         while (true) {
             final CompiledCodeObject code = current.getClosureOrMethod();
             final Object[] rcvrAndArgs = current.getReceiverAndNArguments(code.getNumArgsAndCopied());
-            final String[] argumentStrings = new String[rcvrAndArgs.length];
-            for (int i = 0; i < rcvrAndArgs.length; i++) {
-                argumentStrings[i] = rcvrAndArgs[i].toString();
-            }
-            image.getOutput().println(MiscUtils.format("%s #(%s)", current, String.join(", ", argumentStrings)));
+            image.getOutput().println(MiscUtils.format("%s #(%s) [%s]", current, ArrayUtils.toJoinedString(", ", rcvrAndArgs), current.getFrameMarker()));
             final AbstractSqueakObject sender = current.getSender();
             if (sender == image.nil) {
                 break;

@@ -562,9 +562,8 @@ public final class SqueakImageContext {
         final boolean isTravisBuild = System.getenv().containsKey("TRAVIS");
         final int[] depth = new int[1];
         final Object[] lastSender = new Object[]{null};
-        getError().println("== Squeak stack trace ===========================================================");
+        getError().println("== Truffle stack trace ===========================================================");
         Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
-
             @Override
             public Object visitFrame(final FrameInstance frameInstance) {
                 if (depth[0]++ > 50 && isTravisBuild) {
@@ -577,17 +576,13 @@ public final class SqueakImageContext {
                 final Object method = FrameAccess.getMethod(current);
                 lastSender[0] = FrameAccess.getSender(current);
                 final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                final Object[] arguments = FrameAccess.getReceiverAndArguments(current);
-                final String[] argumentStrings = new String[arguments.length];
-                for (int i = 0; i < arguments.length; i++) {
-                    argumentStrings[i] = arguments[i].toString();
-                }
                 final String prefix = FrameAccess.getClosure(current) == null ? "" : "[] in ";
-                getError().println(MiscUtils.format("%s%s #(%s) [this: %s, sender: %s]", prefix, method, String.join(", ", argumentStrings), contextOrMarker, lastSender[0]));
+                final String argumentsString = ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(current));
+                getError().println(MiscUtils.format("%s%s #(%s) [this: %s, sender: %s]", prefix, method, argumentsString, contextOrMarker, lastSender[0]));
                 return null;
             }
         });
-        getError().println("== " + depth[0] + " Truffle frames ================================================================");
+        getError().println("== " + depth[0] + " Squeak frames ================================================================");
         if (lastSender[0] instanceof ContextObject) {
             ((ContextObject) lastSender[0]).printSqStackTrace();
         }

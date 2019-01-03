@@ -13,8 +13,10 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
+import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.SqueakNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
 
 /**
@@ -40,13 +42,46 @@ public abstract class SqueakObjectAtPutAndMarkContextsNode extends Node {
 
     public abstract void executeWrite(VirtualFrame frame);
 
+    @Specialization(guards = {"!isNativeObject(object)", "value.isMatchingFrame(frame)"})
+    protected final void doFrameMarkerMatching(final VirtualFrame frame, final AbstractSqueakObject object, final FrameMarker value) {
+        final ContextObject context = ContextObjectNodes.getMaterializeContextForFrame(frame, value);
+        context.markEscaped();
+        atPut0Node.execute(frame, object, index, context);
+    }
+
+    @Specialization(guards = {"!isNativeObject(object)", "!value.isMatchingFrame(frame)"})
+    protected final void doFrameMarkerNotMatching(final VirtualFrame frame, final AbstractSqueakObject object, final FrameMarker value) {
+        final ContextObject context = ContextObjectNodes.getMaterializedContextForMarker(value);
+        context.markEscaped();
+        atPut0Node.execute(frame, object, index, context);
+    }
+
     @Specialization(guards = {"!isNativeObject(object)"})
     protected final void doContext(final VirtualFrame frame, final AbstractSqueakObject object, final ContextObject value) {
         value.markEscaped();
         atPut0Node.execute(frame, object, index, value);
     }
 
-    @Specialization(guards = {"!isNativeObject(object)", "!isContextObject(value)"})
+    @Specialization(guards = {"!isNativeObject(object)", "value.isMatchingFrame(frame)"})
+    protected final void doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker object, final FrameMarker value) {
+        final ContextObject context = ContextObjectNodes.getMaterializeContextForFrame(frame, value);
+        context.markEscaped();
+        atPut0Node.execute(frame, object, index, context);
+    }
+
+    @Specialization(guards = {"!isNativeObject(object)", "!value.isMatchingFrame(frame)"})
+    protected final void doFrameMarkerNotMatching(final VirtualFrame frame, final FrameMarker object, final FrameMarker value) {
+        final ContextObject context = ContextObjectNodes.getMaterializedContextForMarker(value);
+        context.markEscaped();
+        atPut0Node.execute(frame, object, index, context);
+    }
+
+    @Specialization(guards = {"!isNativeObject(object)", "!isContextObject(value)", "!isFrameMarker(value)"})
+    protected final void doFrameMarker(final VirtualFrame frame, final FrameMarker object, final Object value) {
+        atPut0Node.execute(frame, object, index, value);
+    }
+
+    @Specialization(guards = {"!isNativeObject(object)", "!isContextObject(value)", "!isFrameMarker(value)"})
     protected final void doSqueakObject(final VirtualFrame frame, final AbstractSqueakObject object, final Object value) {
         atPut0Node.execute(frame, object, index, value);
     }

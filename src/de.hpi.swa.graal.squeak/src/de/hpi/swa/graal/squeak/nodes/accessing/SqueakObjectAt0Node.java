@@ -64,7 +64,7 @@ public abstract class SqueakObjectAt0Node extends Node {
     @Specialization(guards = {"!obj.isMatchingFrame(frame)"})
     protected static final Object doContextVirtualizedNotMatching(final VirtualFrame frame, final FrameMarker obj, final long index,
                     @Cached("create()") final ContextObjectReadNode readNode) {
-        return Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
+        final Object result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
             @Override
             public Object visitFrame(final FrameInstance frameInstance) {
                 final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
@@ -74,10 +74,16 @@ public abstract class SqueakObjectAt0Node extends Node {
                 final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
                 if (obj == contextOrMarker) {
                     return readNode.execute(current, obj, index);
+                } else if (contextOrMarker instanceof ContextObject) {
+                    return ((ContextObject) contextOrMarker).at0(index);
                 }
                 return null;
             }
         });
+        if (result == null) {
+            throw new SqueakException("Unable to find frameMarker");
+        }
+        return result;
     }
 
     @Specialization

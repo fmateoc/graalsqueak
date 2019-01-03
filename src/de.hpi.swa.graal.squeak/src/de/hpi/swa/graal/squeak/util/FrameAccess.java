@@ -13,6 +13,7 @@ import com.oracle.truffle.api.frame.FrameUtil;
 
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
+import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FrameMarker;
 
 public class FrameAccess {
@@ -101,7 +102,7 @@ public class FrameAccess {
                     return null;
                 }
                 final Object contextOrMarker = getContextOrMarker(current);
-                if (frameMarker == contextOrMarker) {
+                if (frameMarker == contextOrMarker || (contextOrMarker instanceof ContextObject && ((ContextObject) contextOrMarker).getFrameMarker() == frameMarker)) {
                     return frameInstance.getFrame(FrameInstance.FrameAccess.MATERIALIZE);
                 }
                 return null;

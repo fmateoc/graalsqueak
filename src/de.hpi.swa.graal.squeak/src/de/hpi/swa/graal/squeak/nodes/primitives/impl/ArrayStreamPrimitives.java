@@ -3,11 +3,15 @@ package de.hpi.swa.graal.squeak.nodes.primitives.impl;
 import java.util.List;
 
 import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.Frame;
+import com.oracle.truffle.api.frame.FrameInstance;
+import com.oracle.truffle.api.frame.FrameInstanceVisitor;
 import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
@@ -851,10 +855,35 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
             return receiver.atTemp(index - 1);
         }
 
-        @Specialization(guards = {"index < getMethod(frame).sqContextSize()"})
-        protected static final Object doFrameMarker(final VirtualFrame frame, final FrameMarker receiver, final long index,
+        @Specialization(guards = {"index < getMethod(frame).sqContextSize()", "receiver.isMatchingFrame(frame)"})
+        protected static final Object doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker receiver, final long index,
                         @Cached("create()") final ContextObjectReadNode readNode) {
             return readNode.execute(frame, receiver, CONTEXT.TEMP_FRAME_START + index - 1);
+        }
+
+        @Specialization(guards = {"index < getMethod(frame).sqContextSize()", "!receiver.isMatchingFrame(frame)"})
+        protected static final Object doFrameMarkerNotMatching(final VirtualFrame frame, final FrameMarker receiver, final long index,
+                        @Cached("create()") final ContextObjectReadNode readNode) {
+            final Object result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
+                @Override
+                public Object visitFrame(final FrameInstance frameInstance) {
+                    final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                    if (!FrameAccess.isGraalSqueakFrame(current)) {
+                        return null;
+                    }
+                    final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+                    if (receiver == contextOrMarker) {
+                        return readNode.execute(current, receiver, CONTEXT.TEMP_FRAME_START + index - 1);
+                    } else if (contextOrMarker instanceof ContextObject) {
+                        return ((ContextObject) contextOrMarker).atTemp(index - 1);
+                    }
+                    return null;
+                }
+            });
+            if (result == null) {
+                throw new SqueakException("Unable to find frameMarker");
+            }
+            return result;
         }
     }
 

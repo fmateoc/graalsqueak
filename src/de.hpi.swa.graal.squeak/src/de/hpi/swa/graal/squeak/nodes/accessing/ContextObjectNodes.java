@@ -32,9 +32,13 @@ public final class ContextObjectNodes {
         if (targetFrame == null) {
             throw new SqueakException("Could not find frame");
         }
-        final CompiledCodeObject code = FrameAccess.getMethod(targetFrame);
-        final MaterializedFrame materializedFrame = targetFrame.materialize();
-        final ContextObject context = ContextObject.create(code.image, code.sqContextSize(), materializedFrame, obj);
+        return getMaterializeContextForFrame(targetFrame, obj);
+    }
+
+    public static ContextObject getMaterializeContextForFrame(final Frame frame, final FrameMarker frameMarker) {
+        final CompiledCodeObject code = FrameAccess.getMethod(frame);
+        final MaterializedFrame materializedFrame = frame.materialize();
+        final ContextObject context = ContextObject.create(code.image, code.sqContextSize(), materializedFrame, frameMarker);
         materializedFrame.setObject(code.thisContextOrMarkerSlot, context);
         return context;
     }
