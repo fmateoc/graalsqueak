@@ -6,7 +6,6 @@ import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameUtil;
-import com.oracle.truffle.api.frame.MaterializedFrame;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.Node;
 
@@ -26,22 +25,6 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public final class ContextObjectNodes {
 
-    public static ContextObject getMaterializedContextForMarker(final FrameMarker obj) {
-        final Frame targetFrame = FrameAccess.findFrameForMarker(obj);
-        if (targetFrame == null) {
-            throw new SqueakException("Could not find frame for: " + obj);
-        }
-        return getMaterializeContextForFrame(targetFrame, obj);
-    }
-
-    public static ContextObject getMaterializeContextForFrame(final Frame frame, final FrameMarker frameMarker) {
-        final CompiledCodeObject code = FrameAccess.getMethod(frame);
-        final MaterializedFrame materializedFrame = frame.materialize();
-        final ContextObject context = ContextObject.create(code.image, code.sqContextSize(), materializedFrame, frameMarker);
-        materializedFrame.setObject(code.thisContextOrMarkerSlot, context);
-        return context;
-    }
-
     @ImportStatic(CONTEXT.class)
     public abstract static class ContextObjectReadNode extends Node {
 
@@ -51,12 +34,12 @@ public final class ContextObjectNodes {
 
         public abstract Object execute(Frame frame, FrameMarker obj, long index);
 
-        @Specialization(guards = {"!obj.isMatchingFrame(frame)"})
+        @Specialization(guards = {"!obj.matches(frame)"})
         protected static final Object doMaterialize(@SuppressWarnings("unused") final Frame frame, final FrameMarker obj, final long index) {
-            return getMaterializedContextForMarker(obj).at0(index);
+            return ContextObject.getMaterializedContextForMarker(obj).at0(index);
         }
 
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == SENDER_OR_NIL"})
+        @Specialization(guards = {"obj.matches(frame)", "index == SENDER_OR_NIL"})
         protected static final Object doSenderVirtualized(final Frame frame, final FrameMarker obj, final long index) {
             final Object senderOrMarker = frame.getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER];
             if (senderOrMarker instanceof FrameMarker) {
@@ -67,7 +50,7 @@ public final class ContextObjectNodes {
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == INSTRUCTION_POINTER"})
+        @Specialization(guards = {"obj.matches(frame)", "index == INSTRUCTION_POINTER"})
         protected static final Object doPCVirtualized(final Frame frame, final FrameMarker obj, final long index) {
             final CompiledCodeObject blockOrMethod = FrameAccess.getMethod(frame);
             final int pc = FrameUtil.getIntSafe(frame, blockOrMethod.instructionPointerSlot);
@@ -85,19 +68,19 @@ public final class ContextObjectNodes {
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == STACKPOINTER"})
+        @Specialization(guards = {"obj.matches(frame)", "index == STACKPOINTER"})
         protected static final Object doSPVirtualized(final Frame frame, final FrameMarker obj, final long index) {
             return (long) FrameUtil.getIntSafe(frame, FrameAccess.getMethod(frame).stackPointerSlot);
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == METHOD"})
+        @Specialization(guards = {"obj.matches(frame)", "index == METHOD"})
         protected static final CompiledCodeObject doMethodVirtualized(final Frame frame, final FrameMarker obj, final long index) {
             return FrameAccess.getMethod(frame);
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == CLOSURE_OR_NIL"})
+        @Specialization(guards = {"obj.matches(frame)", "index == CLOSURE_OR_NIL"})
         protected static final Object doClosureVirtualized(final Frame frame, final FrameMarker obj, final long index) {
             final BlockClosureObject closure = FrameAccess.getClosure(frame);
             if (closure != null) {
@@ -108,13 +91,13 @@ public final class ContextObjectNodes {
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == RECEIVER"})
+        @Specialization(guards = {"obj.matches(frame)", "index == RECEIVER"})
         protected static final Object doReceiverVirtualized(final Frame frame, final FrameMarker obj, final long index) {
             return FrameAccess.getReceiver(frame);
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index >= TEMP_FRAME_START"})
+        @Specialization(guards = {"obj.matches(frame)", "index >= TEMP_FRAME_START"})
         protected static final Object doStackVirtualized(final Frame frame, final FrameMarker obj, final long index) {
             final int stackIndex = (int) (index - CONTEXT.TEMP_FRAME_START);
             final CompiledCodeObject code = FrameAccess.getMethod(frame);
@@ -140,25 +123,25 @@ public final class ContextObjectNodes {
 
         public abstract void execute(VirtualFrame frame, FrameMarker obj, long index, Object value);
 
-        @Specialization(guards = {"!obj.isMatchingFrame(frame)"})
+        @Specialization(guards = {"!obj.matches(frame)"})
         protected static final void doMaterialize(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker obj, final long index, final Object value) {
-            getMaterializedContextForMarker(obj).atput0(index, value);
+            ContextObject.getMaterializedContextForMarker(obj).atput0(index, value);
         }
 
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == SENDER_OR_NIL"})
+        @Specialization(guards = {"obj.matches(frame)", "index == SENDER_OR_NIL"})
         protected static final void doSenderVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index, final Object value) {
             // Bailing, frame needs to be materialized.
             doMaterialize(frame, obj, index, value);
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == INSTRUCTION_POINTER"})
+        @Specialization(guards = {"obj.matches(frame)", "index == INSTRUCTION_POINTER"})
         protected static final void doPCVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index, final NilObject value) {
             frame.setInt(FrameAccess.getMethod(frame).instructionPointerSlot, -1);
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == INSTRUCTION_POINTER", "value >= 0"})
+        @Specialization(guards = {"obj.matches(frame)", "index == INSTRUCTION_POINTER", "value >= 0"})
         protected static final void doPCVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index, final long value) {
             final CompiledCodeObject blockOrMethod = FrameAccess.getMethod(frame);
             final int initalPC;
@@ -171,36 +154,36 @@ public final class ContextObjectNodes {
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == STACKPOINTER"})
+        @Specialization(guards = {"obj.matches(frame)", "index == STACKPOINTER"})
         protected static final void doSPVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index, final long value) {
             frame.setInt(FrameAccess.getMethod(frame).stackPointerSlot, (int) value);
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == METHOD"})
+        @Specialization(guards = {"obj.matches(frame)", "index == METHOD"})
         protected static final void doMethodVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index, final CompiledCodeObject value) {
             frame.getArguments()[FrameAccess.METHOD] = value;
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == CLOSURE_OR_NIL"})
+        @Specialization(guards = {"obj.matches(frame)", "index == CLOSURE_OR_NIL"})
         protected static final void doClosureVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index, final NilObject value) {
             frame.getArguments()[FrameAccess.CLOSURE_OR_NULL] = null;
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == CLOSURE_OR_NIL"})
+        @Specialization(guards = {"obj.matches(frame)", "index == CLOSURE_OR_NIL"})
         protected static final void doClosureVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index, final BlockClosureObject value) {
             frame.getArguments()[FrameAccess.CLOSURE_OR_NULL] = value;
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index == RECEIVER"})
+        @Specialization(guards = {"obj.matches(frame)", "index == RECEIVER"})
         protected static final void doReceiverVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index, final Object value) {
             frame.getArguments()[FrameAccess.RECEIVER] = value;
         }
 
-        @Specialization(guards = {"obj.isMatchingFrame(frame)", "index >= TEMP_FRAME_START"})
+        @Specialization(guards = {"obj.matches(frame)", "index >= TEMP_FRAME_START"})
         protected static final void doStackVirtualized(final VirtualFrame frame, @SuppressWarnings("unused") final FrameMarker obj, final long index, final Object value,
                         @Cached("create(getMethod(frame))") final FrameStackWriteNode writeNode) {
             final int stackIndex = (int) (index - CONTEXT.TEMP_FRAME_START);

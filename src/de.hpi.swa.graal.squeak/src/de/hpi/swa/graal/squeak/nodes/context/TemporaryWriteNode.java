@@ -10,7 +10,6 @@ import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithCode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameSlotWriteNode;
 
 public abstract class TemporaryWriteNode extends AbstractNodeWithCode {
@@ -27,22 +26,22 @@ public abstract class TemporaryWriteNode extends AbstractNodeWithCode {
         this.tempIndex = tempIndex;
     }
 
-    @Specialization(guards = {"isVirtualized(frame)", "value.isMatchingFrame(frame)"})
+    @Specialization(guards = {"isVirtualized(frame)", "value.matches(frame)"})
     protected final void doWriteVirtualizedMatching(final VirtualFrame frame, final FrameMarker value,
                     @Cached("create(code.getStackSlot(tempIndex))") final FrameSlotWriteNode writeNode) {
         assert value != null;
         assert 0 <= tempIndex && tempIndex <= CONTEXT.MAX_STACK_SIZE;
-        final ContextObject context = ContextObjectNodes.getMaterializeContextForFrame(frame, value);
+        final ContextObject context = ContextObject.getMaterializedContextForFrame(frame, value);
         context.markEscaped();
         writeNode.executeWrite(frame, context);
     }
 
-    @Specialization(guards = {"isVirtualized(frame)", "!value.isMatchingFrame(frame)"})
+    @Specialization(guards = {"isVirtualized(frame)", "!value.matches(frame)"})
     protected final void doWriteVirtualizedNotMatching(final VirtualFrame frame, final FrameMarker value,
                     @Cached("create(code.getStackSlot(tempIndex))") final FrameSlotWriteNode writeNode) {
         assert value != null;
         assert 0 <= tempIndex && tempIndex <= CONTEXT.MAX_STACK_SIZE;
-        final ContextObject context = ContextObjectNodes.getMaterializedContextForMarker(value);
+        final ContextObject context = ContextObject.getMaterializedContextForMarker(value);
         context.markEscaped();
         writeNode.executeWrite(frame, context);
     }

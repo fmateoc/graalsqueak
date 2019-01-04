@@ -17,7 +17,6 @@ import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.SqueakNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
 
 /**
@@ -43,16 +42,16 @@ public abstract class SqueakObjectAtPutAndMarkContextsNode extends Node {
 
     public abstract void executeWrite(VirtualFrame frame);
 
-    @Specialization(guards = {"!isNativeObject(object)", "value.isMatchingFrame(frame)"})
+    @Specialization(guards = {"!isNativeObject(object)", "value.matches(frame)"})
     protected final void doFrameMarkerMatching(final VirtualFrame frame, final AbstractSqueakObject object, final FrameMarker value) {
-        final ContextObject context = ContextObjectNodes.getMaterializeContextForFrame(frame, value);
+        final ContextObject context = ContextObject.getMaterializedContextForFrame(frame, value);
         context.markEscaped();
         atPut0Node.execute(frame, object, index, context);
     }
 
-    @Specialization(guards = {"!isNativeObject(object)", "!value.isMatchingFrame(frame)"})
+    @Specialization(guards = {"!isNativeObject(object)", "!value.matches(frame)"})
     protected final void doFrameMarkerNotMatching(final VirtualFrame frame, final AbstractSqueakObject object, final FrameMarker value) {
-        final ContextObject context = ContextObjectNodes.getMaterializedContextForMarker(value);
+        final ContextObject context = ContextObject.getMaterializedContextForMarker(value);
         context.markEscaped();
         atPut0Node.execute(frame, object, index, context);
     }
@@ -63,66 +62,66 @@ public abstract class SqueakObjectAtPutAndMarkContextsNode extends Node {
         atPut0Node.execute(frame, object, index, value);
     }
 
-    @Specialization(guards = {"value.isMatchingFrame(frame)"})
+    @Specialization(guards = {"value.matches(frame)"})
     protected final void doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker object, final FrameMarker value) {
-        final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
-        final ContextObject context = ContextObjectNodes.getMaterializeContextForFrame(frame, value);
+        final ContextObject target = ContextObject.getMaterializedContextForMarker(object);
+        final ContextObject context = ContextObject.getMaterializedContextForFrame(frame, value);
         target.markEscaped();
         context.markEscaped();
         target.atput0(index, context);
     }
 
-    @Specialization(guards = {"!value.isMatchingFrame(frame)"})
+    @Specialization(guards = {"!value.matches(frame)"})
     protected final void doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker object, final FrameMarker value) {
-        final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
-        final ContextObject context = ContextObjectNodes.getMaterializedContextForMarker(value);
+        final ContextObject target = ContextObject.getMaterializedContextForMarker(object);
+        final ContextObject context = ContextObject.getMaterializedContextForMarker(value);
         target.markEscaped();
         context.markEscaped();
         target.atput0(index, context);
     }
 
-    @Specialization(guards = {"object.isMatchingFrame(frame)"})
+    @Specialization(guards = {"object.matches(frame)"})
     protected final void doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker object, final ContextObject value) {
-        final ContextObject target = ContextObjectNodes.getMaterializeContextForFrame(frame, object);
+        final ContextObject target = ContextObject.getMaterializedContextForFrame(frame, object);
         target.markEscaped();
         value.markEscaped();
         target.atput0(index, value);
     }
 
-    @Specialization(guards = {"!value.isMatchingFrame(frame)"})
+    @Specialization(guards = {"!object.matches(frame)"})
     protected final void doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker object, final ContextObject value) {
-        final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
+        final ContextObject target = ContextObject.getMaterializedContextForMarker(object);
         target.markEscaped();
         value.markEscaped();
         target.atput0(index, value);
     }
 
-    @Specialization(guards = {"object.isMatchingFrame(frame)"})
+    @Specialization(guards = {"object.matches(frame)"})
     protected final void doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker object, final BlockClosureObject value) {
-        final ContextObject target = ContextObjectNodes.getMaterializeContextForFrame(frame, object);
+        final ContextObject target = ContextObject.getMaterializedContextForFrame(frame, object);
         target.markEscaped();
         value.getHomeContext().markEscaped();
         target.atput0(index, value);
     }
 
-    @Specialization(guards = {"!object.isMatchingFrame(frame)"})
+    @Specialization(guards = {"!object.matches(frame)"})
     protected final void doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker object, final BlockClosureObject value) {
-        final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
+        final ContextObject target = ContextObject.getMaterializedContextForMarker(object);
         target.markEscaped();
         value.getHomeContext().markEscaped();
         target.atput0(index, value);
     }
 
-    @Specialization(guards = {"object.isMatchingFrame(frame)", "!isContextObject(value)", "!isFrameMarker(value)", "!isBlockClosureObject(value)"})
+    @Specialization(guards = {"object.matches(frame)", "!isContextObject(value)", "!isFrameMarker(value)", "!isBlockClosureObject(value)"})
     protected final void doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker object, final Object value) {
-        final ContextObject target = ContextObjectNodes.getMaterializeContextForFrame(frame, object);
+        final ContextObject target = ContextObject.getMaterializedContextForFrame(frame, object);
         target.markEscaped();
         target.atput0(index, value);
     }
 
-    @Specialization(guards = {"!object.isMatchingFrame(frame)", "!isContextObject(value)", "!isFrameMarker(value)", "!isBlockClosureObject(value)"})
+    @Specialization(guards = {"!object.matches(frame)", "!isContextObject(value)", "!isFrameMarker(value)", "!isBlockClosureObject(value)"})
     protected final void doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker object, final Object value) {
-        final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
+        final ContextObject target = ContextObject.getMaterializedContextForMarker(object);
         target.markEscaped();
         target.atput0(index, value);
     }

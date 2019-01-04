@@ -13,7 +13,6 @@ import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.BLOCK_CLOSURE;
 import de.hpi.swa.graal.squeak.nodes.EnterCodeNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes;
 
 public final class BlockClosureObject extends AbstractSqueakObject {
     @CompilationFinal private Object receiver;
@@ -202,7 +201,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
     @TruffleBoundary
     public ContextObject getHomeContext() {
         if (outerContextOrMarker instanceof FrameMarker) {
-            outerContextOrMarker = ContextObjectNodes.getMaterializedContextForMarker((FrameMarker) outerContextOrMarker);
+            outerContextOrMarker = ContextObject.getMaterializedContextForMarker((FrameMarker) outerContextOrMarker);
         }
         final ContextObject context = (ContextObject) outerContextOrMarker;
         if (context.isTerminated()) {

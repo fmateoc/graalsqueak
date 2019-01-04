@@ -32,7 +32,7 @@ public final class FrameMarker implements TruffleObject {
         return "FrameMarker@" + Integer.toHexString(System.identityHashCode(this));
     }
 
-    public boolean isMatchingFrame(final Frame frame) {
+    public boolean matches(final Frame frame) {
         return FrameAccess.getContextOrMarker(frame) == this;
     }
 

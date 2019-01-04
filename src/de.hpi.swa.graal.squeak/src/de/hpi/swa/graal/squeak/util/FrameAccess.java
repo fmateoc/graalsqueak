@@ -80,6 +80,10 @@ public final class FrameAccess {
         return arguments.length >= RECEIVER && arguments[METHOD] instanceof CompiledCodeObject;
     }
 
+    public static boolean matchesContextOrMarker(final FrameMarker frameMarker, final Object contextOrMarker) {
+        return contextOrMarker == frameMarker || (contextOrMarker instanceof ContextObject && ((ContextObject) contextOrMarker).getFrameMarker() == frameMarker);
+    }
+
     public static Object[] newWith(final CompiledCodeObject code, final Object sender, final BlockClosureObject closure, final Object[] frameArgs) {
         final Object[] arguments = new Object[RECEIVER + frameArgs.length];
         arguments[METHOD] = code;

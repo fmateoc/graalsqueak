@@ -855,13 +855,13 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
             return receiver.atTemp(index - 1);
         }
 
-        @Specialization(guards = {"index < getMethod(frame).sqContextSize()", "receiver.isMatchingFrame(frame)"})
+        @Specialization(guards = {"index < getMethod(frame).sqContextSize()", "receiver.matches(frame)"})
         protected static final Object doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker receiver, final long index,
                         @Cached("create()") final ContextObjectReadNode readNode) {
             return readNode.execute(frame, receiver, CONTEXT.TEMP_FRAME_START + index - 1);
         }
 
-        @Specialization(guards = {"index < getMethod(frame).sqContextSize()", "!receiver.isMatchingFrame(frame)"})
+        @Specialization(guards = {"index < getMethod(frame).sqContextSize()", "!receiver.matches(frame)"})
         protected static final Object doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker receiver, final long index,
                         @Cached("create()") final ContextObjectReadNode readNode) {
             final Object result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
