@@ -25,7 +25,7 @@ public abstract class TerminateContextNode extends AbstractNodeWithCode {
     protected final void doTerminateVirtualized(final VirtualFrame frame) {
         // TODO: check the below is actually needed (see also GetOrCreateContextNode.materialize())
         frame.setInt(code.instructionPointerSlot, -1); // cannot set nil, -1 instead.
-        // cannot remove sender
+        frame.getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] = null;
     }
 
     @Fallback
