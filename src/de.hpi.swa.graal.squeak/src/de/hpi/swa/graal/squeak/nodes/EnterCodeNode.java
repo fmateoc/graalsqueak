@@ -1,6 +1,7 @@
 package de.hpi.swa.graal.squeak.nodes;
 
 import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Cached;
@@ -97,9 +98,15 @@ public abstract class EnterCodeNode extends Node implements InstrumentableNode {
                     @Cached("create(code)") final StackPushNode pushStackNode) {
         CompilerDirectives.ensureVirtualized(frame);
         initializeSlots(code, frame);
-        frame.setObject(code.thisContextOrMarkerSlot, new FrameMarker(frame));
-        // Push arguments and copied values onto the newContext.
         final Object[] arguments = frame.getArguments();
+        if (arguments.length == 5 && arguments[0].toString().equals("Context>>runUntilErrorOrReturnFrom:")) {
+            final ContextObject newContext = getCreateContextNode().executeGet(frame);
+            frame.setObject(code.thisContextOrMarkerSlot, newContext);
+        } else {
+            frame.setObject(code.thisContextOrMarkerSlot, new FrameMarker(frame));
+        }
+        // Push arguments and copied values onto the newContext.
+// final Object[] arguments = frame.getArguments();
         assert code.getNumArgsAndCopied() == (arguments.length - FrameAccess.ARGUMENTS_START);
         for (int i = 0; i < code.getNumArgsAndCopied(); i++) {
             pushStackNode.executeWrite(frame, arguments[FrameAccess.ARGUMENTS_START + i]);

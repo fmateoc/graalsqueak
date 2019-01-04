@@ -29,6 +29,7 @@ import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
@@ -423,6 +424,18 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         @Specialization
         protected final boolean doObject(final NilObject a, final NilObject b) {
             return code.image.sqTrue;
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization
+        protected final boolean doObject(final FrameMarker a, final ContextObject b) {
+            return a == b.getFrameMarker() ? code.image.sqTrue : code.image.sqFalse;
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization
+        protected final boolean doObject(final ContextObject a, final FrameMarker b) {
+            return a.getFrameMarker() == b ? code.image.sqTrue : code.image.sqFalse;
         }
 
         @Fallback
@@ -862,6 +875,18 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         @Specialization
         protected final boolean doFloat(final FloatObject a, final FloatObject b) {
             return a != b && !doDouble(a.getValue(), b.getValue());
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization
+        protected final boolean doObject(final FrameMarker a, final ContextObject b) {
+            return a != b.getFrameMarker() ? code.image.sqTrue : code.image.sqFalse;
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization
+        protected final boolean doObject(final ContextObject a, final FrameMarker b) {
+            return a.getFrameMarker() != b ? code.image.sqTrue : code.image.sqFalse;
         }
 
         @Fallback

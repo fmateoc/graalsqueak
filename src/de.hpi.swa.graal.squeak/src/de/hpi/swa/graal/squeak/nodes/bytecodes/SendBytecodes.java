@@ -1,5 +1,6 @@
 package de.hpi.swa.graal.squeak.nodes.bytecodes;
 
+import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveWithoutResultException;
@@ -53,6 +54,9 @@ public final class SendBytecodes {
         }
 
         public final Object executeSend(final VirtualFrame frame) {
+            if (selector.toString().equals("bottomContext")) {
+                Truffle.getRuntime();
+            }
             final Object[] rcvrAndArgs = (Object[]) popNReversedNode.executeRead(frame);
             final ClassObject rcvrClass = lookupClassNode.executeLookup(rcvrAndArgs[0]);
             final Object lookupResult = lookupMethodNode.executeLookup(rcvrClass, selector);

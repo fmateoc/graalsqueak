@@ -30,7 +30,7 @@ public final class ContextObjectNodes {
     public static ContextObject getMaterializedContextForMarker(final FrameMarker obj) {
         final Frame targetFrame = FrameAccess.findFrameForMarker(obj);
         if (targetFrame == null) {
-            throw new SqueakException("Could not find frame");
+            throw new SqueakException("Could not find frame for: " + obj);
         }
         return getMaterializeContextForFrame(targetFrame, obj);
     }

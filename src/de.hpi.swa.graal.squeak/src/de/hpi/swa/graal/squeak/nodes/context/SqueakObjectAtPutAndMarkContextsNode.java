@@ -63,7 +63,7 @@ public abstract class SqueakObjectAtPutAndMarkContextsNode extends Node {
         atPut0Node.execute(frame, object, index, value);
     }
 
-    @Specialization(guards = {"!isNativeObject(object)", "value.isMatchingFrame(frame)"})
+    @Specialization(guards = {"value.isMatchingFrame(frame)"})
     protected final void doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker object, final FrameMarker value) {
         final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
         final ContextObject context = ContextObjectNodes.getMaterializeContextForFrame(frame, value);
@@ -72,7 +72,7 @@ public abstract class SqueakObjectAtPutAndMarkContextsNode extends Node {
         target.atput0(index, context);
     }
 
-    @Specialization(guards = {"!isNativeObject(object)", "!value.isMatchingFrame(frame)"})
+    @Specialization(guards = {"!value.isMatchingFrame(frame)"})
     protected final void doFrameMarkerNotMatching(final VirtualFrame frame, final FrameMarker object, final FrameMarker value) {
         final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
         final ContextObject context = ContextObjectNodes.getMaterializedContextForMarker(value);
@@ -81,7 +81,15 @@ public abstract class SqueakObjectAtPutAndMarkContextsNode extends Node {
         target.atput0(index, context);
     }
 
-    @Specialization(guards = {"!isNativeObject(object)", "!isContextObject(value)", "!isFrameMarker(value)"})
+    @Specialization
+    protected final void doFrameMarker(final VirtualFrame frame, final FrameMarker object, final ContextObject value) {
+        final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
+        target.markEscaped();
+        value.markEscaped();
+        target.atput0(index, value);
+    }
+
+    @Specialization
     protected final void doFrameMarker(final VirtualFrame frame, final FrameMarker object, final BlockClosureObject value) {
         final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
         target.markEscaped();

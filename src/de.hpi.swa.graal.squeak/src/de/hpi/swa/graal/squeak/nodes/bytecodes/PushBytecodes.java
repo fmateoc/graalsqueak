@@ -47,7 +47,7 @@ public final class PushBytecodes {
 
     @NodeInfo(cost = NodeCost.NONE)
     public static final class PushActiveContextNode extends AbstractPushNode {
-        private static final boolean ALWAYS_PUSH_MATERIALIZED_CONTEXT = true;
+        private static final boolean ALWAYS_PUSH_MATERIALIZED_CONTEXT = false;
 
         @Child private GetOrCreateContextNode getContextNode;
 
