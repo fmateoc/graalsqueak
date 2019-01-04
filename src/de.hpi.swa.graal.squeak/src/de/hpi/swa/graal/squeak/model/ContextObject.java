@@ -23,8 +23,8 @@ public final class ContextObject extends AbstractPointersObject {
     private MaterializedFrame truffleFrame;
     private FrameMarker frameMarker;
     private boolean hasModifiedSender = false;
-    private boolean isDirty = false;
-    private boolean escaped = false;
+    public boolean isDirty = false;
+    public boolean escaped = false;
 
     public static ContextObject createWithHash(final SqueakImageContext image, final long hash) {
         return new ContextObject(image, hash);
@@ -67,6 +67,8 @@ public final class ContextObject extends AbstractPointersObject {
         truffleFrame = original.truffleFrame;
         frameMarker = original.frameMarker;
         hasModifiedSender = original.hasModifiedSender;
+        isDirty = original.isDirty;
+        escaped = original.escaped;
     }
 
     public boolean isMatchingFrame(final VirtualFrame frame) {

@@ -50,6 +50,10 @@ public final class FrameMarker implements TruffleObject {
         final Object contextOrMarker = FrameAccess.getContextOrMarker(matchingFrame);
         if (contextOrMarker instanceof ContextObject) {
             assert ((ContextObject) contextOrMarker).getFrameMarker() == this;
+            if (((ContextObject) contextOrMarker).isDirty) {
+                ((ContextObject) contextOrMarker).image.printToStdErr("Mark as clean (terrible hack!!!):", contextOrMarker);
+                ((ContextObject) contextOrMarker).isDirty = false;
+            }
             return (ContextObject) contextOrMarker; // TODO: Refactor this code path.
         }
         assert matches(matchingFrame) : "Frame does not match";

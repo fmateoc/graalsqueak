@@ -1,13 +1,14 @@
 package de.hpi.swa.graal.squeak.nodes.accessing;
 
 import com.oracle.truffle.api.Truffle;
-import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameInstanceVisitor;
+import com.oracle.truffle.api.frame.FrameSlot;
+import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.FrameUtil;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.Node;
@@ -23,7 +24,6 @@ import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodesFactory.ContextObjectReadNodeGen;
 import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodesFactory.ContextObjectWriteNodeGen;
-import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackWriteNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public final class ContextObjectNodes {
@@ -190,7 +190,12 @@ public final class ContextObjectNodes {
 
         @Specialization(guards = {"!obj.matches(frame)", "index == INSTRUCTION_POINTER"})
         protected static final void doPC(@SuppressWarnings("unused") final Frame frame, final FrameMarker obj, final long index, final NilObject value) {
-            doPCMatching(getWritableFrame(obj), obj, index, value);
+            final Object writableFrameOrContext = getWritableFrameOrContext(obj);
+            if (writableFrameOrContext instanceof ContextObject) {
+                ((ContextObject) writableFrameOrContext).atput0(index, value);
+            } else {
+                doPCMatching((Frame) writableFrameOrContext, obj, index, value);
+            }
         }
 
         @SuppressWarnings("unused")
@@ -201,7 +206,12 @@ public final class ContextObjectNodes {
 
         @Specialization(guards = {"!obj.matches(frame)", "index == INSTRUCTION_POINTER", "value >= 0"})
         protected static final void doPC(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker obj, final long index, final long value) {
-            doPCMatching(getWritableFrame(obj), obj, index, value);
+            final Object writableFrameOrContext = getWritableFrameOrContext(obj);
+            if (writableFrameOrContext instanceof ContextObject) {
+                ((ContextObject) writableFrameOrContext).atput0(index, value);
+            } else {
+                doPCMatching((Frame) writableFrameOrContext, obj, index, value);
+            }
         }
 
         @SuppressWarnings("unused")
@@ -220,7 +230,12 @@ public final class ContextObjectNodes {
         @SuppressWarnings("unused")
         @Specialization(guards = {"!obj.matches(frame)", "index == STACKPOINTER"})
         protected static final void doSP(final Frame frame, final FrameMarker obj, final long index, final long value) {
-            doSPMatching(getWritableFrame(obj), obj, index, value);
+            final Object writableFrameOrContext = getWritableFrameOrContext(obj);
+            if (writableFrameOrContext instanceof ContextObject) {
+                ((ContextObject) writableFrameOrContext).atput0(index, value);
+            } else {
+                doSPMatching((Frame) writableFrameOrContext, obj, index, value);
+            }
         }
 
         @SuppressWarnings("unused")
@@ -232,7 +247,12 @@ public final class ContextObjectNodes {
         @SuppressWarnings("unused")
         @Specialization(guards = {"!obj.matches(frame)", "index == METHOD"})
         protected static final void doMethod(final Frame frame, final FrameMarker obj, final long index, final CompiledCodeObject value) {
-            doMethodMatching(getWritableFrame(obj), obj, index, value);
+            final Object writableFrameOrContext = getWritableFrameOrContext(obj);
+            if (writableFrameOrContext instanceof ContextObject) {
+                ((ContextObject) writableFrameOrContext).atput0(index, value);
+            } else {
+                doMethodMatching((Frame) writableFrameOrContext, obj, index, value);
+            }
         }
 
         @SuppressWarnings("unused")
@@ -244,7 +264,12 @@ public final class ContextObjectNodes {
         @SuppressWarnings("unused")
         @Specialization(guards = {"!obj.matches(frame)", "index == CLOSURE_OR_NIL"})
         protected static final void doClosure(final Frame frame, final FrameMarker obj, final long index, final NilObject value) {
-            doClosureMatching(getWritableFrame(obj), obj, index, value);
+            final Object writableFrameOrContext = getWritableFrameOrContext(obj);
+            if (writableFrameOrContext instanceof ContextObject) {
+                ((ContextObject) writableFrameOrContext).atput0(index, value);
+            } else {
+                doClosureMatching((Frame) writableFrameOrContext, obj, index, value);
+            }
         }
 
         @SuppressWarnings("unused")
@@ -256,7 +281,12 @@ public final class ContextObjectNodes {
         @SuppressWarnings("unused")
         @Specialization(guards = {"!obj.matches(frame)", "index == CLOSURE_OR_NIL"})
         protected static final void doClosure(final Frame frame, final FrameMarker obj, final long index, final BlockClosureObject value) {
-            doClosureMatching(getWritableFrame(obj), obj, index, value);
+            final Object writableFrameOrContext = getWritableFrameOrContext(obj);
+            if (writableFrameOrContext instanceof ContextObject) {
+                ((ContextObject) writableFrameOrContext).atput0(index, value);
+            } else {
+                doClosureMatching((Frame) writableFrameOrContext, obj, index, value);
+            }
         }
 
         @SuppressWarnings("unused")
@@ -268,7 +298,12 @@ public final class ContextObjectNodes {
         @SuppressWarnings("unused")
         @Specialization(guards = {"!obj.matches(frame)", "index == RECEIVER"})
         protected static final void doReceiver(final Frame frame, final FrameMarker obj, final long index, final Object value) {
-            doReceiverMatching(getWritableFrame(obj), obj, index, value);
+            final Object writableFrameOrContext = getWritableFrameOrContext(obj);
+            if (writableFrameOrContext instanceof ContextObject) {
+                ((ContextObject) writableFrameOrContext).atput0(index, value);
+            } else {
+                doReceiverMatching((Frame) writableFrameOrContext, obj, index, value);
+            }
         }
 
         @SuppressWarnings("unused")
@@ -279,16 +314,24 @@ public final class ContextObjectNodes {
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"!obj.matches(frame)", "index >= TEMP_FRAME_START"})
-        protected static final void doStack(final Frame frame, final FrameMarker obj, final long index, final Object value,
-                        @Cached("create(getMethod(frame))") final FrameStackWriteNode writeNode) {
-            doStackMatching(getWritableFrame(obj), obj, index, value, writeNode);
+        protected static final void doStack(final Frame frame, final FrameMarker obj, final long index, final Object value) {
+            final Object writableFrameOrContext = getWritableFrameOrContext(obj);
+            if (writableFrameOrContext instanceof ContextObject) {
+                ((ContextObject) writableFrameOrContext).atput0(index, value);
+            } else {
+                doStackMatching((Frame) writableFrameOrContext, obj, index, value);
+            }
         }
 
         @Specialization(guards = {"obj.matches(frame)", "index >= TEMP_FRAME_START"})
-        protected static final void doStackMatching(final Frame frame, @SuppressWarnings("unused") final FrameMarker obj, final long index, final Object value,
-                        @Cached("create(getMethod(frame))") final FrameStackWriteNode writeNode) {
+        protected static final void doStackMatching(final Frame frame, @SuppressWarnings("unused") final FrameMarker obj, final long index, final Object value) {
             final int stackIndex = (int) (index - CONTEXT.TEMP_FRAME_START);
-            writeNode.execute(frame, stackIndex, value);
+            final CompiledCodeObject code = FrameAccess.getMethod(frame);
+            // FIXME FIXME this is bad!
+            assert value != null;
+            final FrameSlot stackSlot = code.getStackSlot(stackIndex);
+            frame.getFrameDescriptor().setFrameSlotKind(stackSlot, FrameSlotKind.Object);
+            frame.setObject(stackSlot, value);
         }
 
         @Fallback
@@ -296,19 +339,22 @@ public final class ContextObjectNodes {
             throw new SqueakException("Unexpected values:", obj, index, value);
         }
 
-        private static Frame getWritableFrame(final FrameMarker obj) {
-            final Frame targetFrame = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Frame>() {
+        private static Object getWritableFrameOrContext(final FrameMarker obj) {
+            final Object targetFrame = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
                 @Override
-                public Frame visitFrame(final FrameInstance frameInstance) {
+                public Object visitFrame(final FrameInstance frameInstance) {
                     final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
                     if (!FrameAccess.isGraalSqueakFrame(current)) {
                         return null;
                     }
                     final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                    if (obj == contextOrMarker || (contextOrMarker instanceof ContextObject && ((ContextObject) contextOrMarker).getFrameMarker() == obj)) {
+                    if (obj == contextOrMarker) {
                         return frameInstance.getFrame(FrameInstance.FrameAccess.READ_WRITE);
+                    } else if (contextOrMarker instanceof ContextObject && ((ContextObject) contextOrMarker).getFrameMarker() == obj) {
+                        return contextOrMarker;
+                    } else {
+                        return null;
                     }
-                    return null;
                 }
             });
             assert targetFrame != null : "Unable to find frame for " + obj;
