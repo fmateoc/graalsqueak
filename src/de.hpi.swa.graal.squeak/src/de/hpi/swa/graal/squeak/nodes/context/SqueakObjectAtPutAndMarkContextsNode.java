@@ -77,6 +77,10 @@ public abstract class SqueakObjectAtPutAndMarkContextsNode extends Node {
         final ContextObject context = value.getMaterializedContext();
         target.markEscaped();
         context.markEscaped();
+        if (context.isDirty) {
+            context.image.printToStdErr("Mark as clean (terrible hack!!!):", context);
+            context.isDirty = false;
+        }
         target.atput0(index, context);
     }
 
