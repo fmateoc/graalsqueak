@@ -13,10 +13,11 @@ import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.BLOCK_CLOSURE;
 import de.hpi.swa.graal.squeak.nodes.EnterCodeNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes;
 
 public final class BlockClosureObject extends AbstractSqueakObject {
     @CompilationFinal private Object receiver;
-    @CompilationFinal private ContextObject outerContext;
+    @CompilationFinal private Object outerContextOrMarker;
     @CompilationFinal private CompiledBlockObject block;
     @CompilationFinal private long pc = -1;
     @CompilationFinal private long numArgs = -1;
@@ -35,11 +36,11 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         this.copied = new Object[0]; // ensure copied is set
     }
 
-    public BlockClosureObject(final CompiledBlockObject compiledBlock, final RootCallTarget callTarget, final Object receiver, final Object[] copied, final ContextObject outerContext) {
+    public BlockClosureObject(final CompiledBlockObject compiledBlock, final RootCallTarget callTarget, final Object receiver, final Object[] copied, final Object outerContext) {
         super(compiledBlock.image, compiledBlock.image.blockClosureClass);
         this.block = compiledBlock;
         this.callTarget = callTarget;
-        this.outerContext = outerContext;
+        this.outerContextOrMarker = outerContext;
         this.receiver = receiver;
         this.copied = copied;
         this.pc = block.getInitialPC();
@@ -50,7 +51,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         super(original.image, original.image.blockClosureClass);
         this.block = original.block;
         this.callTarget = original.callTarget;
-        this.outerContext = original.outerContext;
+        this.outerContextOrMarker = original.outerContextOrMarker;
         this.receiver = original.receiver;
         this.copied = original.copied;
         this.pc = original.pc;
@@ -61,7 +62,8 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         CompilerDirectives.transferToInterpreterAndInvalidate();
         final Object[] pointers = chunk.getPointers();
         assert pointers.length >= BLOCK_CLOSURE.FIRST_COPIED_VALUE;
-        outerContext = (ContextObject) pointers[BLOCK_CLOSURE.OUTER_CONTEXT];
+        outerContextOrMarker = pointers[BLOCK_CLOSURE.OUTER_CONTEXT];
+        assert outerContextOrMarker instanceof ContextObject;
         pc = (long) pointers[BLOCK_CLOSURE.START_PC];
         numArgs = (long) pointers[BLOCK_CLOSURE.ARGUMENT_COUNT];
         copied = new Object[pointers.length - BLOCK_CLOSURE.FIRST_COPIED_VALUE];
@@ -94,7 +96,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         final int index = (int) longIndex;
         switch (index) {
             case BLOCK_CLOSURE.OUTER_CONTEXT:
-                return outerContext;
+                return outerContextOrMarker;
             case BLOCK_CLOSURE.START_PC:
                 return getStartPC();
             case BLOCK_CLOSURE.ARGUMENT_COUNT:
@@ -109,7 +111,8 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         switch (index) {
             case BLOCK_CLOSURE.OUTER_CONTEXT:
                 CompilerDirectives.transferToInterpreterAndInvalidate();
-                outerContext = (ContextObject) obj;
+                assert obj instanceof ContextObject;
+                outerContextOrMarker = obj;
                 break;
             case BLOCK_CLOSURE.START_PC:
                 CompilerDirectives.transferToInterpreterAndInvalidate();
@@ -153,7 +156,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
     public Object getReceiver() {
         if (receiver == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
-            receiver = outerContext.getReceiver();
+            receiver = ((ContextObject) outerContextOrMarker).getReceiver();
         }
         return receiver;
     }
@@ -175,7 +178,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         if (block == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
             assert pc >= 0;
-            final CompiledCodeObject code = outerContext.getMethod();
+            final CompiledCodeObject code = ((ContextObject) outerContextOrMarker).getMethod();
             final CompiledMethodObject method;
             if (code instanceof CompiledMethodObject) {
                 method = (CompiledMethodObject) code;
@@ -193,30 +196,35 @@ public final class BlockClosureObject extends AbstractSqueakObject {
     }
 
     public boolean hasHomeContext() {
-        return outerContext != null;
+        return outerContextOrMarker != null;
     }
 
     @TruffleBoundary
     public ContextObject getHomeContext() {
-        if (outerContext.isTerminated()) {
+        if (outerContextOrMarker instanceof FrameMarker) {
+            outerContextOrMarker = ContextObjectNodes.getMaterializedContextForMarker((FrameMarker) outerContextOrMarker);
+        }
+        final ContextObject context = (ContextObject) outerContextOrMarker;
+        if (context.isTerminated()) {
             throw new SqueakException("BlockCannotReturnError");
         }
         // recursively unpack closures until home context is reached
-        final BlockClosureObject closure = outerContext.getClosure();
+        final BlockClosureObject closure = context.getClosure();
         if (closure != null) {
             return closure.getHomeContext();
         } else {
-            return outerContext;
+            return context;
         }
     }
 
-    public ContextObject getOuterContext() {
-        return outerContext;
+    public Object getOuterContext() {
+        return outerContextOrMarker;
     }
 
-    public void setOuterContext(final ContextObject outerContext) {
+    public void setOuterContext(final Object outerContext) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
-        this.outerContext = outerContext;
+        assert outerContext instanceof ContextObject || outerContext instanceof FrameMarker;
+        this.outerContextOrMarker = outerContext;
     }
 
     public AbstractSqueakObject shallowCopy() {
@@ -229,7 +237,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
             result[i] = copied[i];
         }
         result[copied.length] = receiver;
-        result[copied.length + 1] = outerContext;
+        result[copied.length + 1] = outerContextOrMarker;
         return result;
     }
 }
