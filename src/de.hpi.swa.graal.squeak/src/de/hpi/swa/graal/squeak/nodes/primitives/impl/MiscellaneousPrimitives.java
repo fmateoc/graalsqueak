@@ -482,8 +482,8 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
         }
 
         @Specialization
-        protected final Object doShallowCopy(final Object receiver) {
-            return shallowCopyNode.execute(receiver);
+        protected final Object doShallowCopy(final VirtualFrame frame, final Object receiver) {
+            return shallowCopyNode.execute(frame, receiver);
         }
     }
 

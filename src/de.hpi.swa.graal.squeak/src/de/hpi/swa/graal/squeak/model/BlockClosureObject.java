@@ -201,7 +201,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
     @TruffleBoundary
     public ContextObject getHomeContext() {
         if (outerContextOrMarker instanceof FrameMarker) {
-            outerContextOrMarker = ContextObject.getMaterializedContextForMarker((FrameMarker) outerContextOrMarker);
+            outerContextOrMarker = ((FrameMarker) outerContextOrMarker).getMaterializedContext();
         }
         final ContextObject context = (ContextObject) outerContextOrMarker;
         if (context.isTerminated()) {

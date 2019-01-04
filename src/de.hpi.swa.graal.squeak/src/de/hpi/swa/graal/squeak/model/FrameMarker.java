@@ -4,10 +4,12 @@ import java.io.PrintStream;
 
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.Frame;
+import com.oracle.truffle.api.frame.MaterializedFrame;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.interop.ForeignAccess;
 import com.oracle.truffle.api.interop.TruffleObject;
 
+import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.interop.SqueakObjectMessageResolutionForeign;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
@@ -34,6 +36,23 @@ public final class FrameMarker implements TruffleObject {
 
     public boolean matches(final Frame frame) {
         return FrameAccess.getContextOrMarker(frame) == this;
+    }
+
+    public ContextObject getMaterializedContext() {
+        final Frame targetFrame = FrameAccess.findFrameForMarker(this);
+        if (targetFrame == null) {
+            throw new SqueakException("Could not find frame for: " + this);
+        }
+        return getMaterializedContext(targetFrame);
+    }
+
+    public ContextObject getMaterializedContext(final Frame matchingFrame) {
+        assert matches(matchingFrame) : "Frame does not match or is already materialized";
+        final CompiledCodeObject code = FrameAccess.getMethod(matchingFrame);
+        final MaterializedFrame materializedFrame = matchingFrame.materialize();
+        final ContextObject context = ContextObject.create(code.image, code.sqContextSize(), materializedFrame, this);
+        materializedFrame.setObject(code.thisContextOrMarkerSlot, context);
+        return context;
     }
 
     public ForeignAccess getForeignAccess() {

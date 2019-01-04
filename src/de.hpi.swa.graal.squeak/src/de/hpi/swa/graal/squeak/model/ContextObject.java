@@ -53,22 +53,6 @@ public final class ContextObject extends AbstractPointersObject {
         return new ContextObject(image, size, frame, frameMarker);
     }
 
-    public static ContextObject getMaterializedContextForMarker(final FrameMarker obj) {
-        final Frame targetFrame = FrameAccess.findFrameForMarker(obj);
-        if (targetFrame == null) {
-            throw new SqueakException("Could not find frame for: " + obj);
-        }
-        return getMaterializedContextForFrame(targetFrame, obj);
-    }
-
-    public static ContextObject getMaterializedContextForFrame(final Frame frame, final FrameMarker frameMarker) {
-        final CompiledCodeObject code = FrameAccess.getMethod(frame);
-        final MaterializedFrame materializedFrame = frame.materialize();
-        final ContextObject context = ContextObject.create(code.image, code.sqContextSize(), materializedFrame, frameMarker);
-        materializedFrame.setObject(code.thisContextOrMarkerSlot, context);
-        return context;
-    }
-
     private ContextObject(final SqueakImageContext image, final int size, final MaterializedFrame frame, final FrameMarker frameMarker) {
         super(image, image.methodContextClass);
         isDirty = false;

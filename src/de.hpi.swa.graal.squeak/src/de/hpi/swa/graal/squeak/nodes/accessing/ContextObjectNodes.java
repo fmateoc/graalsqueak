@@ -14,7 +14,6 @@ import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
-import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
@@ -36,7 +35,7 @@ public final class ContextObjectNodes {
 
         @Specialization(guards = {"!obj.matches(frame)"})
         protected static final Object doMaterialize(@SuppressWarnings("unused") final Frame frame, final FrameMarker obj, final long index) {
-            return ContextObject.getMaterializedContextForMarker(obj).at0(index);
+            return obj.getMaterializedContext().at0(index);
         }
 
         @Specialization(guards = {"obj.matches(frame)", "index == SENDER_OR_NIL"})
@@ -125,7 +124,7 @@ public final class ContextObjectNodes {
 
         @Specialization(guards = {"!obj.matches(frame)"})
         protected static final void doMaterialize(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker obj, final long index, final Object value) {
-            ContextObject.getMaterializedContextForMarker(obj).atput0(index, value);
+            obj.getMaterializedContext().atput0(index, value);
         }
 
         @Specialization(guards = {"obj.matches(frame)", "index == SENDER_OR_NIL"})

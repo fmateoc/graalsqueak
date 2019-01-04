@@ -226,8 +226,8 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         @Specialization(guards = {"receiver.matches(frame)"})
         protected static final Object doTerminateMatchingReceiver(final VirtualFrame frame, final FrameMarker receiver, final FrameMarker previousMarker) {
             terminateBetween(receiver, previousMarker);
-            final ContextObject previousContext = ContextObject.getMaterializedContextForMarker(previousMarker);
-            final ContextObject context = ContextObject.getMaterializedContextForFrame(frame, receiver);
+            final ContextObject previousContext = previousMarker.getMaterializedContext();
+            final ContextObject context = receiver.getMaterializedContext(frame);
             context.atput0(CONTEXT.SENDER_OR_NIL, previousContext); // flagging context as dirty
             return receiver;
         }
@@ -235,8 +235,8 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         @Specialization(guards = {"previousMarker.matches(frame)"})
         protected static final Object doTerminateMatchingPreviousMarker(final VirtualFrame frame, final FrameMarker receiver, final FrameMarker previousMarker) {
             terminateBetween(receiver, previousMarker);
-            final ContextObject previousContext = ContextObject.getMaterializedContextForFrame(frame, previousMarker);
-            final ContextObject context = ContextObject.getMaterializedContextForMarker(receiver);
+            final ContextObject previousContext = previousMarker.getMaterializedContext(frame);
+            final ContextObject context = receiver.getMaterializedContext();
             context.atput0(CONTEXT.SENDER_OR_NIL, previousContext); // flagging context as dirty
             return receiver;
         }
@@ -244,8 +244,8 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         @Specialization(guards = {"!receiver.matches(frame)", "!previousMarker.matches(frame)"})
         protected static final Object doTerminateNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker receiver, final FrameMarker previousMarker) {
             terminateBetween(receiver, previousMarker);
-            final ContextObject previousContext = ContextObject.getMaterializedContextForMarker(previousMarker);
-            final ContextObject context = ContextObject.getMaterializedContextForMarker(receiver);
+            final ContextObject previousContext = previousMarker.getMaterializedContext();
+            final ContextObject context = receiver.getMaterializedContext();
             context.atput0(CONTEXT.SENDER_OR_NIL, previousContext); // flagging context as dirty
             return receiver;
         }
@@ -253,7 +253,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         @Specialization(guards = {"previousMarker.matches(frame)"})
         protected static final Object doTerminateMatching(final VirtualFrame frame, final ContextObject receiver, final FrameMarker previousMarker) {
             terminateBetween(receiver.getFrameMarker(), previousMarker);
-            final ContextObject previousContext = ContextObject.getMaterializedContextForFrame(frame, previousMarker);
+            final ContextObject previousContext = previousMarker.getMaterializedContext(frame);
             receiver.atput0(CONTEXT.SENDER_OR_NIL, previousContext); // flagging context as dirty
             return receiver;
         }
@@ -261,7 +261,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         @Specialization(guards = {"!previousMarker.matches(frame)"})
         protected static final Object doTerminateNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final ContextObject receiver, final FrameMarker previousMarker) {
             terminateBetween(receiver.getFrameMarker(), previousMarker);
-            final ContextObject previousContext = ContextObject.getMaterializedContextForMarker(previousMarker);
+            final ContextObject previousContext = previousMarker.getMaterializedContext();
             receiver.atput0(CONTEXT.SENDER_OR_NIL, previousContext); // flagging context as dirty
             return receiver;
         }
@@ -269,7 +269,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         @Specialization(guards = {"receiver.matches(frame)"})
         protected static final Object doTerminateMatching(final VirtualFrame frame, final FrameMarker receiver, final ContextObject previousContext) {
             terminateBetween(receiver, previousContext.getFrameMarker());
-            final ContextObject context = ContextObject.getMaterializedContextForFrame(frame, receiver);
+            final ContextObject context = receiver.getMaterializedContext(frame);
             context.atput0(CONTEXT.SENDER_OR_NIL, previousContext); // flagging context as dirty
             return receiver;
         }
@@ -277,7 +277,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         @Specialization(guards = {"!receiver.matches(frame)"})
         protected static final Object doTerminateNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker receiver, final ContextObject previousContext) {
             terminateBetween(receiver, previousContext.getFrameMarker());
-            final ContextObject context = ContextObject.getMaterializedContextForMarker(receiver);
+            final ContextObject context = receiver.getMaterializedContext();
             context.atput0(CONTEXT.SENDER_OR_NIL, previousContext); // flagging context as dirty
             return receiver;
         }

@@ -2,6 +2,7 @@ package de.hpi.swa.graal.squeak.nodes.accessing;
 
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
@@ -13,6 +14,7 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.EmptyObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
@@ -26,16 +28,16 @@ public abstract class SqueakObjectShallowCopyNode extends AbstractNodeWithImage 
         return SqueakObjectShallowCopyNodeGen.create(image);
     }
 
-    public final Object execute(final Object object) {
+    public final Object execute(final VirtualFrame frame, final Object object) {
         image.reportNewAllocationRequest();
-        return image.reportNewAllocationResult(executeAllocation(object));
+        return image.reportNewAllocationResult(executeAllocation(frame, object));
     }
 
     protected SqueakObjectShallowCopyNode(final SqueakImageContext image) {
         super(image);
     }
 
-    protected abstract Object executeAllocation(Object obj);
+    protected abstract Object executeAllocation(VirtualFrame frame, Object obj);
 
     @Specialization
     protected static final double doDouble(final double value) {
@@ -65,6 +67,16 @@ public abstract class SqueakObjectShallowCopyNode extends AbstractNodeWithImage 
     @Specialization
     protected static final Object doContext(final ContextObject receiver) {
         return receiver.shallowCopy();
+    }
+
+    @Specialization(guards = "receiver.matches(frame)")
+    protected static final Object doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker receiver) {
+        return receiver.getMaterializedContext(frame).shallowCopy();
+    }
+
+    @Specialization(guards = "!receiver.matches(frame)")
+    protected static final Object doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker receiver) {
+        return receiver.getMaterializedContext().shallowCopy();
     }
 
     @Specialization

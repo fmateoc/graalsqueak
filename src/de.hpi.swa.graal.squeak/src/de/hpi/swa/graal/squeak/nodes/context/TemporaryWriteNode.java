@@ -31,7 +31,7 @@ public abstract class TemporaryWriteNode extends AbstractNodeWithCode {
                     @Cached("create(code.getStackSlot(tempIndex))") final FrameSlotWriteNode writeNode) {
         assert value != null;
         assert 0 <= tempIndex && tempIndex <= CONTEXT.MAX_STACK_SIZE;
-        final ContextObject context = ContextObject.getMaterializedContextForFrame(frame, value);
+        final ContextObject context = value.getMaterializedContext(frame);
         context.markEscaped();
         writeNode.executeWrite(frame, context);
     }
@@ -41,7 +41,7 @@ public abstract class TemporaryWriteNode extends AbstractNodeWithCode {
                     @Cached("create(code.getStackSlot(tempIndex))") final FrameSlotWriteNode writeNode) {
         assert value != null;
         assert 0 <= tempIndex && tempIndex <= CONTEXT.MAX_STACK_SIZE;
-        final ContextObject context = ContextObject.getMaterializedContextForMarker(value);
+        final ContextObject context = value.getMaterializedContext();
         context.markEscaped();
         writeNode.executeWrite(frame, context);
     }
