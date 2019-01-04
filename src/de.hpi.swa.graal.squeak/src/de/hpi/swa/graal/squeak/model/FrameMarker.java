@@ -49,6 +49,7 @@ public final class FrameMarker implements TruffleObject {
     public ContextObject getMaterializedContext(final Frame matchingFrame) {
         final Object contextOrMarker = FrameAccess.getContextOrMarker(matchingFrame);
         if (contextOrMarker instanceof ContextObject) {
+            assert ((ContextObject) contextOrMarker).getFrameMarker() == this;
             return (ContextObject) contextOrMarker; // TODO: Refactor this code path.
         }
         assert matches(matchingFrame) : "Frame does not match";
