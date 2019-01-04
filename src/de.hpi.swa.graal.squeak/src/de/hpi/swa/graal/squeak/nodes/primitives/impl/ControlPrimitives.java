@@ -905,8 +905,8 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             isEmptyListNode = IsEmptyListNode.create(method.image);
         }
 
-        @Specialization(guards = "isEmptyListNode.executeIsEmpty(frame,mutex)")
-        protected final Object doExitEmpty(final VirtualFrame frame, final PointersObject mutex) {
+        @Specialization(guards = "isEmptyListNode.executeIsEmpty(frame, mutex)")
+        protected final Object doExitEmpty(@SuppressWarnings("unused") final VirtualFrame frame, final PointersObject mutex) {
             mutex.atput0(MUTEX.OWNER, code.image.nil);
             return mutex;
         }

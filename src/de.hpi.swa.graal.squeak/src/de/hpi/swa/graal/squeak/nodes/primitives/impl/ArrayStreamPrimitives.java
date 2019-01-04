@@ -862,7 +862,7 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         }
 
         @Specialization(guards = {"index < getMethod(frame).sqContextSize()", "!receiver.isMatchingFrame(frame)"})
-        protected static final Object doFrameMarkerNotMatching(final VirtualFrame frame, final FrameMarker receiver, final long index,
+        protected static final Object doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker receiver, final long index,
                         @Cached("create()") final ContextObjectReadNode readNode) {
             final Object result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
                 @Override
@@ -881,7 +881,7 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
                 }
             });
             if (result == null) {
-                throw new SqueakException("Unable to find frameMarker");
+                throw new SqueakException("Unable to find frameMarker:", receiver);
             }
             return result;
         }

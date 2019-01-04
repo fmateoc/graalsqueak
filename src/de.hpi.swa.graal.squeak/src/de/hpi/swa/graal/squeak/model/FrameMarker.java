@@ -2,7 +2,6 @@ package de.hpi.swa.graal.squeak.model;
 
 import java.io.PrintStream;
 
-import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.VirtualFrame;
@@ -24,9 +23,6 @@ public final class FrameMarker implements TruffleObject {
 
     @TruffleBoundary
     private void logAllocations(final Object[] arguments) {
-        if (arguments.length == 5 && arguments[0].toString().equals("Context>>runUntilErrorOrReturnFrom:") && arguments[4].toString().equals("CTX [] in SmalltalkImage>>installLowSpaceWatcher")) {
-            Truffle.getRuntime();
-        }
         final PrintStream err = System.err;
         err.println(String.format("new %s; frame args: %s", toString(), ArrayUtils.toJoinedString(", ", arguments)));
     }

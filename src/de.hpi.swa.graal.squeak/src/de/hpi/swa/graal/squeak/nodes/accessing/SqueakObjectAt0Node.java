@@ -62,7 +62,7 @@ public abstract class SqueakObjectAt0Node extends Node {
     }
 
     @Specialization(guards = {"!obj.isMatchingFrame(frame)"})
-    protected static final Object doContextVirtualizedNotMatching(final VirtualFrame frame, final FrameMarker obj, final long index,
+    protected static final Object doContextVirtualizedNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker obj, final long index,
                     @Cached("create()") final ContextObjectReadNode readNode) {
         final Object result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
             @Override

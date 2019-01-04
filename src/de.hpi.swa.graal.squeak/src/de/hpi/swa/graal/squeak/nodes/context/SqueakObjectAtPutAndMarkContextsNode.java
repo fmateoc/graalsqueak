@@ -73,7 +73,7 @@ public abstract class SqueakObjectAtPutAndMarkContextsNode extends Node {
     }
 
     @Specialization(guards = {"!value.isMatchingFrame(frame)"})
-    protected final void doFrameMarkerNotMatching(final VirtualFrame frame, final FrameMarker object, final FrameMarker value) {
+    protected final void doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker object, final FrameMarker value) {
         final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
         final ContextObject context = ContextObjectNodes.getMaterializedContextForMarker(value);
         target.markEscaped();
@@ -81,24 +81,47 @@ public abstract class SqueakObjectAtPutAndMarkContextsNode extends Node {
         target.atput0(index, context);
     }
 
-    @Specialization
-    protected final void doFrameMarker(final VirtualFrame frame, final FrameMarker object, final ContextObject value) {
+    @Specialization(guards = {"object.isMatchingFrame(frame)"})
+    protected final void doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker object, final ContextObject value) {
+        final ContextObject target = ContextObjectNodes.getMaterializeContextForFrame(frame, object);
+        target.markEscaped();
+        value.markEscaped();
+        target.atput0(index, value);
+    }
+
+    @Specialization(guards = {"!value.isMatchingFrame(frame)"})
+    protected final void doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker object, final ContextObject value) {
         final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
         target.markEscaped();
         value.markEscaped();
         target.atput0(index, value);
     }
 
-    @Specialization
-    protected final void doFrameMarker(final VirtualFrame frame, final FrameMarker object, final BlockClosureObject value) {
+    @Specialization(guards = {"object.isMatchingFrame(frame)"})
+    protected final void doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker object, final BlockClosureObject value) {
+        final ContextObject target = ContextObjectNodes.getMaterializeContextForFrame(frame, object);
+        target.markEscaped();
+        value.getHomeContext().markEscaped();
+        target.atput0(index, value);
+    }
+
+    @Specialization(guards = {"!object.isMatchingFrame(frame)"})
+    protected final void doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker object, final BlockClosureObject value) {
         final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
         target.markEscaped();
         value.getHomeContext().markEscaped();
         target.atput0(index, value);
     }
 
-    @Specialization(guards = {"!isNativeObject(object)", "!isContextObject(value)", "!isFrameMarker(value)", "!isBlockClosureObject(value)"})
-    protected final void doFrameMarker(final VirtualFrame frame, final FrameMarker object, final Object value) {
+    @Specialization(guards = {"object.isMatchingFrame(frame)", "!isContextObject(value)", "!isFrameMarker(value)", "!isBlockClosureObject(value)"})
+    protected final void doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker object, final Object value) {
+        final ContextObject target = ContextObjectNodes.getMaterializeContextForFrame(frame, object);
+        target.markEscaped();
+        target.atput0(index, value);
+    }
+
+    @Specialization(guards = {"!object.isMatchingFrame(frame)", "!isContextObject(value)", "!isFrameMarker(value)", "!isBlockClosureObject(value)"})
+    protected final void doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker object, final Object value) {
         final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
         target.markEscaped();
         target.atput0(index, value);
@@ -106,9 +129,6 @@ public abstract class SqueakObjectAtPutAndMarkContextsNode extends Node {
 
     @Specialization(guards = {"!isNativeObject(object)"})
     protected final void doSqueakObject(final VirtualFrame frame, final AbstractSqueakObject object, final BlockClosureObject value) {
-// if (value.hasHomeContext()) {
-// value.getHomeContext().markEscaped();
-// }
         atPut0Node.execute(frame, object, index, value);
     }
 

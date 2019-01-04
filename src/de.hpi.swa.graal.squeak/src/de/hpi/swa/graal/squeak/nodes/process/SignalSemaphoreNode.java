@@ -30,7 +30,7 @@ public abstract class SignalSemaphoreNode extends AbstractNodeWithImage {
     public abstract void executeSignal(VirtualFrame frame, Object semaphore);
 
     @Specialization(guards = {"semaphore.isSemaphore()", "isEmptyListNode.executeIsEmpty(frame, semaphore)"})
-    public static final void doSignalEmpty(final VirtualFrame frame, final PointersObject semaphore) {
+    public static final void doSignalEmpty(@SuppressWarnings("unused") final VirtualFrame frame, final PointersObject semaphore) {
         semaphore.atput0(SEMAPHORE.EXCESS_SIGNALS, (long) semaphore.at0(SEMAPHORE.EXCESS_SIGNALS) + 1);
     }
 
