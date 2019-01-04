@@ -3,6 +3,7 @@ package de.hpi.swa.graal.squeak.nodes.primitives;
 import com.oracle.truffle.api.dsl.Fallback;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
+import de.hpi.swa.graal.squeak.model.FrameMarker;
 
 public final class PrimitiveInterfaces {
     public interface AbstractPrimitive {
@@ -17,8 +18,8 @@ public final class PrimitiveInterfaces {
 
     public interface UnaryPrimitive extends UnaryPrimitiveWithoutFallback {
         @Fallback
-        @SuppressWarnings("unused")
         default Object doFail(final Object arg1) {
+            assert !(arg1 instanceof FrameMarker);
             throw new PrimitiveFailed();
         }
     }
@@ -31,8 +32,8 @@ public final class PrimitiveInterfaces {
 
     public interface BinaryPrimitive extends BinaryPrimitiveWithoutFallback {
         @Fallback
-        @SuppressWarnings("unused")
         default Object doFail(final Object arg1, final Object arg2) {
+            assert !(arg1 instanceof FrameMarker) && !(arg2 instanceof FrameMarker);
             throw new PrimitiveFailed();
         }
     }
@@ -43,8 +44,8 @@ public final class PrimitiveInterfaces {
         }
 
         @Fallback
-        @SuppressWarnings("unused")
         default Object doFail(final Object arg1, final Object arg2, final Object arg3) {
+            assert !(arg1 instanceof FrameMarker) && !(arg2 instanceof FrameMarker) && !(arg3 instanceof FrameMarker);
             throw new PrimitiveFailed();
         }
     }
@@ -55,8 +56,8 @@ public final class PrimitiveInterfaces {
         }
 
         @Fallback
-        @SuppressWarnings("unused")
         default Object doFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4) {
+            assert !(arg1 instanceof FrameMarker) && !(arg2 instanceof FrameMarker) && !(arg3 instanceof FrameMarker) && !(arg4 instanceof FrameMarker);
             throw new PrimitiveFailed();
         }
     }
@@ -67,8 +68,8 @@ public final class PrimitiveInterfaces {
         }
 
         @Fallback
-        @SuppressWarnings("unused")
         default Object doFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5) {
+            assert !(arg1 instanceof FrameMarker) && !(arg2 instanceof FrameMarker) && !(arg3 instanceof FrameMarker) && !(arg4 instanceof FrameMarker) && !(arg5 instanceof FrameMarker);
             throw new PrimitiveFailed();
         }
     }
@@ -79,8 +80,9 @@ public final class PrimitiveInterfaces {
         }
 
         @Fallback
-        @SuppressWarnings("unused")
         default Object doFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final Object arg6) {
+            assert !(arg1 instanceof FrameMarker) && !(arg2 instanceof FrameMarker) && !(arg3 instanceof FrameMarker) && !(arg4 instanceof FrameMarker) && !(arg5 instanceof FrameMarker) &&
+                            !(arg6 instanceof FrameMarker);
             throw new PrimitiveFailed();
         }
     }
@@ -91,8 +93,9 @@ public final class PrimitiveInterfaces {
         }
 
         @Fallback
-        @SuppressWarnings("unused")
         default Object doFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final Object arg6, final Object arg7) {
+            assert !(arg1 instanceof FrameMarker) && !(arg2 instanceof FrameMarker) && !(arg3 instanceof FrameMarker) && !(arg4 instanceof FrameMarker) && !(arg5 instanceof FrameMarker) &&
+                            !(arg6 instanceof FrameMarker) && !(arg7 instanceof FrameMarker);
             throw new PrimitiveFailed();
         }
     }
@@ -103,8 +106,9 @@ public final class PrimitiveInterfaces {
         }
 
         @Fallback
-        @SuppressWarnings("unused")
         default Object doFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final Object arg6, final Object arg7, final Object arg8) {
+            assert !(arg1 instanceof FrameMarker) && !(arg2 instanceof FrameMarker) && !(arg3 instanceof FrameMarker) && !(arg4 instanceof FrameMarker) && !(arg5 instanceof FrameMarker) &&
+                            !(arg6 instanceof FrameMarker) && !(arg7 instanceof FrameMarker) && !(arg8 instanceof FrameMarker);
             throw new PrimitiveFailed();
         }
     }
