@@ -73,9 +73,7 @@ public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
         evaluate("Utilities setAuthorInitials: 'GraalSqueak'");
         image.getOutput().println("Initializing fresh MorphicUIManager...");
         evaluate("Project current instVarNamed: #uiManager put: MorphicUIManager new");
-        if (!runsOnMXGate()) {
-            patchMethod("TestCase", "performTest", "performTest [self perform: testSelector asSymbol] on: Error do: [:e | e printVerboseOn: FileStream stderr. e signal]");
-        }
+        patchMethod("TestCase", "performTest", "performTest [self perform: testSelector asSymbol] on: Error do: [:e | e printVerboseOn: FileStream stderr. e signal]");
     }
 
     private static boolean runsOnMXGate() {
