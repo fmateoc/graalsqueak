@@ -44,7 +44,8 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         super(compiledBlock.image, compiledBlock.image.blockClosureClass);
         this.block = compiledBlock;
         this.callTarget = callTarget;
-        this.outerContext = FrameAccess.getContextOrMarker(frame);
+        Object contextOrMarker = FrameAccess.getContextOrMarker(frame);
+        this.outerContext = contextOrMarker;
         this.receiver = receiver;
         this.copied = copied;
         this.pc = block.getInitialPC();
@@ -197,13 +198,16 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         return block;
     }
 
+    public boolean hasHomeContext() {
+        return outerContext != null;
+    }
+
     public ContextObject getHomeContext() {
         final ContextObject context;
         if (outerContext instanceof FrameMarker) {
-            context = ContextObjectNodes.getMaterializedContextForMarker((FrameMarker) outerContext);
-        } else {
-            context = (ContextObject) outerContext;
+            outerContext = ContextObjectNodes.getMaterializedContextForMarker((FrameMarker) outerContext);
         }
+        context = (ContextObject) outerContext;
         if (context.isTerminated()) {
             throw new SqueakException("BlockCannotReturnError");
         }

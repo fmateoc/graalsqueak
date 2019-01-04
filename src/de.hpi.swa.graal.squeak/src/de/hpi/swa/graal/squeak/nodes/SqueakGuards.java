@@ -3,6 +3,7 @@ package de.hpi.swa.graal.squeak.nodes;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
+import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
@@ -43,6 +44,10 @@ public final class SqueakGuards {
 
     public static boolean isArrayObject(final Object object) {
         return object instanceof ArrayObject;
+    }
+
+    public static boolean isBlockClosureObject(final Object object) {
+        return object instanceof BlockClosureObject;
     }
 
     public static boolean isBoolean(final Object value) {
