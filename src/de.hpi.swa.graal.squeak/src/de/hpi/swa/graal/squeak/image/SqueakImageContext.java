@@ -582,7 +582,7 @@ public final class SqueakImageContext {
                 return null;
             }
         });
-        getError().println("== " + depth[0] + " Squeak frames ================================================================");
+        getError().println("== Squeak frames ================================================================");
         if (lastSender[0] instanceof ContextObject) {
             ((ContextObject) lastSender[0]).printSqStackTrace();
         }
