@@ -412,9 +412,9 @@ public final class ContextObject extends AbstractPointersObject {
         return truffleFrame;
     }
 
-    public void setTruffleFrame(final MaterializedFrame frame) {
-        truffleFrame = frame;
-    }
+// public void setTruffleFrame(final MaterializedFrame frame) {
+// truffleFrame = frame;
+// }
 
     public void findAndSetTruffleFrame() {
         assert frameMarker != null;
