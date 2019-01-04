@@ -47,7 +47,11 @@ public final class FrameMarker implements TruffleObject {
     }
 
     public ContextObject getMaterializedContext(final Frame matchingFrame) {
-        assert matches(matchingFrame) : "Frame does not match or is already materialized";
+        final Object contextOrMarker = FrameAccess.getContextOrMarker(matchingFrame);
+        if (contextOrMarker instanceof ContextObject) {
+            return (ContextObject) contextOrMarker; // TODO: Refactor this code path.
+        }
+        assert matches(matchingFrame) : "Frame does not match";
         final CompiledCodeObject code = FrameAccess.getMethod(matchingFrame);
         final MaterializedFrame materializedFrame = matchingFrame.materialize();
         final ContextObject context = ContextObject.create(code.image, code.sqContextSize(), materializedFrame, this);
