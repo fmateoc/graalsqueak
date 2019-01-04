@@ -159,7 +159,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
     public Object getReceiver() {
         if (receiver == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
-            receiver = ((ContextObject) outerContext).getReceiver();
+            receiver = outerContext.getReceiver();
         }
         return receiver;
     }
@@ -181,7 +181,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         if (block == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
             assert pc >= 0;
-            final CompiledCodeObject code = ((ContextObject) outerContext).getMethod();
+            final CompiledCodeObject code = outerContext.getMethod();
             final CompiledMethodObject method;
             if (code instanceof CompiledMethodObject) {
                 method = (CompiledMethodObject) code;
@@ -216,13 +216,13 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         }
     }
 
-    public Object getOuterContext() {
+    public ContextObject getOuterContext() {
         return outerContext;
     }
 
-    public void setOuterContext(final Object outerContext) {
+    public void setOuterContext(final ContextObject outerContext) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
-        this.outerContext = (ContextObject) outerContext;
+        this.outerContext = outerContext;
     }
 
     public AbstractSqueakObject shallowCopy() {

@@ -83,20 +83,24 @@ public abstract class SqueakObjectAtPutAndMarkContextsNode extends Node {
 
     @Specialization(guards = {"!isNativeObject(object)", "!isContextObject(value)", "!isFrameMarker(value)"})
     protected final void doFrameMarker(final VirtualFrame frame, final FrameMarker object, final BlockClosureObject value) {
+        final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
+        target.markEscaped();
         value.getHomeContext().markEscaped();
-        atPut0Node.execute(frame, object, index, value);
+        target.atput0(index, value);
     }
 
     @Specialization(guards = {"!isNativeObject(object)", "!isContextObject(value)", "!isFrameMarker(value)", "!isBlockClosureObject(value)"})
     protected final void doFrameMarker(final VirtualFrame frame, final FrameMarker object, final Object value) {
-        atPut0Node.execute(frame, object, index, value);
+        final ContextObject target = ContextObjectNodes.getMaterializedContextForMarker(object);
+        target.markEscaped();
+        target.atput0(index, value);
     }
 
-    @Specialization(guards = {"!isNativeObject(object)", "!isContextObject(value)", "!isFrameMarker(value)"})
+    @Specialization(guards = {"!isNativeObject(object)"})
     protected final void doSqueakObject(final VirtualFrame frame, final AbstractSqueakObject object, final BlockClosureObject value) {
-        if (value.hasHomeContext()) {
-            value.getHomeContext().markEscaped();
-        }
+// if (value.hasHomeContext()) {
+// value.getHomeContext().markEscaped();
+// }
         atPut0Node.execute(frame, object, index, value);
     }
 
