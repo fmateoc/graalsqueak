@@ -188,7 +188,7 @@ public abstract class ObjectGraphNode extends AbstractNodeWithImage {
 
         @Specialization
         protected static final Object[] doContext(final ContextObject object) {
-            return object.getPointers();
+            return new Object[0]; // FIXME
         }
 
         @Specialization

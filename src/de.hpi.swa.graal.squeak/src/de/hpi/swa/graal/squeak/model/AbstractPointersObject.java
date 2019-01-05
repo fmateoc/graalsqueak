@@ -47,7 +47,7 @@ public abstract class AbstractPointersObject extends AbstractSqueakObject {
         this.pointers = pointers;
     }
 
-    public final int size() {
+    public int size() {
         return pointers.length;
     }
 }

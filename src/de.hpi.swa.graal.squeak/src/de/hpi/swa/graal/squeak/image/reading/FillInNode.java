@@ -57,8 +57,7 @@ public abstract class FillInNode extends Node {
 
     @Specialization
     protected static final void doContext(final ContextObject obj, final SqueakImageChunk chunk) {
-        obj.setPointers(chunk.getPointers());
-        assert obj.getMethod().sqContextSize() + CONTEXT.TEMP_FRAME_START == obj.getPointers().length : "ContextObject has wrong size";
+        // do nothing TODO: better comment "FillInContextNode"
     }
 
     @Specialization(guards = "obj.isShortType()")
