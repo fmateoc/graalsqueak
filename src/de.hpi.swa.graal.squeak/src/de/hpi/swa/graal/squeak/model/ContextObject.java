@@ -272,6 +272,7 @@ public final class ContextObject extends AbstractPointersObject {
 
     private MaterializedFrame getOrCreateTruffleFrame() {
         if (truffleFrame == null) {
+            CompilerDirectives.transferToInterpreter();
             // Method is unknown, use dummy frame instead
             final int guessedArgumentSize = size > CONTEXT.LARGE_FRAMESIZE ? size - CONTEXT.LARGE_FRAMESIZE : size - CONTEXT.SMALL_FRAMESIZE;
             final Object[] dummyArguments = FrameAccess.newDummyWith(null, image.nil, null, new Object[guessedArgumentSize]);

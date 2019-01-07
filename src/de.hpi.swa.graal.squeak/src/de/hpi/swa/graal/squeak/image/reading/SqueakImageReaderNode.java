@@ -18,6 +18,7 @@ import com.oracle.truffle.api.nodes.RootNode;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakAbortException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
+import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
@@ -429,8 +430,17 @@ public final class SqueakImageReaderNode extends RootNode {
             fillInContextNode.execute(chunk.asObject(), chunk);
         }
         // Do it again for compiled block closures
+        for (int i = 0; i < 2; i++) {
+            for (final SqueakImageChunk chunk : chunktable.values()) {
+                fillInContextNode.execute(chunk.asObject(), chunk);
+            }
+        }
+
         for (final SqueakImageChunk chunk : chunktable.values()) {
-            fillInContextNode.execute(chunk.asObject(), chunk);
+            final Object object = chunk.object;
+            if (object instanceof ContextObject) {
+                assert ((ContextObject) object).hasTruffleFrame();
+            }
         }
     }
 

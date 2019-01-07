@@ -60,6 +60,7 @@ public final class ExecuteTopLevelContextNode extends RootNode {
             CompilerDirectives.transferToInterpreter();
             assert activeContext.hasMaterializedSender() : "Context must have materialized sender";
             final AbstractSqueakObject sender = (AbstractSqueakObject) activeContext.getSender();
+            assert sender == image.nil || ((ContextObject) sender).hasTruffleFrame();
             try {
                 MaterializeContextOnMethodExitNode.reset();
                 final CompiledCodeObject code = activeContext.getClosureOrMethod();

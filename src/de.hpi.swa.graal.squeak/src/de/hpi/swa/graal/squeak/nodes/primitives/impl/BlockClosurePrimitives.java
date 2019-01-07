@@ -59,7 +59,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
             contextNode = GetOrCreateContextNode.create(method);
         }
 
-        @Specialization(guards = {"receiver.hasVirtualSender()"})
+        @Specialization
         @TruffleBoundary
         protected final Object doFindNextVirtualized(final ContextObject receiver, final ContextObject previousContext) {
             final ContextObject handlerContext = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<ContextObject>() {
@@ -98,26 +98,9 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
             }
         }
 
-        @Specialization(guards = {"receiver.hasVirtualSender()"})
+        @Specialization
         protected final Object doFindNextVirtualizedNil(final ContextObject receiver, @SuppressWarnings("unused") final NilObject nil) {
             return doFindNextVirtualized(receiver, null);
-        }
-
-        @Specialization(guards = {"!receiver.hasVirtualSender()"})
-        protected final Object doFindNext(final ContextObject receiver, final AbstractSqueakObject previousContextOrNil) {
-            ContextObject current = receiver;
-            while (current != previousContextOrNil) {
-                final Object sender = current.getSender();
-                if (sender == code.image.nil || sender == previousContextOrNil) {
-                    break;
-                } else {
-                    current = (ContextObject) sender;
-                    if (current.isUnwindContext()) {
-                        return current;
-                    }
-                }
-            }
-            return code.image.nil;
         }
 
         @Specialization
@@ -404,19 +387,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
 
         @Specialization(guards = {"!receiver.hasVirtualSender()"})
         protected final Object findNext(final ContextObject receiver) {
-            ContextObject context = receiver;
-            while (true) {
-                if (context.getMethod().isExceptionHandlerMarked()) {
-                    return context;
-                }
-                final Object sender = context.getSender();
-                if (sender instanceof ContextObject) {
-                    context = (ContextObject) sender;
-                } else {
-                    assert sender == code.image.nil;
-                    return code.image.nil;
-                }
-            }
+            return findNext(receiver.getFrameMarker());
         }
 
         @Specialization
