@@ -13,6 +13,7 @@ import com.oracle.truffle.api.frame.FrameUtil;
 
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
+import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FrameMarker;
 
@@ -46,8 +47,8 @@ public final class FrameAccess {
      * </pre>
      */
 
-    public static CompiledCodeObject getMethod(final Frame frame) {
-        return (CompiledCodeObject) frame.getArguments()[METHOD];
+    public static CompiledMethodObject getMethod(final Frame frame) {
+        return (CompiledMethodObject) frame.getArguments()[METHOD];
     }
 
     public static Object getSender(final Frame frame) {
@@ -86,6 +87,7 @@ public final class FrameAccess {
 
     public static Object[] newWith(final CompiledCodeObject code, final Object sender, final BlockClosureObject closure, final Object[] frameArgs) {
         final Object[] arguments = new Object[RECEIVER + frameArgs.length];
+        assert frameArgs.length > 0 : "At least a receiver must be provided";
         arguments[METHOD] = code;
         arguments[SENDER_OR_SENDER_MARKER] = sender;
         arguments[CLOSURE_OR_NULL] = closure;

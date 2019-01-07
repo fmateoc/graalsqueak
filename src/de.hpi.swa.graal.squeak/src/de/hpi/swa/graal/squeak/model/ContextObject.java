@@ -46,7 +46,6 @@ public final class ContextObject extends AbstractPointersObject {
         super(image, image.methodContextClass);
         truffleFrame = null;
         frameMarker = null;
-        setPointersUnsafe(new Object[size]);
         this.size = size;
     }
 
@@ -58,7 +57,6 @@ public final class ContextObject extends AbstractPointersObject {
         super(image, image.methodContextClass);
         truffleFrame = frame;
         this.frameMarker = frameMarker;
-        setPointersUnsafe(new Object[size]);
         this.size = size;
     }
 
@@ -72,22 +70,23 @@ public final class ContextObject extends AbstractPointersObject {
 
     public void fillIn(final Object[] pointers) {
         assert pointers.length > CONTEXT.TEMP_FRAME_START;
-        final CompiledCodeObject closureOrMethod = (CompiledCodeObject) pointers[CONTEXT.METHOD];
+        final CompiledMethodObject method = (CompiledMethodObject) pointers[CONTEXT.METHOD];
         final Object sender = pointers[CONTEXT.SENDER_OR_NIL] == image.nil ? null : pointers[CONTEXT.SENDER_OR_NIL];
         final BlockClosureObject closure = pointers[CONTEXT.CLOSURE_OR_NIL] == image.nil ? null : (BlockClosureObject) pointers[CONTEXT.CLOSURE_OR_NIL];
-        final int endArguments = CONTEXT.RECEIVER + 1 + closureOrMethod.getNumArgsAndCopied();
+        final int endArguments = CONTEXT.RECEIVER + 1 + method.getNumArgsAndCopied();
         final Object[] arguments = Arrays.copyOfRange(pointers, CONTEXT.RECEIVER, endArguments);
-        final Object[] frameArguments = FrameAccess.newWith(closureOrMethod, sender, closure, arguments);
-        truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, closureOrMethod.getFrameDescriptor());
-        setPointersUnsafe(new Object[(int) closureOrMethod.getNumStackSlots()]);
-        truffleFrame.setObject(closureOrMethod.thisContextOrMarkerSlot, this);
-        truffleFrame.setInt(closureOrMethod.instructionPointerSlot, pointers[CONTEXT.INSTRUCTION_POINTER] == image.nil ? -1 : (int) (long) pointers[CONTEXT.INSTRUCTION_POINTER]);
-        truffleFrame.setInt(closureOrMethod.stackPointerSlot, (int) (long) pointers[CONTEXT.STACKPOINTER]);
+        final Object[] frameArguments = FrameAccess.newWith(method, sender, closure, arguments);
+        truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, method.getFrameDescriptor());
+        setPointersUnsafe(new Object[(int) method.getNumStackSlots()]);
+        truffleFrame.setObject(method.thisContextOrMarkerSlot, this);
+        final int initalPC = method.getInitialPC();
+        truffleFrame.setInt(method.instructionPointerSlot, pointers[CONTEXT.INSTRUCTION_POINTER] == image.nil ? -1 : (int) (long) pointers[CONTEXT.INSTRUCTION_POINTER] - initalPC);
+        truffleFrame.setInt(method.stackPointerSlot, (int) (long) pointers[CONTEXT.STACKPOINTER]);
         for (int i = CONTEXT.TEMP_FRAME_START; i < pointers.length; i++) {
             final Object pointer = pointers[i];
-// if (pointer != image.nil) {
-// TODO: do better than FrameSlotKind.Object
-            final FrameSlot frameSlot = closureOrMethod.getStackSlot(i - CONTEXT.TEMP_FRAME_START);
+            // if (pointer != image.nil) {
+            // TODO: do better than FrameSlotKind.Object
+            final FrameSlot frameSlot = method.getStackSlot(i - CONTEXT.TEMP_FRAME_START);
             truffleFrame.getFrameDescriptor().setFrameSlotKind(frameSlot, FrameSlotKind.Object);
             truffleFrame.setObject(frameSlot, pointer);
         }
@@ -96,14 +95,6 @@ public final class ContextObject extends AbstractPointersObject {
     public boolean isMatchingFrame(final VirtualFrame frame) {
         final Object contextOrMarker = FrameAccess.getContextOrMarker(frame);
         return this == contextOrMarker || frameMarker == contextOrMarker;
-    }
-
-    private void initializePointers(final int size) {
-        /*
-         * Size of pointers array is too small, because method is unknown, so we cannot call
-         * CompiledCodeObject.getNumArgsAndCopied() here. Add 8 additional slots for now.
-         */
-        setPointersUnsafe(new Object[CONTEXT.TEMP_FRAME_START + size + 8]);
     }
 
     public void terminate() {
@@ -128,19 +119,19 @@ public final class ContextObject extends AbstractPointersObject {
                 if (pc < 0) {
                     return image.nil;
                 } else {
-                    final CompiledCodeObject blockOrMethod = getMethod();
+                    final BlockClosureObject closure = getClosure();
                     final int initalPC;
-                    if (blockOrMethod instanceof CompiledBlockObject) {
-                        initalPC = ((CompiledBlockObject) blockOrMethod).getInitialPC();
+                    if (closure != null) {
+                        initalPC = closure.getCompiledBlock().getInitialPC();
                     } else {
-                        initalPC = ((CompiledMethodObject) blockOrMethod).getInitialPC();
+                        initalPC = getMethod().getInitialPC();
                     }
                     return (long) (initalPC + pc);
                 }
             case CONTEXT.STACKPOINTER:
                 return (long) FrameUtil.getIntSafe(truffleFrame, getMethod().stackPointerSlot);
             case CONTEXT.METHOD:
-                return FrameAccess.getMethod(truffleFrame);
+                return getMethod();
             case CONTEXT.CLOSURE_OR_NIL:
                 final BlockClosureObject closure = FrameAccess.getClosure(truffleFrame);
                 return closure == null ? image.nil : closure;
@@ -168,41 +159,35 @@ public final class ContextObject extends AbstractPointersObject {
         assert value != null : "null indicates a problem";
         switch (index) {
             case CONTEXT.SENDER_OR_NIL:
-                truffleFrame.getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] = value;
+                getOrCreateTruffleFrame().getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] = value;
                 break;
             case CONTEXT.INSTRUCTION_POINTER:
                 if (value == image.nil) {
                     truffleFrame.setInt(FrameAccess.getMethod(truffleFrame).instructionPointerSlot, -1);
                 } else {
-                    final CompiledCodeObject code = FrameAccess.getMethod(truffleFrame);
+                    final BlockClosureObject closure = getClosure();
                     final int initalPC;
-                    if (code instanceof CompiledBlockObject) {
-                        initalPC = ((CompiledBlockObject) code).getInitialPC();
+                    if (closure != null) {
+                        initalPC = closure.getCompiledBlock().getInitialPC();
                     } else {
-                        initalPC = ((CompiledMethodObject) code).getInitialPC();
+                        initalPC = getMethod().getInitialPC();
                     }
-                    truffleFrame.setInt(FrameAccess.getMethod(truffleFrame).instructionPointerSlot, (int) (long) value - initalPC);
+                    getOrCreateTruffleFrame().setInt(FrameAccess.getMethod(truffleFrame).instructionPointerSlot, (int) (long) value - initalPC);
                 }
                 break;
             case CONTEXT.STACKPOINTER:
-                truffleFrame.setInt(FrameAccess.getMethod(truffleFrame).stackPointerSlot, (int) (long) value);
+                getOrCreateTruffleFrame().setInt(FrameAccess.getMethod(truffleFrame).stackPointerSlot, (int) (long) value);
                 break;
             case CONTEXT.METHOD:
-                if (truffleFrame == null) {
-                    final CompiledCodeObject code = (CompiledCodeObject) value;
-                    final Object[] arguments = new Object[1 + code.getNumArgsAndCopied()];
-                    final Object[] frameArguments = FrameAccess.newWith(code, null, null, arguments);
-                    truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, code.getFrameDescriptor());
-                    setPointersUnsafe(new Object[(int) code.getNumStackSlots()]);
-                    truffleFrame.setObject(code.thisContextOrMarkerSlot, this);
-                }
-                truffleFrame.getArguments()[FrameAccess.METHOD] = value;
+                assert value instanceof CompiledMethodObject : "CompiledMethodObject expected";
+                getOrCreateTruffleFrame((CompiledCodeObject) value).getArguments()[FrameAccess.METHOD] = value;
                 break;
             case CONTEXT.CLOSURE_OR_NIL:
-                truffleFrame.getArguments()[FrameAccess.CLOSURE_OR_NULL] = value == image.nil ? null : value;
+                assert value == image.nil || value instanceof BlockClosureObject;
+                getOrCreateTruffleFrame().getArguments()[FrameAccess.CLOSURE_OR_NULL] = value == image.nil ? null : value;
                 break;
             case CONTEXT.RECEIVER:
-                truffleFrame.getArguments()[FrameAccess.RECEIVER] = value;
+                getOrCreateTruffleFrame().getArguments()[FrameAccess.RECEIVER] = value;
                 break;
             default:
                 final int stackIndex = index - CONTEXT.TEMP_FRAME_START;
@@ -210,25 +195,67 @@ public final class ContextObject extends AbstractPointersObject {
                 if (stackIndex >= code.getNumStackSlots()) {
                     throw new SqueakException("unexpected store"); // TODO: make this better.
                 } else {
-                    truffleFrame.setObject(code.getStackSlot(stackIndex), value);
+                    getOrCreateTruffleFrame().setObject(code.getStackSlot(stackIndex), value);
                 }
         }
+    }
+
+    private MaterializedFrame getOrCreateTruffleFrame() {
+        if (truffleFrame == null) {
+            // Method is unknown, use dummy frame instead
+            final int guessedArgumentSize = size > CONTEXT.LARGE_FRAMESIZE ? size - CONTEXT.LARGE_FRAMESIZE : size - CONTEXT.SMALL_FRAMESIZE;
+            final Object[] dummyArguments = FrameAccess.newWith(null, null, null, new Object[guessedArgumentSize]);
+            truffleFrame = Truffle.getRuntime().createMaterializedFrame(dummyArguments);
+        }
+        return truffleFrame;
+    }
+
+    private MaterializedFrame getOrCreateTruffleFrame(final CompiledCodeObject code) {
+        if (truffleFrame == null || FrameAccess.getMethod(truffleFrame) == null) {
+            final Object sender;
+            final BlockClosureObject closure;
+            final Object[] arguments;
+            if (truffleFrame != null) {
+                sender = FrameAccess.getSender(truffleFrame);
+                closure = FrameAccess.getClosure(truffleFrame);
+
+                final Object[] dummyArguments = truffleFrame.getArguments();
+                final int expectedArgumentSize = FrameAccess.ARGUMENTS_START + code.getNumArgsAndCopied();
+                assert dummyArguments.length >= expectedArgumentSize : "Unexpected argument size, maybe dummy frame had wrong size?";
+                if (dummyArguments.length > expectedArgumentSize) {
+                    // Trim arguments.
+                    arguments = Arrays.copyOfRange(dummyArguments, 0, expectedArgumentSize);
+                } else {
+                    arguments = truffleFrame.getArguments();
+                }
+            } else {
+                sender = null;
+                closure = null;
+                final int expectedArgumentSize = FrameAccess.ARGUMENTS_START + code.getNumArgsAndCopied();
+                arguments = new Object[expectedArgumentSize];
+            }
+            final Object[] frameArguments = FrameAccess.newWith(code, sender, closure, arguments);
+            truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, code.getFrameDescriptor());
+            truffleFrame.setObject(code.thisContextOrMarkerSlot, this);
+        }
+        return truffleFrame;
     }
 
     public CompiledCodeObject getClosureOrMethod() {
         final BlockClosureObject closure = getClosure();
         if (closure != null) {
             return closure.getCompiledBlock();
+        } else {
+            return getMethod();
         }
-        return getMethod();
     }
 
     private boolean hasMethod() {
-        return at0(CONTEXT.METHOD) instanceof CompiledCodeObject;
+        return getMethod() != null;
     }
 
-    public CompiledCodeObject getMethod() {
-        return (CompiledCodeObject) at0(CONTEXT.METHOD);
+    public CompiledMethodObject getMethod() {
+        return FrameAccess.getMethod(truffleFrame);
     }
 
     public AbstractSqueakObject shallowCopy() {
@@ -283,7 +310,7 @@ public final class ContextObject extends AbstractPointersObject {
     public static ContextObject getOrCreateContextFor(final MaterializedFrame frame) {
         final Object contextOrMarker = FrameAccess.getContextOrMarker(frame);
         if (contextOrMarker instanceof FrameMarker) {
-            final CompiledCodeObject method = (CompiledCodeObject) frame.getArguments()[FrameAccess.METHOD];
+            final CompiledMethodObject method = FrameAccess.getMethod(frame);
             final ContextObject context = ContextObject.create(method.image, method.sqContextSize(), frame, (FrameMarker) contextOrMarker);
             frame.setObject(method.thisContextOrMarkerSlot, context);
             return context;
@@ -414,6 +441,7 @@ public final class ContextObject extends AbstractPointersObject {
     }
 
     public MaterializedFrame getTruffleFrame(final int numArgs) {
+        assert truffleFrame == null || FrameAccess.getMethod(truffleFrame) != null : "Frame without method should not leak";
         if (truffleFrame != null) {
             return truffleFrame;
         }
@@ -433,7 +461,7 @@ public final class ContextObject extends AbstractPointersObject {
     @TruffleBoundary
     public void printSqStackTrace() {
         ContextObject current = this;
-        while (true) {
+        while (current != null) {
             final CompiledCodeObject code = current.getClosureOrMethod();
             final Object[] rcvrAndArgs = current.getReceiverAndNArguments(code.getNumArgsAndCopied());
             image.getOutput().println(MiscUtils.format("%s #(%s) [%s]", current, ArrayUtils.toJoinedString(", ", rcvrAndArgs), current.getFrameMarker()));

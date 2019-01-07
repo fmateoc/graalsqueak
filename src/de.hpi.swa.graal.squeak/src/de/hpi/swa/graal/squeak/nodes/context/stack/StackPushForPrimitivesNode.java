@@ -11,6 +11,7 @@ import com.oracle.truffle.api.nodes.Node;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
+import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackWriteNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
@@ -34,7 +35,7 @@ public abstract class StackPushForPrimitivesNode extends Node {
 
     @Specialization(guards = {"isVirtualized(frame, codeObject)"}, limit = "1")
     protected static final void doWriteVirtualized(final VirtualFrame frame, final Object value,
-                    @Cached("getMethod(frame)") final CompiledCodeObject codeObject,
+                    @Cached("getMethod(frame)") final CompiledMethodObject codeObject,
                     @Cached("create(codeObject)") final FrameStackWriteNode writeNode) {
         assert value != null;
         final int currentStackPointer = FrameUtil.getIntSafe(frame, codeObject.stackPointerSlot);
@@ -44,7 +45,7 @@ public abstract class StackPushForPrimitivesNode extends Node {
 
     @Specialization(guards = {"!isVirtualized(frame, codeObject)"}, limit = "1")
     protected static final void doWrite(final VirtualFrame frame, final Object value,
-                    @Cached("getMethod(frame)") final CompiledCodeObject codeObject) {
+                    @Cached("getMethod(frame)") final CompiledMethodObject codeObject) {
         assert value != null;
         getContext(frame, codeObject).push(value);
     }

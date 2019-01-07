@@ -9,6 +9,7 @@ import com.oracle.truffle.api.nodes.Node;
 
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
+import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public abstract class GetBlockFrameArgumentsNode extends Node {
@@ -54,12 +55,11 @@ public abstract class GetBlockFrameArgumentsNode extends Node {
     }
 
     private static Object[] fillInSpecial(final BlockClosureObject block, final Object senderOrMarker, final int numObjects, final int numCopied) {
-        final CompiledBlockObject blockObject = block.getCompiledBlock();
-        assert blockObject.getNumArgs() == numObjects : "number of required and provided block arguments do not match";
+        assert block.getCompiledBlock().getNumArgs() == numObjects : "number of required and provided block arguments do not match";
         final Object[] arguments = new Object[FrameAccess.ARGUMENTS_START +
                         numObjects +
                         numCopied];
-        arguments[FrameAccess.METHOD] = blockObject;
+        arguments[FrameAccess.METHOD] = block.getHomeContext().getMethod();
         // Sender is thisContext (or marker)
         arguments[FrameAccess.SENDER_OR_SENDER_MARKER] = senderOrMarker;
         arguments[FrameAccess.CLOSURE_OR_NULL] = block;
