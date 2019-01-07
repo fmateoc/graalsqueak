@@ -106,6 +106,7 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
         // maybe persist newContext, so there's no need to lookup the context to update its pc.
         assert code == context.getClosureOrMethod();
         assert context.getMethod() == FrameAccess.getMethod(frame);
+        assert frame.getFrameDescriptor() == code.getFrameDescriptor();
 
         try {
             triggerInterruptHandlerNode.executeGeneric(frame, code.hasPrimitive(), bytecodeNodes.length);

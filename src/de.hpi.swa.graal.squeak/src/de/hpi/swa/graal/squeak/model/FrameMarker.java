@@ -35,7 +35,11 @@ public final class FrameMarker implements TruffleObject {
     }
 
     public boolean matches(final Frame frame) {
-        return FrameAccess.getContextOrMarker(frame) == this;
+        return this == FrameAccess.getContextOrMarker(frame);
+    }
+
+    public boolean matchesContextOrMarker(final Object contextOrMarker) {
+        return this == contextOrMarker || (contextOrMarker instanceof ContextObject && this == ((ContextObject) contextOrMarker).getFrameMarker());
     }
 
     public ContextObject getMaterializedContext() {

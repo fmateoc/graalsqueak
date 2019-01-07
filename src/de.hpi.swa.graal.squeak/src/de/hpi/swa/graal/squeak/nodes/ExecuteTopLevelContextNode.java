@@ -59,7 +59,7 @@ public final class ExecuteTopLevelContextNode extends RootNode {
         while (true) {
             CompilerDirectives.transferToInterpreter();
             assert activeContext.hasMaterializedSender() : "Context must have materialized sender";
-            final AbstractSqueakObject sender = activeContext.getSender();
+            final AbstractSqueakObject sender = (AbstractSqueakObject) activeContext.getSender();
             try {
                 MaterializeContextOnMethodExitNode.reset();
                 final CompiledCodeObject code = activeContext.getClosureOrMethod();
@@ -77,7 +77,7 @@ public final class ExecuteTopLevelContextNode extends RootNode {
                 image.traceProcessSwitches("Switching from", activeContext, "to", ps.getNewContext());
                 activeContext = ps.getNewContext();
             } catch (NonLocalReturn nlr) {
-                final AbstractSqueakObject target = nlr.hasArrivedAtTargetContext() ? sender : nlr.getTargetContext().getSender();
+                final AbstractSqueakObject target = nlr.hasArrivedAtTargetContext() ? sender : (AbstractSqueakObject) nlr.getTargetContext().getSender();
                 activeContext = unwindContextChainNode.executeUnwind(sender, target, nlr.getReturnValue());
                 image.traceProcessSwitches("Non Local Return on top-level, new context is", activeContext);
             } catch (NonVirtualReturn nvr) {

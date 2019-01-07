@@ -44,13 +44,7 @@ public final class ContextObjectNodes {
 
         @Specialization(guards = {"obj.matches(frame)", "index == SENDER_OR_NIL"})
         protected static final Object doSenderMatching(final Frame frame, final FrameMarker obj, final long index) {
-            final Object senderOrMarker = frame.getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER];
-            if (senderOrMarker instanceof FrameMarker) {
-                // FIXME: can we do better? iterframes?
-                return obj.getMaterializedContext().at0(index);
-            } else {
-                return senderOrMarker;
-            }
+            return frame.getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER];
         }
 
         @Specialization(guards = {"!obj.matches(frame)", "index == INSTRUCTION_POINTER"})

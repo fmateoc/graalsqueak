@@ -12,6 +12,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameInstanceVisitor;
+import com.oracle.truffle.api.frame.FrameUtil;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
@@ -106,7 +107,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         protected final Object doFindNext(final ContextObject receiver, final AbstractSqueakObject previousContextOrNil) {
             ContextObject current = receiver;
             while (current != previousContextOrNil) {
-                final AbstractSqueakObject sender = current.getSender();
+                final Object sender = current.getSender();
                 if (sender == code.image.nil || sender == previousContextOrNil) {
                     break;
                 } else {
@@ -126,16 +127,20 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         }
 
         @Specialization
-        protected final Object previousMarker(final ContextObject receiver, final FrameMarker previousContext) {
+        protected final Object previousMarker(final ContextObject receiver, final FrameMarker previousMarker) {
             ContextObject current = receiver;
-            while (current.getFrameMarker() != previousContext) {
-                final AbstractSqueakObject sender = current.getSender();
-                if (sender == code.image.nil || ((ContextObject) sender).getFrameMarker() == previousContext) {
+            while (current.getFrameMarker() != previousMarker) {
+                final Object sender = current.getSender();
+                if (sender == code.image.nil || sender == previousMarker) {
                     break;
                 } else {
-                    current = (ContextObject) sender;
-                    if (current.isUnwindContext()) {
-                        return current;
+                    if (sender instanceof ContextObject) {
+                        current = (ContextObject) sender;
+                        if (current.getFrameMarker() == previousMarker) {
+                            break;
+                        } else if (current.isUnwindContext()) {
+                            return current;
+                        }
                     }
                 }
             }
@@ -320,12 +325,33 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
             if (context == previousContext) {
                 return false;
             }
-            AbstractSqueakObject sender = context.getSender();
+            Object sender = context.getSender();
+            final FrameMarker[] senderMarker = new FrameMarker[1];
             while (sender != code.image.nil) {
                 if (sender == previousContext) {
                     return true;
+                } else if (sender instanceof FrameMarker) {
+                    senderMarker[0] = (FrameMarker) sender;
+                    break;
+                } else {
+                    sender = ((ContextObject) sender).getSender();
                 }
-                sender = ((ContextObject) sender).getSender();
+            }
+            if (senderMarker[0] != null) {
+                final Frame frame = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Frame>() {
+                    public Frame visitFrame(final FrameInstance frameInstance) {
+                        final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                        if (!FrameAccess.isGraalSqueakFrame(current)) {
+                            return null;
+                        }
+                        final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+                        if (senderMarker[0].matchesContextOrMarker(contextOrMarker)) {
+                            return current;
+                        }
+                        return null;
+                    }
+                });
+                return frame != null;
             }
             return false;
         }
@@ -355,7 +381,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
                     }
                     if (!foundMyself) {
                         final CompiledCodeObject codeObject = FrameAccess.getMethod(current);
-                        final Object contextOrMarker = current.getValue(codeObject.thisContextOrMarkerSlot);
+                        final Object contextOrMarker = FrameUtil.getObjectSafe(current, codeObject.thisContextOrMarkerSlot);
                         if (receiver == contextOrMarker) {
                             foundMyself = true;
                         }
@@ -383,7 +409,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
                 if (context.getMethod().isExceptionHandlerMarked()) {
                     return context;
                 }
-                final AbstractSqueakObject sender = context.getSender();
+                final Object sender = context.getSender();
                 if (sender instanceof ContextObject) {
                     context = (ContextObject) sender;
                 } else {
@@ -393,6 +419,29 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
             }
         }
 
+        @Specialization
+        protected final Object findNext(final FrameMarker receiver) {
+            final Object result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
+                boolean foundMyself = false;
+
+                public Object visitFrame(final FrameInstance frameInstance) {
+                    final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                    final CompiledCodeObject codeObject = FrameAccess.getMethod(current);
+                    final Object contextOrMarker = FrameUtil.getObjectSafe(current, codeObject.thisContextOrMarkerSlot);
+                    if (!foundMyself) {
+                        if (receiver.matchesContextOrMarker(contextOrMarker)) {
+                            foundMyself = true;
+                        }
+                    } else {
+                        if (codeObject.isExceptionHandlerMarked()) {
+                            return contextOrMarker;
+                        }
+                    }
+                    return null;
+                }
+            });
+            return result != null ? result : code.image.nil;
+        }
     }
 
     private abstract static class AbstractClosureValuePrimitiveNode extends AbstractPrimitiveNode {
