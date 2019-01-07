@@ -204,10 +204,10 @@ public final class BlockClosureObject extends AbstractSqueakObject {
             outerContextOrMarker = ((FrameMarker) outerContextOrMarker).getMaterializedContext();
         }
         final ContextObject context = (ContextObject) outerContextOrMarker;
-        if (context.isTerminated()) {
-            throw new SqueakException("BlockCannotReturnError");
-        }
-        // recursively unpack closures until home context is reached
+// if (context.isTerminated()) {
+// throw new SqueakException("BlockCannotReturnError");
+// }
+// recursively unpack closures until home context is reached
         final BlockClosureObject closure = context.getClosure();
         if (closure != null) {
             return closure.getHomeContext();

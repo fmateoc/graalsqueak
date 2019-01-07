@@ -104,7 +104,8 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
     @Fallback
     protected final Object doNonVirtualized(final VirtualFrame frame, final ContextObject context) {
         // maybe persist newContext, so there's no need to lookup the context to update its pc.
-        assert context.getClosureOrMethod() == frame.getArguments()[FrameAccess.METHOD];
+        assert code == context.getClosureOrMethod();
+        assert context.getMethod() == FrameAccess.getMethod(frame);
 
         try {
             triggerInterruptHandlerNode.executeGeneric(frame, code.hasPrimitive(), bytecodeNodes.length);

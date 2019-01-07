@@ -428,6 +428,10 @@ public final class SqueakImageReaderNode extends RootNode {
         for (final SqueakImageChunk chunk : chunktable.values()) {
             fillInContextNode.execute(chunk.asObject(), chunk);
         }
+        // Do it again for compiled block closures
+        for (final SqueakImageChunk chunk : chunktable.values()) {
+            fillInContextNode.execute(chunk.asObject(), chunk);
+        }
     }
 
     private void instantiateClasses() {

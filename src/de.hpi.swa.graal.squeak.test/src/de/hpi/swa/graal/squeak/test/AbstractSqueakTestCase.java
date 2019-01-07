@@ -115,7 +115,7 @@ public abstract class AbstractSqueakTestCase {
         return runMethod(method, rcvr, arguments);
     }
 
-    protected static VirtualFrame createTestFrame(final CompiledCodeObject code) {
+    protected static VirtualFrame createTestFrame(final CompiledMethodObject code) {
         final Object[] arguments = FrameAccess.newWith(code, code.image.nil, null, new Object[0]);
         return Truffle.getRuntime().createVirtualFrame(arguments, code.getFrameDescriptor());
     }

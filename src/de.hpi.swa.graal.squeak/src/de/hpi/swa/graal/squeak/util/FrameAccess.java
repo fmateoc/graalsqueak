@@ -85,7 +85,22 @@ public final class FrameAccess {
         return contextOrMarker == frameMarker || (contextOrMarker instanceof ContextObject && ((ContextObject) contextOrMarker).getFrameMarker() == frameMarker);
     }
 
-    public static Object[] newWith(final CompiledCodeObject code, final Object sender, final BlockClosureObject closure, final Object[] frameArgs) {
+    public static Object[] newWith(final CompiledMethodObject method, final Object sender, final BlockClosureObject closure, final Object[] frameArgs) {
+        final Object[] arguments = new Object[RECEIVER + frameArgs.length];
+        assert method != null : "Method should never be null";
+        assert sender != null : "Sender should never be null";
+        assert frameArgs.length > 0 : "At least a receiver must be provided";
+        assert frameArgs[0] != null : "Receiver should never be null";
+        arguments[METHOD] = method;
+        arguments[SENDER_OR_SENDER_MARKER] = sender;
+        arguments[CLOSURE_OR_NULL] = closure;
+        for (int i = 0; i < frameArgs.length; i++) {
+            arguments[RECEIVER + i] = frameArgs[i];
+        }
+        return arguments;
+    }
+
+    public static Object[] newDummyWith(final CompiledCodeObject code, final Object sender, final BlockClosureObject closure, final Object[] frameArgs) {
         final Object[] arguments = new Object[RECEIVER + frameArgs.length];
         assert frameArgs.length > 0 : "At least a receiver must be provided";
         arguments[METHOD] = code;

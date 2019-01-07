@@ -24,7 +24,7 @@ public abstract class FillInContextNode extends Node {
 
     @Specialization(guards = "obj.hasTruffleFrame()")
     protected static final void doContextFail(final ContextObject obj, final SqueakImageChunk chunk) {
-        throw new SqueakException("Context already has a truffleFrame");
+        // throw new SqueakException("Context already has a truffleFrame");
     }
 
     @SuppressWarnings("unused")

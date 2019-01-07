@@ -6,6 +6,9 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.Frame;
+import com.oracle.truffle.api.frame.FrameDescriptor;
+import com.oracle.truffle.api.frame.FrameInstance;
+import com.oracle.truffle.api.frame.FrameInstanceVisitor;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.FrameUtil;
@@ -13,6 +16,8 @@ import com.oracle.truffle.api.frame.MaterializedFrame;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.source.Source;
 
+import de.hpi.swa.graal.squeak.exceptions.InstructionPointerModification;
+import de.hpi.swa.graal.squeak.exceptions.ProcessSwitch;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
@@ -71,13 +76,23 @@ public final class ContextObject extends AbstractPointersObject {
     public void fillIn(final Object[] pointers) {
         assert pointers.length > CONTEXT.TEMP_FRAME_START;
         final CompiledMethodObject method = (CompiledMethodObject) pointers[CONTEXT.METHOD];
-        final Object sender = pointers[CONTEXT.SENDER_OR_NIL] == image.nil ? null : pointers[CONTEXT.SENDER_OR_NIL];
+        final Object sender = pointers[CONTEXT.SENDER_OR_NIL];
+        assert sender != null : "sender should not be null";
         final BlockClosureObject closure = pointers[CONTEXT.CLOSURE_OR_NIL] == image.nil ? null : (BlockClosureObject) pointers[CONTEXT.CLOSURE_OR_NIL];
         final int endArguments = CONTEXT.RECEIVER + 1 + method.getNumArgsAndCopied();
         final Object[] arguments = Arrays.copyOfRange(pointers, CONTEXT.RECEIVER, endArguments);
         final Object[] frameArguments = FrameAccess.newWith(method, sender, closure, arguments);
-        truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, method.getFrameDescriptor());
-        setPointersUnsafe(new Object[(int) method.getNumStackSlots()]);
+        final FrameDescriptor frameDescriptor;
+        if (closure != null) {
+            if (!closure.hasHomeContext() || !((ContextObject) closure.getOuterContext()).hasTruffleFrame()) {
+                // FIXME: this is hacky and slow (2nd loop needed in reader).
+                return; // block closure not ready try again later
+            }
+            frameDescriptor = closure.getCompiledBlock().getFrameDescriptor();
+        } else {
+            frameDescriptor = method.getFrameDescriptor();
+        }
+        truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, frameDescriptor);
         truffleFrame.setObject(method.thisContextOrMarkerSlot, this);
         final int initalPC = method.getInitialPC();
         truffleFrame.setInt(method.instructionPointerSlot, pointers[CONTEXT.INSTRUCTION_POINTER] == image.nil ? -1 : (int) (long) pointers[CONTEXT.INSTRUCTION_POINTER] - initalPC);
@@ -162,7 +177,48 @@ public final class ContextObject extends AbstractPointersObject {
                 getOrCreateTruffleFrame().getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] = value;
                 break;
             case CONTEXT.INSTRUCTION_POINTER:
+                final ContextObject[] lastSender = new ContextObject[]{null};
+                final boolean isActiveOnTruffleStack = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Boolean>() {
+                    public Boolean visitFrame(final FrameInstance frameInstance) {
+                        final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                        if (!FrameAccess.isGraalSqueakFrame(current)) {
+                            return null;
+                        }
+                        final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+                        final Object sender = FrameAccess.getSender(current);
+                        if (sender instanceof ContextObject) {
+                            lastSender[0] = (ContextObject) sender;
+                        } else {
+                            lastSender[0] = null;
+                        }
+                        if (contextOrMarker == this || contextOrMarker == getFrameMarker()) {
+                            return true;
+                        }
+                        return null;
+                    }
+                }) != null;
+                boolean isActiveOnSqueakStack = false;
+                final boolean isActive;
+                if (lastSender[0] != null && !isActiveOnTruffleStack) {
+                    ContextObject current = lastSender[0];
+                    while (true) {
+                        if (current == this) {
+                            isActiveOnSqueakStack = true;
+                            break;
+                        }
+                        final AbstractSqueakObject sender = current.getSender();
+                        if (sender.isNil()) {
+                            break;
+                        } else {
+                            current = (ContextObject) sender;
+                        }
+                    }
+                    isActive = isActiveOnSqueakStack == true;
+                } else {
+                    isActive = isActiveOnTruffleStack == true;
+                }
                 if (value == image.nil) {
+                    assert !isActive : "Cannot terminate active context";
                     truffleFrame.setInt(FrameAccess.getMethod(truffleFrame).instructionPointerSlot, -1);
                 } else {
                     final BlockClosureObject closure = getClosure();
@@ -172,7 +228,16 @@ public final class ContextObject extends AbstractPointersObject {
                     } else {
                         initalPC = getMethod().getInitialPC();
                     }
-                    getOrCreateTruffleFrame().setInt(FrameAccess.getMethod(truffleFrame).instructionPointerSlot, (int) (long) value - initalPC);
+                    final int newPC = (int) (long) value - initalPC;
+                    getOrCreateTruffleFrame().setInt(FrameAccess.getMethod(truffleFrame).instructionPointerSlot, newPC);
+                    if (isActiveOnTruffleStack) {
+                        throw new SqueakException("Signal InstructionPointerModification?");
+                        // FIXME: throw new InstructionPointerModification(frameMarker, newPC);
+                    } else if (isActiveOnSqueakStack) {
+                        throw new SqueakException("Switch to this context?");
+                        // FIXME: throw new ProcessSwitch(this); ?
+                    }
+
                 }
                 break;
             case CONTEXT.STACKPOINTER:
@@ -180,7 +245,7 @@ public final class ContextObject extends AbstractPointersObject {
                 break;
             case CONTEXT.METHOD:
                 assert value instanceof CompiledMethodObject : "CompiledMethodObject expected";
-                getOrCreateTruffleFrame((CompiledCodeObject) value).getArguments()[FrameAccess.METHOD] = value;
+                getOrCreateTruffleFrame((CompiledMethodObject) value).getArguments()[FrameAccess.METHOD] = value;
                 break;
             case CONTEXT.CLOSURE_OR_NIL:
                 assert value == image.nil || value instanceof BlockClosureObject;
@@ -204,39 +269,40 @@ public final class ContextObject extends AbstractPointersObject {
         if (truffleFrame == null) {
             // Method is unknown, use dummy frame instead
             final int guessedArgumentSize = size > CONTEXT.LARGE_FRAMESIZE ? size - CONTEXT.LARGE_FRAMESIZE : size - CONTEXT.SMALL_FRAMESIZE;
-            final Object[] dummyArguments = FrameAccess.newWith(null, null, null, new Object[guessedArgumentSize]);
+            final Object[] dummyArguments = FrameAccess.newDummyWith(null, image.nil, null, new Object[guessedArgumentSize]);
             truffleFrame = Truffle.getRuntime().createMaterializedFrame(dummyArguments);
         }
         return truffleFrame;
     }
 
-    private MaterializedFrame getOrCreateTruffleFrame(final CompiledCodeObject code) {
+    private MaterializedFrame getOrCreateTruffleFrame(final CompiledMethodObject method) {
         if (truffleFrame == null || FrameAccess.getMethod(truffleFrame) == null) {
-            final Object sender;
-            final BlockClosureObject closure;
-            final Object[] arguments;
+            final Object[] frameArguments;
+            final FrameDescriptor frameDescriptor;
             if (truffleFrame != null) {
-                sender = FrameAccess.getSender(truffleFrame);
-                closure = FrameAccess.getClosure(truffleFrame);
+                assert FrameAccess.getSender(truffleFrame) != null : "Sender should not be null";
 
                 final Object[] dummyArguments = truffleFrame.getArguments();
-                final int expectedArgumentSize = FrameAccess.ARGUMENTS_START + code.getNumArgsAndCopied();
+                final int expectedArgumentSize = FrameAccess.ARGUMENTS_START + method.getNumArgsAndCopied();
                 assert dummyArguments.length >= expectedArgumentSize : "Unexpected argument size, maybe dummy frame had wrong size?";
                 if (dummyArguments.length > expectedArgumentSize) {
                     // Trim arguments.
-                    arguments = Arrays.copyOfRange(dummyArguments, 0, expectedArgumentSize);
+                    frameArguments = Arrays.copyOfRange(dummyArguments, 0, expectedArgumentSize);
                 } else {
-                    arguments = truffleFrame.getArguments();
+                    frameArguments = truffleFrame.getArguments();
                 }
+                assert frameArguments[FrameAccess.RECEIVER] != null : "Receiver should probably not be null here";
+                final BlockClosureObject closure = FrameAccess.getClosure(truffleFrame);
+                frameDescriptor = closure != null ? closure.getCompiledBlock().getFrameDescriptor() : method.getFrameDescriptor();
             } else {
-                sender = null;
-                closure = null;
-                final int expectedArgumentSize = FrameAccess.ARGUMENTS_START + code.getNumArgsAndCopied();
-                arguments = new Object[expectedArgumentSize];
+                // Receiver plus arguments.
+                final Object[] squeakArguments = new Object[1 + method.getNumArgsAndCopied()];
+                frameArguments = FrameAccess.newDummyWith(method, image.nil, null, squeakArguments);
+                frameDescriptor = method.getFrameDescriptor();
             }
-            final Object[] frameArguments = FrameAccess.newWith(code, sender, closure, arguments);
-            truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, code.getFrameDescriptor());
-            truffleFrame.setObject(code.thisContextOrMarkerSlot, this);
+            truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, frameDescriptor);
+            truffleFrame.setInt(method.instructionPointerSlot, -2);
+            truffleFrame.setObject(method.thisContextOrMarkerSlot, this);
         }
         return truffleFrame;
     }
@@ -291,6 +357,9 @@ public final class ContextObject extends AbstractPointersObject {
     }
 
     public AbstractSqueakObject getSender() {
+        if (truffleFrame == null) {
+            return null; // Signaling not initialized, FIXME
+        }
         final AbstractSqueakObject actualSender;
         final Object senderOrMarker = FrameAccess.getSender(truffleFrame);
         if (senderOrMarker instanceof FrameMarker) {
@@ -445,11 +514,11 @@ public final class ContextObject extends AbstractPointersObject {
         if (truffleFrame != null) {
             return truffleFrame;
         }
-        final CompiledCodeObject closureOrMethod = getClosureOrMethod();
+        final CompiledMethodObject closureOrMethod = getMethod();
         final AbstractSqueakObject sender = getSender();
         final BlockClosureObject closure = getClosure();
         final Object[] frameArgs = getReceiverAndNArguments(numArgs);
-        final MaterializedFrame frame = Truffle.getRuntime().createMaterializedFrame(FrameAccess.newWith(closureOrMethod, sender, closure, frameArgs), getMethod().getFrameDescriptor());
+        final MaterializedFrame frame = Truffle.getRuntime().createMaterializedFrame(FrameAccess.newWith(closureOrMethod, sender, closure, frameArgs), closureOrMethod.getFrameDescriptor());
         throw new SqueakException("Not yet supported");
         // frame.setObject(closureOrMethod.thisContextOrMarkerSlot, this);
         // return frame;
