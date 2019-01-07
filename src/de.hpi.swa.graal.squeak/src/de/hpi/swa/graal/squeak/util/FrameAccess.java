@@ -59,6 +59,11 @@ public final class FrameAccess {
         return (BlockClosureObject) frame.getArguments()[CLOSURE_OR_NULL];
     }
 
+    public static CompiledCodeObject getBlockOrMethod(final Frame frame) {
+        final BlockClosureObject closure = getClosure(frame);
+        return closure != null ? closure.getCompiledBlock() : getMethod(frame);
+    }
+
     public static Object getReceiver(final Frame frame) {
         return frame.getArguments()[RECEIVER];
     }
@@ -74,6 +79,15 @@ public final class FrameAccess {
 
     public static Object getContextOrMarker(final Frame frame) {
         return FrameUtil.getObjectSafe(frame, getMethod(frame).thisContextOrMarkerSlot);
+    }
+
+    public static int getStackSize(final Frame frame) {
+        final BlockClosureObject closure = getClosure(frame);
+        if (closure != null) {
+            return closure.getCompiledBlock().sqContextSize();
+        } else {
+            return getMethod(frame).sqContextSize();
+        }
     }
 
     public static boolean isGraalSqueakFrame(final Frame frame) {

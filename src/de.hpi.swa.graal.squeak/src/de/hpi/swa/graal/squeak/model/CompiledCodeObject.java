@@ -162,7 +162,7 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
         return stackSlots[i];
     }
 
-    public final long getNumStackSlots() {
+    public final int getNumStackSlots() {
         return stackSlots.length;
     }
 

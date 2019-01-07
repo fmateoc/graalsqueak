@@ -320,7 +320,7 @@ public final class ContextObjectNodes {
         @Specialization(guards = {"obj.matches(frame)", "index >= TEMP_FRAME_START"})
         protected static final void doStackMatching(final Frame frame, @SuppressWarnings("unused") final FrameMarker obj, final long index, final Object value) {
             final int stackIndex = (int) (index - CONTEXT.TEMP_FRAME_START);
-            final CompiledCodeObject code = FrameAccess.getMethod(frame);
+            final CompiledCodeObject code = FrameAccess.getBlockOrMethod(frame);
             // FIXME FIXME this is bad!
             assert value != null;
             final FrameSlot stackSlot = code.getStackSlot(stackIndex);

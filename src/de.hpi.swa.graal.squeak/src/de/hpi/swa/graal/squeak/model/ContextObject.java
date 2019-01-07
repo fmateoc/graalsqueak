@@ -95,7 +95,7 @@ public final class ContextObject extends AbstractPointersObject {
         }
         truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, frameDescriptor);
         truffleFrame.setObject(method.thisContextOrMarkerSlot, this);
-        final int initalPC = method.getInitialPC();
+        final int initalPC = closure != null ? closure.getCompiledBlock().getInitialPC() : method.getInitialPC();
         truffleFrame.setInt(method.instructionPointerSlot, pointers[CONTEXT.INSTRUCTION_POINTER] == image.nil ? -1 : (int) (long) pointers[CONTEXT.INSTRUCTION_POINTER] - initalPC);
         truffleFrame.setInt(method.stackPointerSlot, (int) (long) pointers[CONTEXT.STACKPOINTER]);
         for (int i = CONTEXT.TEMP_FRAME_START; i < pointers.length; i++) {
@@ -167,15 +167,14 @@ public final class ContextObject extends AbstractPointersObject {
     public void atput0(final long longIndex, final Object value) {
         assert longIndex >= 0 && value != null;
         final int index = (int) longIndex;
-        if (index == CONTEXT.SENDER_OR_NIL) {
-            assert !(value instanceof FrameMarker) : "sender should not be a marker here anymore";
-            image.printVerbose("Sender of", this, " set to", value);
-            hasModifiedSender = true;
-        }
         assert value != null : "null indicates a problem";
         switch (index) {
             case CONTEXT.SENDER_OR_NIL:
-                assert value != null;
+                assert value != null && !(value instanceof FrameMarker) : "sender should not be null or a marker anymore";
+                image.printVerbose("Sender of", this, " set to", value);
+                if (value != image.nil) {
+                    hasModifiedSender = true;
+                }
                 getOrCreateTruffleFrame().getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] = value;
                 break;
             case CONTEXT.INSTRUCTION_POINTER:
@@ -220,7 +219,7 @@ public final class ContextObject extends AbstractPointersObject {
                     isActive = isActiveOnTruffleStack == true;
                 }
                 if (value == image.nil) {
-                    assert !isActive : "Cannot terminate active context";
+// assert !isActive : "Cannot terminate active context";
                     truffleFrame.setInt(FrameAccess.getMethod(truffleFrame).instructionPointerSlot, -1);
                 } else {
                     final BlockClosureObject closure = getClosure();
@@ -484,6 +483,10 @@ public final class ContextObject extends AbstractPointersObject {
         return (long) at0(CONTEXT.INSTRUCTION_POINTER);
     }
 
+    public int getFrameInstructionPointer() {
+        return FrameUtil.getIntSafe(truffleFrame, getClosureOrMethod().instructionPointerSlot);
+    }
+
     public void setInstructionPointer(final long newPC) {
         assert newPC >= 0;
         atput0(CONTEXT.INSTRUCTION_POINTER, newPC);
@@ -550,7 +553,7 @@ public final class ContextObject extends AbstractPointersObject {
     }
 
     public int getStackSize() {
-        return size() - CONTEXT.TEMP_FRAME_START;
+        return FrameAccess.getStackSize(truffleFrame);
     }
 
     public void become(final ContextObject other) {
