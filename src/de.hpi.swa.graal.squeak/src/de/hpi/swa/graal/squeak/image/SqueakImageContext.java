@@ -178,9 +178,6 @@ public final class SqueakImageContext {
         if (!loaded()) {
             // Load image.
             Truffle.getRuntime().createCallTarget(new SqueakImageReaderNode(this)).call();
-            if (true) {
-                return;
-            }
             // Remove active context.
             final PointersObject activeProcess = GetActiveProcessNode.create(this).executeGet();
             activeProcess.atput0(PROCESS.SUSPENDED_CONTEXT, nil);

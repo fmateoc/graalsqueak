@@ -874,7 +874,7 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
                     final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
                     if (receiver == contextOrMarker) {
                         return readNode.execute(current, receiver, CONTEXT.TEMP_FRAME_START + index - 1);
-                    } else if (contextOrMarker instanceof ContextObject) {
+                    } else if (contextOrMarker instanceof ContextObject && receiver == ((ContextObject) contextOrMarker).getFrameMarker()) {
                         return ((ContextObject) contextOrMarker).atTemp(index - 1);
                     }
                     return null;

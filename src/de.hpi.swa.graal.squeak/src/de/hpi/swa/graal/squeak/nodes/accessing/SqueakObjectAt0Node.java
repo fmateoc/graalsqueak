@@ -74,7 +74,7 @@ public abstract class SqueakObjectAt0Node extends Node {
                 final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
                 if (obj == contextOrMarker) {
                     return readNode.execute(current, obj, index);
-                } else if (contextOrMarker instanceof ContextObject) {
+                } else if (contextOrMarker instanceof ContextObject && obj == ((ContextObject) contextOrMarker).getFrameMarker()) {
                     return ((ContextObject) contextOrMarker).at0(index);
                 }
                 return null;
