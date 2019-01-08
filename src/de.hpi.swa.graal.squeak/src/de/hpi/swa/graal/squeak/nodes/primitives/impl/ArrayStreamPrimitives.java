@@ -3,15 +3,10 @@ package de.hpi.swa.graal.squeak.nodes.primitives.impl;
 import java.util.List;
 
 import com.oracle.truffle.api.CompilerDirectives;
-import com.oracle.truffle.api.Truffle;
-import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
-import com.oracle.truffle.api.frame.Frame;
-import com.oracle.truffle.api.frame.FrameInstance;
-import com.oracle.truffle.api.frame.FrameInstanceVisitor;
 import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
@@ -20,20 +15,15 @@ import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.CharacterObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
-import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.EmptyObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
-import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
-import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ReadArrayObjectNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.WriteArrayObjectNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeAcceptsValueNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.ReadNativeObjectNode;
@@ -48,9 +38,7 @@ import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveWithSizeNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.BinaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.QuaternaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.TernaryPrimitive;
-import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.UnaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
-import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder {
 
@@ -839,134 +827,6 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         protected static final long doNativeInt(final NativeObject receiver, final long index, final long value) {
             receiver.getIntStorage()[(int) index - 1] = (int) value;
             return value;
-        }
-    }
-
-    @ImportStatic(FrameAccess.class)
-    @GenerateNodeFactory
-    @SqueakPrimitive(indices = 210)
-    protected abstract static class PrimContextAtNode extends AbstractPrimitiveNode implements BinaryPrimitive {
-        protected PrimContextAtNode(final CompiledMethodObject method) {
-            super(method);
-        }
-
-        @Specialization(guards = {"index < receiver.getStackSize()"})
-        protected static final Object doContextObject(final ContextObject receiver, final long index) {
-            return receiver.atTemp(index - 1);
-        }
-
-        @Specialization(guards = {"index < getStackSize(frame)", "receiver.matches(frame)"})
-        protected static final Object doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker receiver, final long index,
-                        @Cached("create()") final ContextObjectReadNode readNode) {
-            return readNode.execute(frame, receiver, CONTEXT.TEMP_FRAME_START + index - 1);
-        }
-
-        @Specialization(guards = {"index < getStackSize(frame)", "!receiver.matches(frame)"})
-        protected static final Object doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker receiver, final long index,
-                        @Cached("create()") final ContextObjectReadNode readNode) {
-            final Object result = Truffle.getRuntime().iterateFrames(frameInstance -> {
-                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                if (!FrameAccess.isGraalSqueakFrame(current)) {
-                    return null;
-                }
-                final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                if (receiver == contextOrMarker) {
-                    return readNode.execute(current, receiver, CONTEXT.TEMP_FRAME_START + index - 1);
-                } else if (contextOrMarker instanceof ContextObject && receiver == ((ContextObject) contextOrMarker).getFrameMarker()) {
-                    return ((ContextObject) contextOrMarker).atTemp(index - 1);
-                }
-                return null;
-            });
-            if (result == null) {
-                throw new SqueakException("Unable to find frameMarker:", receiver);
-            }
-            return result;
-        }
-    }
-
-    @ImportStatic(FrameAccess.class)
-    @GenerateNodeFactory
-    @SqueakPrimitive(indices = 211)
-    protected abstract static class PrimContextAtPutNode extends AbstractPrimitiveNode implements TernaryPrimitive {
-        protected PrimContextAtPutNode(final CompiledMethodObject method) {
-            super(method);
-        }
-
-        @Specialization(guards = "index < receiver.getStackSize()")
-        protected static final Object doContextObject(final ContextObject receiver, final long index, final Object value) {
-            receiver.atTempPut(index - 1, value);
-            return value;
-        }
-
-        @Specialization(guards = {"index < getStackSize(frame)", "receiver.matches(frame)"})
-        protected static final Object doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker receiver, final long index, final Object value,
-                        @Cached("create()") final ContextObjectWriteNode writeNode) {
-            writeNode.execute(frame, receiver, CONTEXT.TEMP_FRAME_START + index - 1, value);
-            return value;
-        }
-
-        @Specialization(guards = {"index < getStackSize(frame)", "!receiver.matches(frame)"})
-        protected static final Object doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker receiver, final long index, final Object value,
-                        @Cached("create()") final ContextObjectWriteNode writeNode) {
-            final Object result = Truffle.getRuntime().iterateFrames(frameInstance -> {
-                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                if (!FrameAccess.isGraalSqueakFrame(current)) {
-                    return null;
-                }
-                final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                if (receiver == contextOrMarker) {
-                    writeNode.execute(current, receiver, CONTEXT.TEMP_FRAME_START + index - 1, value);
-                    return value;
-                } else if (contextOrMarker instanceof ContextObject && receiver == ((ContextObject) contextOrMarker).getFrameMarker()) {
-                    ((ContextObject) contextOrMarker).atTemp(index - 1);
-                    return value;
-                } else {
-                    return null;
-                }
-            });
-            if (result != value) {
-                throw new SqueakException("Unable to find frameMarker:", receiver);
-            }
-            return value;
-        }
-    }
-
-    @GenerateNodeFactory
-    @SqueakPrimitive(indices = 212)
-    protected abstract static class PrimContextSizeNode extends AbstractPrimitiveNode implements UnaryPrimitive {
-
-        protected PrimContextSizeNode(final CompiledMethodObject method) {
-            super(method);
-        }
-
-        @Specialization(guards = "receiver.hasTruffleFrame()")
-        protected static final long doSize(final ContextObject receiver) {
-            return FrameAccess.getStackPointer(receiver.getTruffleFrame());
-        }
-
-        @Specialization(guards = "!receiver.hasTruffleFrame()")
-        protected static final long doSizeWithoutFrame(final ContextObject receiver) {
-            return receiver.size() - receiver.instsize();
-        }
-
-        @Specialization
-        protected static final long doSizeMarker(final FrameMarker receiver) {
-            final Long result = Truffle.getRuntime().iterateFrames(frameInstance -> {
-                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                if (!FrameAccess.isGraalSqueakFrame(current)) {
-                    return null;
-                }
-                final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                if (receiver.matchesContextOrMarker(contextOrMarker)) {
-                    return (long) FrameAccess.getStackPointer(current);
-                } else {
-                    return null;
-                }
-            });
-            if (result == null) {
-                throw new SqueakException("Unable to find frameMarker:", receiver);
-            }
-            return result;
         }
     }
 }

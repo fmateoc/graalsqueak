@@ -34,6 +34,7 @@ import de.hpi.swa.graal.squeak.nodes.plugins.Win32OSProcessPlugin;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.ArithmeticPrimitives;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.ArrayStreamPrimitives;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.BlockClosurePrimitives;
+import de.hpi.swa.graal.squeak.nodes.primitives.impl.ContextPrimtives;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.ControlPrimitives;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.ControlPrimitives.PrimitiveFailedNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.IOPrimitives;
@@ -47,6 +48,7 @@ public final class PrimitiveNodeFactory {
                     new ArithmeticPrimitives(),
                     new ArrayStreamPrimitives(),
                     new BlockClosurePrimitives(),
+                    new ContextPrimtives(),
                     new ControlPrimitives(),
                     new IOPrimitives(),
                     new MiscellaneousPrimitives(),
