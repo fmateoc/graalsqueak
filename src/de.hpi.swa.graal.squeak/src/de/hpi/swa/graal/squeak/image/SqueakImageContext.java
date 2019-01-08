@@ -249,7 +249,7 @@ public final class SqueakImageContext {
                         "parse:class:noPattern:notifying:ifFail:", wrap(source.getCharacters().toString()), nilClass, sqTrue, nil, new BlockClosureObject(this));
         final CompiledMethodObject doItMethod = (CompiledMethodObject) methodNode.send("generate");
 
-        final ContextObject customContext = ContextObject.create(this, doItMethod.sqContextSize());
+        final ContextObject customContext = ContextObject.create(this, doItMethod.getSqueakContextSize());
         customContext.atput0(CONTEXT.METHOD, doItMethod);
         customContext.atput0(CONTEXT.INSTRUCTION_POINTER, (long) doItMethod.getInitialPC());
         customContext.atput0(CONTEXT.RECEIVER, nilClass);
@@ -563,24 +563,21 @@ public final class SqueakImageContext {
         final int[] depth = new int[1];
         final Object[] lastSender = new Object[]{null};
         getError().println("== Truffle stack trace ===========================================================");
-        Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
-            @Override
-            public Object visitFrame(final FrameInstance frameInstance) {
-                if (depth[0]++ > 50 && isTravisBuild) {
-                    return null;
-                }
-                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                if (!FrameAccess.isGraalSqueakFrame(current)) {
-                    return null;
-                }
-                final Object method = FrameAccess.getMethod(current);
-                lastSender[0] = FrameAccess.getSender(current);
-                final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                final String prefix = FrameAccess.getClosure(current) == null ? "" : "[] in ";
-                final String argumentsString = ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(current));
-                getError().println(MiscUtils.format("%s%s #(%s) [this: %s, sender: %s]", prefix, method, argumentsString, contextOrMarker, lastSender[0]));
+        Truffle.getRuntime().iterateFrames(frameInstance -> {
+            if (depth[0]++ > 50 && isTravisBuild) {
                 return null;
             }
+            final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+            if (!FrameAccess.isGraalSqueakFrame(current)) {
+                return null;
+            }
+            final Object method = FrameAccess.getMethod(current);
+            lastSender[0] = FrameAccess.getSender(current);
+            final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+            final String prefix = FrameAccess.getClosure(current) == null ? "" : "[] in ";
+            final String argumentsString = ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(current));
+            getError().println(MiscUtils.format("%s%s #(%s) [this: %s, sender: %s]", prefix, method, argumentsString, contextOrMarker, lastSender[0]));
+            return null;
         });
         getError().println("== Squeak frames ================================================================");
         if (lastSender[0] instanceof ContextObject) {

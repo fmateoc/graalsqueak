@@ -7,11 +7,8 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithCode;
-import de.hpi.swa.graal.squeak.nodes.accessing.CompiledCodeNodes.CalculcatePCOffsetNode;
 
 public abstract class UpdateInstructionPointerNode extends AbstractNodeWithCode {
-    @Child private CalculcatePCOffsetNode calculcatePCOffsetNode = CalculcatePCOffsetNode.create();
-
     public static UpdateInstructionPointerNode create(final CompiledCodeObject code) {
         return UpdateInstructionPointerNodeGen.create(code);
     }
@@ -30,6 +27,6 @@ public abstract class UpdateInstructionPointerNode extends AbstractNodeWithCode 
     @Fallback
     protected final void doUpdate(final VirtualFrame frame, final int value) {
         final ContextObject context = getContext(frame);
-        context.setInstructionPointer(value + calculcatePCOffsetNode.execute(context.getClosureOrMethod()));
+        getContext(frame).getTruffleFrame().setInt(context.getClosureOrMethod().instructionPointerSlot, value);
     }
 }

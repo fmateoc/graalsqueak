@@ -78,7 +78,7 @@ public abstract class AbstractSqueakTestCase {
         final ContextObject testContext = ContextObject.create(code.image, arguments.length + CONTEXT.LARGE_FRAMESIZE);
         testContext.atput0(CONTEXT.METHOD, code);
         testContext.atput0(CONTEXT.RECEIVER, receiver);
-        testContext.setInstructionPointer(code.getInitialPC());
+        testContext.atput0(CONTEXT.INSTRUCTION_POINTER, code.getInitialPC());
         testContext.setStackPointer(0);
         testContext.atput0(CONTEXT.CLOSURE_OR_NIL, code.image.nil);
         testContext.setSender(code.image.nil);

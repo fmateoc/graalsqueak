@@ -26,7 +26,7 @@ public abstract class GetOrCreateContextNode extends AbstractNodeWithCode {
     @Specialization(guards = {"isFullyVirtualized(frame)"})
     protected final ContextObject doCreateLight(final VirtualFrame frame) {
         final CompiledCodeObject method = FrameAccess.getMethod(frame);
-        final ContextObject context = ContextObject.create(method.image, method.sqContextSize(), frame.materialize(), getFrameMarker(frame));
+        final ContextObject context = ContextObject.create(method.image, method.getSqueakContextSize(), frame.materialize(), getFrameMarker(frame));
         frame.setObject(code.thisContextOrMarkerSlot, context);
         return context;
     }

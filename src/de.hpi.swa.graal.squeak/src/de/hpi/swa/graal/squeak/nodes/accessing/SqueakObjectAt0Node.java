@@ -64,21 +64,18 @@ public abstract class SqueakObjectAt0Node extends Node {
     @Specialization(guards = {"!obj.matches(frame)"})
     protected static final Object doContextVirtualizedNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker obj, final long index,
                     @Cached("create()") final ContextObjectReadNode readNode) {
-        final Object result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
-            @Override
-            public Object visitFrame(final FrameInstance frameInstance) {
-                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                if (!FrameAccess.isGraalSqueakFrame(current)) {
-                    return null;
-                }
-                final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                if (obj == contextOrMarker) {
-                    return readNode.execute(current, obj, index);
-                } else if (contextOrMarker instanceof ContextObject && obj == ((ContextObject) contextOrMarker).getFrameMarker()) {
-                    return ((ContextObject) contextOrMarker).at0(index);
-                }
+        final Object result = Truffle.getRuntime().iterateFrames(frameInstance -> {
+            final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+            if (!FrameAccess.isGraalSqueakFrame(current)) {
                 return null;
             }
+            final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+            if (obj == contextOrMarker) {
+                return readNode.execute(current, obj, index);
+            } else if (contextOrMarker instanceof ContextObject && obj == ((ContextObject) contextOrMarker).getFrameMarker()) {
+                return ((ContextObject) contextOrMarker).at0(index);
+            }
+            return null;
         });
         if (result == null) {
             throw new SqueakException("Unable to find frameMarker:", obj);

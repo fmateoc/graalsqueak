@@ -18,7 +18,6 @@ import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
-import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
@@ -62,100 +61,51 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         @Specialization
         @TruffleBoundary
         protected final Object doFindNextVirtualized(final ContextObject receiver, final ContextObject previousContext) {
-            final ContextObject handlerContext = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<ContextObject>() {
-                boolean foundMyself = false;
-
-                @Override
-                public ContextObject visitFrame(final FrameInstance frameInstance) {
-                    final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                    if (!FrameAccess.isGraalSqueakFrame(current)) {
-                        return null;
-                    }
-                    final CompiledCodeObject codeObject = FrameAccess.getMethod(current);
-                    final Object contextOrMarker = current.getValue(codeObject.thisContextOrMarkerSlot);
-                    if (!foundMyself) {
-                        if (receiver == contextOrMarker) {
-                            foundMyself = true;
-                        }
-                    } else {
-                        if (previousContext != null && previousContext == contextOrMarker) {
-                            return null;
-                        } else {
-                            final CompiledCodeObject frameMethod = FrameAccess.getMethod(current);
-                            if (frameMethod.isUnwindMarked()) {
-                                CompilerDirectives.bailout("Finding materializable frames should never be part of compiled code as it triggers deopts");
-                                return contextNode.executeGet(frameInstance.getFrame(FrameInstance.FrameAccess.MATERIALIZE));
-                            }
-                        }
-                    }
-                    return null;
-                }
-            });
-            if (handlerContext == null) {
-                return code.image.nil;
-            } else {
-                return handlerContext;
-            }
+            return doFindNextMarkers(receiver.getFrameMarker(), previousContext.getFrameMarker());
         }
 
         @Specialization
         protected final Object doFindNextVirtualizedNil(final ContextObject receiver, @SuppressWarnings("unused") final NilObject nil) {
-            return doFindNextVirtualized(receiver, null);
-        }
-
-        @Specialization
-        protected final Object doFindNext(final FrameMarker receiver, final FrameMarker previousContext) {
-            code.image.printToStdErr("Implement me 1?", receiver, previousContext);
-            return receiver;
+            return doFindNextMarkers(receiver.getFrameMarker(), null);
         }
 
         @Specialization
         protected final Object previousMarker(final ContextObject receiver, final FrameMarker previousMarker) {
-            ContextObject current = receiver;
-            while (current.getFrameMarker() != previousMarker) {
-                final Object sender = current.getSender();
-                if (sender == code.image.nil || sender == previousMarker) {
-                    break;
-                } else {
-                    if (sender instanceof ContextObject) {
-                        current = (ContextObject) sender;
-                        if (current.getFrameMarker() == previousMarker) {
-                            break;
-                        } else if (current.isUnwindContext()) {
-                            return current;
-                        }
-                    }
-                }
-            }
-            return code.image.nil;
+            return doFindNextMarkers(receiver.getFrameMarker(), previousMarker);
         }
 
         @Specialization
-        protected final Object doFindNextVirtualized(final FrameMarker receiver, final ContextObject previousContext) {
-            final ContextObject handlerContext = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<ContextObject>() {
+        protected final Object doFindNext(final FrameMarker receiver, final ContextObject previousContext) {
+            return doFindNextMarkers(receiver, previousContext.getFrameMarker());
+        }
+
+        @Specialization
+        protected final Object doFindNext(final FrameMarker receiver, @SuppressWarnings("unused") final NilObject nil) {
+            return doFindNextMarkers(receiver, null);
+        }
+
+        @Specialization
+        protected final Object doFindNextMarkers(final FrameMarker receiver, final FrameMarker previousMarker) {
+            final Object handlerContext = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
                 boolean foundMyself = false;
 
                 @Override
-                public ContextObject visitFrame(final FrameInstance frameInstance) {
+                public Object visitFrame(final FrameInstance frameInstance) {
                     final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
                     if (!FrameAccess.isGraalSqueakFrame(current)) {
                         return null;
                     }
-                    final CompiledCodeObject codeObject = FrameAccess.getMethod(current);
-                    final Object contextOrMarker = current.getValue(codeObject.thisContextOrMarkerSlot);
+                    final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
                     if (!foundMyself) {
-                        if (receiver == contextOrMarker || (contextOrMarker instanceof ContextObject && ((ContextObject) contextOrMarker).getFrameMarker() == receiver)) {
+                        if (receiver.matchesContextOrMarker(contextOrMarker)) {
                             foundMyself = true;
                         }
                     } else {
-                        if (previousContext != null && previousContext == contextOrMarker) {
+                        if (previousMarker != null && previousMarker.matchesContextOrMarker(contextOrMarker)) {
                             return null;
-                        } else {
-                            final CompiledCodeObject frameMethod = FrameAccess.getMethod(current);
-                            if (frameMethod.isUnwindMarked()) {
-                                CompilerDirectives.bailout("Finding materializable frames should never be part of compiled code as it triggers deopts");
-                                return contextNode.executeGet(frameInstance.getFrame(FrameInstance.FrameAccess.MATERIALIZE));
-                            }
+                        }
+                        if (FrameAccess.getMethod(current).isUnwindMarked()) {
+                            return contextOrMarker;
                         }
                     }
                     return null;
@@ -166,11 +116,6 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
             } else {
                 return handlerContext;
             }
-        }
-
-        @Specialization
-        protected final Object doFindNextVirtualizedNil(final FrameMarker receiver, @SuppressWarnings("unused") final NilObject nil) {
-            return doFindNextVirtualized(receiver, null);
         }
 
     }
@@ -183,24 +128,13 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
             super(method);
         }
 
-        @Specialization(guards = "hasSender(receiver, previousContext)")
-        protected static final Object doUnwindAndTerminate(final ContextObject receiver, final ContextObject previousContext) {
+        @Specialization
+        protected final Object doUnwindAndTerminate(final ContextObject receiver, final ContextObject previousContext) {
             /*
              * Terminate all the Contexts between me and previousContext, if previousContext is on
              * my Context stack. Make previousContext my sender.
              */
-            ContextObject currentContext = receiver.getNotNilSender();
-            while (currentContext != previousContext) {
-                final ContextObject sendingContext = currentContext.getNotNilSender();
-                currentContext.terminate();
-                currentContext = sendingContext;
-            }
-            receiver.atput0(CONTEXT.SENDER_OR_NIL, previousContext); // flagging context as dirty
-            return receiver;
-        }
-
-        @Specialization(guards = "!hasSender(receiver, previousContext)")
-        protected static final Object doTerminate(final ContextObject receiver, final ContextObject previousContext) {
+            terminateBetween(receiver.getFrameMarker(), previousContext.getFrameMarker());
             receiver.atput0(CONTEXT.SENDER_OR_NIL, previousContext); // flagging context as dirty
             return receiver;
         }
@@ -212,7 +146,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         }
 
         @Specialization(guards = {"receiver.matches(frame)"})
-        protected static final Object doTerminateMatchingReceiver(final VirtualFrame frame, final FrameMarker receiver, final FrameMarker previousMarker) {
+        protected final Object doTerminateMatchingReceiver(final VirtualFrame frame, final FrameMarker receiver, final FrameMarker previousMarker) {
             terminateBetween(receiver, previousMarker);
             final ContextObject previousContext = previousMarker.getMaterializedContext();
             final ContextObject context = receiver.getMaterializedContext(frame);
@@ -221,7 +155,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         }
 
         @Specialization(guards = {"previousMarker.matches(frame)"})
-        protected static final Object doTerminateMatchingPreviousMarker(final VirtualFrame frame, final FrameMarker receiver, final FrameMarker previousMarker) {
+        protected final Object doTerminateMatchingPreviousMarker(final VirtualFrame frame, final FrameMarker receiver, final FrameMarker previousMarker) {
             terminateBetween(receiver, previousMarker);
             final ContextObject previousContext = previousMarker.getMaterializedContext(frame);
             final ContextObject context = receiver.getMaterializedContext();
@@ -230,7 +164,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         }
 
         @Specialization(guards = {"!receiver.matches(frame)", "!previousMarker.matches(frame)"})
-        protected static final Object doTerminateNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker receiver, final FrameMarker previousMarker) {
+        protected final Object doTerminateNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker receiver, final FrameMarker previousMarker) {
             terminateBetween(receiver, previousMarker);
             final ContextObject previousContext = previousMarker.getMaterializedContext();
             final ContextObject context = receiver.getMaterializedContext();
@@ -239,7 +173,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         }
 
         @Specialization(guards = {"previousMarker.matches(frame)"})
-        protected static final Object doTerminateMatching(final VirtualFrame frame, final ContextObject receiver, final FrameMarker previousMarker) {
+        protected final Object doTerminateMatching(final VirtualFrame frame, final ContextObject receiver, final FrameMarker previousMarker) {
             terminateBetween(receiver.getFrameMarker(), previousMarker);
             final ContextObject previousContext = previousMarker.getMaterializedContext(frame);
             receiver.atput0(CONTEXT.SENDER_OR_NIL, previousContext); // flagging context as dirty
@@ -247,7 +181,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         }
 
         @Specialization(guards = {"!previousMarker.matches(frame)"})
-        protected static final Object doTerminateNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final ContextObject receiver, final FrameMarker previousMarker) {
+        protected final Object doTerminateNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final ContextObject receiver, final FrameMarker previousMarker) {
             terminateBetween(receiver.getFrameMarker(), previousMarker);
             final ContextObject previousContext = previousMarker.getMaterializedContext();
             receiver.atput0(CONTEXT.SENDER_OR_NIL, previousContext); // flagging context as dirty
@@ -255,7 +189,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         }
 
         @Specialization(guards = {"receiver.matches(frame)"})
-        protected static final Object doTerminateMatching(final VirtualFrame frame, final FrameMarker receiver, final ContextObject previousContext) {
+        protected final Object doTerminateMatching(final VirtualFrame frame, final FrameMarker receiver, final ContextObject previousContext) {
             terminateBetween(receiver, previousContext.getFrameMarker());
             final ContextObject context = receiver.getMaterializedContext(frame);
             context.atput0(CONTEXT.SENDER_OR_NIL, previousContext); // flagging context as dirty
@@ -263,14 +197,14 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         }
 
         @Specialization(guards = {"!receiver.matches(frame)"})
-        protected static final Object doTerminateNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker receiver, final ContextObject previousContext) {
+        protected final Object doTerminateNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker receiver, final ContextObject previousContext) {
             terminateBetween(receiver, previousContext.getFrameMarker());
             final ContextObject context = receiver.getMaterializedContext();
             context.atput0(CONTEXT.SENDER_OR_NIL, previousContext); // flagging context as dirty
             return receiver;
         }
 
-        private static void terminateBetween(final FrameMarker start, final FrameMarker end) {
+        private void terminateBetween(final FrameMarker start, final FrameMarker end) {
             assert start != null && end != null;
             final Object result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
                 boolean foundMyself = false;
@@ -292,7 +226,9 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
                             return contextOrMarker;
                         } else {
                             final Frame currentWritable = frameInstance.getFrame(FrameInstance.FrameAccess.READ_WRITE);
-                            currentWritable.setInt(currentCode.instructionPointerSlot, -1); // terminate
+                            // Terminate frame
+                            currentWritable.getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] = code.image.nil;
+                            currentWritable.setInt(currentCode.instructionPointerSlot, -1);
                         }
                     }
                     return null;
@@ -304,7 +240,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
         /*
          * Answer whether the receiver is strictly above context on the stack (Context>>hasSender:).
          */
-        protected final boolean hasSender(final ContextObject context, final ContextObject previousContext) {
+        private boolean hasSender(final ContextObject context, final ContextObject previousContext) {
             if (context == previousContext) {
                 return false;
             }
@@ -350,42 +286,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
             contextNode = GetOrCreateContextNode.create(code);
         }
 
-        @Specialization(guards = {"receiver.hasVirtualSender()"})
-        @TruffleBoundary
-        protected final Object findNextVirtualized(final ContextObject receiver) {
-            final ContextObject handlerContext = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<ContextObject>() {
-                boolean foundMyself = false;
-
-                @Override
-                public ContextObject visitFrame(final FrameInstance frameInstance) {
-                    final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                    if (!FrameAccess.isGraalSqueakFrame(current)) {
-                        return null;
-                    }
-                    if (!foundMyself) {
-                        final CompiledCodeObject codeObject = FrameAccess.getMethod(current);
-                        final Object contextOrMarker = FrameUtil.getObjectSafe(current, codeObject.thisContextOrMarkerSlot);
-                        if (receiver == contextOrMarker) {
-                            foundMyself = true;
-                        }
-                    } else {
-                        final CompiledCodeObject frameMethod = FrameAccess.getMethod(current);
-                        if (frameMethod.isExceptionHandlerMarked()) {
-                            CompilerDirectives.bailout("Finding materializable frames should never be part of compiled code as it triggers deopts");
-                            return contextNode.executeGet(frameInstance.getFrame(FrameInstance.FrameAccess.MATERIALIZE));
-                        }
-                    }
-                    return null;
-                }
-            });
-            if (handlerContext == null) {
-                return code.image.nil;
-            } else {
-                return handlerContext;
-            }
-        }
-
-        @Specialization(guards = {"!receiver.hasVirtualSender()"})
+        @Specialization
         protected final Object findNext(final ContextObject receiver) {
             return findNext(receiver.getFrameMarker());
         }
@@ -397,7 +298,10 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
 
                 public Object visitFrame(final FrameInstance frameInstance) {
                     final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                    final CompiledCodeObject codeObject = FrameAccess.getMethod(current);
+                    if (!FrameAccess.isGraalSqueakFrame(current)) {
+                        return null;
+                    }
+                    final CompiledCodeObject codeObject = FrameAccess.getBlockOrMethod(current);
                     final Object contextOrMarker = FrameUtil.getObjectSafe(current, codeObject.thisContextOrMarkerSlot);
                     if (!foundMyself) {
                         if (receiver.matchesContextOrMarker(contextOrMarker)) {

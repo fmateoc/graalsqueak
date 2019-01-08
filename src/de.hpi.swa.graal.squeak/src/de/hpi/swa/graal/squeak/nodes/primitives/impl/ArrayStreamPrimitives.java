@@ -864,21 +864,18 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         @Specialization(guards = {"index < getStackSize(frame)", "!receiver.matches(frame)"})
         protected static final Object doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker receiver, final long index,
                         @Cached("create()") final ContextObjectReadNode readNode) {
-            final Object result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
-                @Override
-                public Object visitFrame(final FrameInstance frameInstance) {
-                    final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                    if (!FrameAccess.isGraalSqueakFrame(current)) {
-                        return null;
-                    }
-                    final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                    if (receiver == contextOrMarker) {
-                        return readNode.execute(current, receiver, CONTEXT.TEMP_FRAME_START + index - 1);
-                    } else if (contextOrMarker instanceof ContextObject && receiver == ((ContextObject) contextOrMarker).getFrameMarker()) {
-                        return ((ContextObject) contextOrMarker).atTemp(index - 1);
-                    }
+            final Object result = Truffle.getRuntime().iterateFrames(frameInstance -> {
+                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                if (!FrameAccess.isGraalSqueakFrame(current)) {
                     return null;
                 }
+                final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+                if (receiver == contextOrMarker) {
+                    return readNode.execute(current, receiver, CONTEXT.TEMP_FRAME_START + index - 1);
+                } else if (contextOrMarker instanceof ContextObject && receiver == ((ContextObject) contextOrMarker).getFrameMarker()) {
+                    return ((ContextObject) contextOrMarker).atTemp(index - 1);
+                }
+                return null;
             });
             if (result == null) {
                 throw new SqueakException("Unable to find frameMarker:", receiver);
@@ -901,10 +898,35 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
             return value;
         }
 
-        @Specialization(guards = "index < getStackSize(frame)")
-        protected static final Object doFrameMarker(final VirtualFrame frame, final FrameMarker receiver, final long index, final Object value,
+        @Specialization(guards = {"index < getStackSize(frame)", "receiver.matches(frame)"})
+        protected static final Object doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker receiver, final long index, final Object value,
                         @Cached("create()") final ContextObjectWriteNode writeNode) {
             writeNode.execute(frame, receiver, CONTEXT.TEMP_FRAME_START + index - 1, value);
+            return value;
+        }
+
+        @Specialization(guards = {"index < getStackSize(frame)", "!receiver.matches(frame)"})
+        protected static final Object doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker receiver, final long index, final Object value,
+                        @Cached("create()") final ContextObjectWriteNode writeNode) {
+            final Object result = Truffle.getRuntime().iterateFrames(frameInstance -> {
+                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                if (!FrameAccess.isGraalSqueakFrame(current)) {
+                    return null;
+                }
+                final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+                if (receiver == contextOrMarker) {
+                    writeNode.execute(current, receiver, CONTEXT.TEMP_FRAME_START + index - 1, value);
+                    return value;
+                } else if (contextOrMarker instanceof ContextObject && receiver == ((ContextObject) contextOrMarker).getFrameMarker()) {
+                    ((ContextObject) contextOrMarker).atTemp(index - 1);
+                    return value;
+                } else {
+                    return null;
+                }
+            });
+            if (result != value) {
+                throw new SqueakException("Unable to find frameMarker:", receiver);
+            }
             return value;
         }
     }
@@ -917,9 +939,34 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
             super(method);
         }
 
-        @Specialization
+        @Specialization(guards = "receiver.hasTruffleFrame()")
         protected static final long doSize(final ContextObject receiver) {
+            return FrameAccess.getStackPointer(receiver.getTruffleFrame());
+        }
+
+        @Specialization(guards = "!receiver.hasTruffleFrame()")
+        protected static final long doSizeWithoutFrame(final ContextObject receiver) {
             return receiver.size() - receiver.instsize();
+        }
+
+        @Specialization
+        protected static final long doSizeMarker(final FrameMarker receiver) {
+            final Long result = Truffle.getRuntime().iterateFrames(frameInstance -> {
+                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                if (!FrameAccess.isGraalSqueakFrame(current)) {
+                    return null;
+                }
+                final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+                if (receiver.matchesContextOrMarker(contextOrMarker)) {
+                    return (long) FrameAccess.getStackPointer(current);
+                } else {
+                    return null;
+                }
+            });
+            if (result == null) {
+                throw new SqueakException("Unable to find frameMarker:", receiver);
+            }
+            return result;
         }
     }
 }

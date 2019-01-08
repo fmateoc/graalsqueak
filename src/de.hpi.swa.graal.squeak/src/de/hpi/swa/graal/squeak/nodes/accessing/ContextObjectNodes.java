@@ -44,7 +44,7 @@ public final class ContextObjectNodes {
 
         @Specialization(guards = {"obj.matches(frame)", "index == SENDER_OR_NIL"})
         protected static final Object doSenderMatching(final Frame frame, final FrameMarker obj, final long index) {
-            return frame.getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER];
+            return FrameAccess.getSender(frame);
         }
 
         @Specialization(guards = {"!obj.matches(frame)", "index == INSTRUCTION_POINTER"})
@@ -77,8 +77,8 @@ public final class ContextObjectNodes {
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"obj.matches(frame)", "index == STACKPOINTER"})
-        protected static final Object doSPMatching(final Frame frame, final FrameMarker obj, final long index) {
-            return (long) FrameUtil.getIntSafe(frame, FrameAccess.getMethod(frame).stackPointerSlot);
+        protected static final long doSPMatching(final Frame frame, final FrameMarker obj, final long index) {
+            return FrameAccess.getStackPointer(frame);
         }
 
         @Specialization(guards = {"!obj.matches(frame)", "index == METHOD"})
@@ -141,22 +141,20 @@ public final class ContextObjectNodes {
             throw new SqueakException("Unexpected values:", obj, index);
         }
 
-        private static Frame getReadableFrame(final FrameMarker obj) {
-            final Frame targetFrame = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Frame>() {
-                @Override
-                public Frame visitFrame(final FrameInstance frameInstance) {
-                    final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                    if (!FrameAccess.isGraalSqueakFrame(current)) {
-                        return null;
-                    }
-                    final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                    if (obj == contextOrMarker || (contextOrMarker instanceof ContextObject && ((ContextObject) contextOrMarker).getFrameMarker() == obj)) {
-                        return current;
-                    }
+        private static Frame getReadableFrame(final FrameMarker marker) {
+            final Frame targetFrame = Truffle.getRuntime().iterateFrames(frameInstance -> {
+                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                if (!FrameAccess.isGraalSqueakFrame(current)) {
+                    return null;
+                }
+                final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+                if (marker.matchesContextOrMarker(contextOrMarker)) {
+                    return current;
+                } else {
                     return null;
                 }
             });
-            assert targetFrame != null : "Unable to find frame for " + obj;
+            assert targetFrame != null : "Unable to find frame for " + marker;
             return targetFrame;
         }
     }
@@ -334,21 +332,18 @@ public final class ContextObjectNodes {
         }
 
         private static Object getWritableFrameOrContext(final FrameMarker obj) {
-            final Object targetFrame = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
-                @Override
-                public Object visitFrame(final FrameInstance frameInstance) {
-                    final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                    if (!FrameAccess.isGraalSqueakFrame(current)) {
-                        return null;
-                    }
-                    final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                    if (obj == contextOrMarker) {
-                        return frameInstance.getFrame(FrameInstance.FrameAccess.READ_WRITE);
-                    } else if (contextOrMarker instanceof ContextObject && ((ContextObject) contextOrMarker).getFrameMarker() == obj) {
-                        return contextOrMarker;
-                    } else {
-                        return null;
-                    }
+            final Object targetFrame = Truffle.getRuntime().iterateFrames(frameInstance -> {
+                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                if (!FrameAccess.isGraalSqueakFrame(current)) {
+                    return null;
+                }
+                final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+                if (obj == contextOrMarker) {
+                    return frameInstance.getFrame(FrameInstance.FrameAccess.READ_WRITE);
+                } else if (contextOrMarker instanceof ContextObject && ((ContextObject) contextOrMarker).getFrameMarker() == obj) {
+                    return contextOrMarker;
+                } else {
+                    return null;
                 }
             });
             assert targetFrame != null : "Unable to find frame for " + obj;

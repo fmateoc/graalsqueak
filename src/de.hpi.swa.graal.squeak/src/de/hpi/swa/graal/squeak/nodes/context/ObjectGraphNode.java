@@ -125,31 +125,28 @@ public abstract class ObjectGraphNode extends AbstractNodeWithImage {
 
     @TruffleBoundary
     private static void addObjectsFromTruffleFrames(final Deque<AbstractSqueakObject> pending) {
-        Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Frame>() {
-            @Override
-            public Frame visitFrame(final FrameInstance frameInstance) {
-                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                if (!FrameAccess.isGraalSqueakFrame(current)) {
-                    return null;
-                }
-                final Object[] arguments = current.getArguments();
-                for (int i = FrameAccess.RECEIVER; i < arguments.length; i++) {
-                    final Object argument = arguments[i];
-                    if (SqueakGuards.isAbstractSqueakObject(argument)) {
-                        pending.add((AbstractSqueakObject) argument);
-                    }
-                }
-                for (final FrameSlot slot : current.getFrameDescriptor().getSlots()) {
-                    final Object stackObject = current.getValue(slot);
-                    if (stackObject == null) {
-                        return null; // Stop here, because this slot and all following are not used.
-                    }
-                    if (SqueakGuards.isAbstractSqueakObject(stackObject)) {
-                        pending.add((AbstractSqueakObject) stackObject);
-                    }
-                }
+        Truffle.getRuntime().iterateFrames(frameInstance -> {
+            final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+            if (!FrameAccess.isGraalSqueakFrame(current)) {
                 return null;
             }
+            final Object[] arguments = current.getArguments();
+            for (int i = FrameAccess.RECEIVER; i < arguments.length; i++) {
+                final Object argument = arguments[i];
+                if (SqueakGuards.isAbstractSqueakObject(argument)) {
+                    pending.add((AbstractSqueakObject) argument);
+                }
+            }
+            for (final FrameSlot slot : current.getFrameDescriptor().getSlots()) {
+                final Object stackObject = current.getValue(slot);
+                if (stackObject == null) {
+                    return null; // Stop here, because this slot and all following are not used.
+                }
+                if (SqueakGuards.isAbstractSqueakObject(stackObject)) {
+                    pending.add((AbstractSqueakObject) stackObject);
+                }
+            }
+            return null;
         });
     }
 

@@ -145,7 +145,7 @@ public final class ContextObject extends AbstractPointersObject {
                     return (long) (initalPC + pc);
                 }
             case CONTEXT.STACKPOINTER:
-                return (long) FrameUtil.getIntSafe(truffleFrame, getMethod().stackPointerSlot);
+                return getStackPointer();
             case CONTEXT.METHOD:
                 return getMethod();
             case CONTEXT.CLOSURE_OR_NIL:
@@ -178,46 +178,47 @@ public final class ContextObject extends AbstractPointersObject {
                 getOrCreateTruffleFrame().getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] = value;
                 break;
             case CONTEXT.INSTRUCTION_POINTER:
-                final ContextObject[] lastSender = new ContextObject[]{null};
-                final boolean isActiveOnTruffleStack = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Boolean>() {
-                    public Boolean visitFrame(final FrameInstance frameInstance) {
-                        final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                        if (!FrameAccess.isGraalSqueakFrame(current)) {
-                            return null;
-                        }
-                        final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                        final Object sender = FrameAccess.getSender(current);
-                        if (sender instanceof ContextObject) {
-                            lastSender[0] = (ContextObject) sender;
-                        } else {
-                            lastSender[0] = null;
-                        }
-                        if (contextOrMarker == this || contextOrMarker == getFrameMarker()) {
-                            return true;
-                        }
-                        return null;
-                    }
-                }) != null;
-                boolean isActiveOnSqueakStack = false;
-                final boolean isActive;
-                if (lastSender[0] != null && !isActiveOnTruffleStack) {
-                    ContextObject current = lastSender[0];
-                    while (true) {
-                        if (current == this) {
-                            isActiveOnSqueakStack = true;
-                            break;
-                        }
-                        final Object sender = current.getSender();
-                        if (sender == null || sender == image.nil) {
-                            break;
-                        } else {
-                            current = (ContextObject) sender;
-                        }
-                    }
-                    isActive = isActiveOnSqueakStack == true;
-                } else {
-                    isActive = isActiveOnTruffleStack == true;
-                }
+// final ContextObject[] lastSender = new ContextObject[]{null};
+// final boolean isActiveOnTruffleStack = Truffle.getRuntime().iterateFrames(new
+// FrameInstanceVisitor<Boolean>() {
+// public Boolean visitFrame(final FrameInstance frameInstance) {
+// final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+// if (!FrameAccess.isGraalSqueakFrame(current)) {
+// return null;
+// }
+// final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+// final Object sender = FrameAccess.getSender(current);
+// if (sender instanceof ContextObject) {
+// lastSender[0] = (ContextObject) sender;
+// } else {
+// lastSender[0] = null;
+// }
+// if (contextOrMarker == this || contextOrMarker == getFrameMarker()) {
+// return true;
+// }
+// return null;
+// }
+// }) != null;
+// boolean isActiveOnSqueakStack = false;
+// final boolean isActive;
+// if (lastSender[0] != null && !isActiveOnTruffleStack) {
+// ContextObject current = lastSender[0];
+// while (true) {
+// if (current == this) {
+// isActiveOnSqueakStack = true;
+// break;
+// }
+// final Object sender = current.getSender();
+// if (sender == null || sender == image.nil) {
+// break;
+// } else {
+// current = (ContextObject) sender;
+// }
+// }
+// isActive = isActiveOnSqueakStack == true;
+// } else {
+// isActive = isActiveOnTruffleStack == true;
+// }
                 if (value == image.nil) {
 // assert !isActive : "Cannot terminate active context";
                     truffleFrame.setInt(FrameAccess.getMethod(truffleFrame).instructionPointerSlot, -1);
@@ -231,18 +232,20 @@ public final class ContextObject extends AbstractPointersObject {
                     }
                     final int newPC = (int) (long) value - initalPC;
                     getOrCreateTruffleFrame().setInt(FrameAccess.getMethod(truffleFrame).instructionPointerSlot, newPC);
-                    if (isActiveOnTruffleStack) {
-                        throw new SqueakException("Signal InstructionPointerModification?");
-                        // FIXME: throw new InstructionPointerModification(frameMarker, newPC);
-                    } else if (isActiveOnSqueakStack) {
-                        throw new SqueakException("Switch to this context?");
-                        // FIXME: throw new ProcessSwitch(this); ?
-                    }
+// if (isActiveOnTruffleStack) {
+// throw new SqueakException("Signal InstructionPointerModification?");
+// // FIXME: throw new InstructionPointerModification(frameMarker, newPC);
+// } else if (isActiveOnSqueakStack) {
+// throw new SqueakException("Switch to this context?");
+// // FIXME: throw new ProcessSwitch(this); ?
+// }
 
                 }
                 break;
             case CONTEXT.STACKPOINTER:
-                getOrCreateTruffleFrame().setInt(FrameAccess.getMethod(truffleFrame).stackPointerSlot, (int) (long) value);
+                final int intValue = (int) (long) value;
+                assert 0 <= intValue && intValue <= getClosureOrMethod().getSqueakContextSize();
+                getOrCreateTruffleFrame().setInt(getClosureOrMethod().stackPointerSlot, intValue);
                 break;
             case CONTEXT.METHOD:
                 assert value instanceof CompiledMethodObject : "CompiledMethodObject expected";
@@ -407,10 +410,6 @@ public final class ContextObject extends AbstractPointersObject {
         return hasModifiedSender;
     }
 
-    public boolean hasVirtualSender() {
-        return FrameAccess.getSender(truffleFrame) instanceof FrameMarker;
-    }
-
     private int getFramePC() {
         return FrameUtil.getIntSafe(truffleFrame, getMethod().instructionPointerSlot);
     }
@@ -451,7 +450,7 @@ public final class ContextObject extends AbstractPointersObject {
         final Object contextOrMarker = FrameAccess.getContextOrMarker(frame);
         if (contextOrMarker instanceof FrameMarker) {
             final CompiledMethodObject method = FrameAccess.getMethod(frame);
-            final ContextObject context = ContextObject.create(method.image, method.sqContextSize(), frame, (FrameMarker) contextOrMarker);
+            final ContextObject context = ContextObject.create(method.image, method.getSqueakContextSize(), frame, (FrameMarker) contextOrMarker);
             frame.setObject(method.thisContextOrMarkerSlot, context);
             return context;
         } else {
@@ -488,18 +487,14 @@ public final class ContextObject extends AbstractPointersObject {
         return FrameUtil.getIntSafe(truffleFrame, getClosureOrMethod().instructionPointerSlot);
     }
 
-    public void setInstructionPointer(final long newPC) {
-        assert newPC >= 0;
-        atput0(CONTEXT.INSTRUCTION_POINTER, newPC);
-    }
-
     public long getStackPointer() {
-        return (long) at0(CONTEXT.STACKPOINTER);
+        return FrameUtil.getIntSafe(truffleFrame, getMethod().stackPointerSlot);
     }
 
-    public void setStackPointer(final long newSP) {
-        assert 0 <= newSP && newSP <= CONTEXT.MAX_STACK_SIZE;
-        atput0(CONTEXT.STACKPOINTER, newSP);
+    public void setStackPointer(final long value) {
+        final int intValue = (int) value;
+        assert 0 <= intValue && intValue <= getClosureOrMethod().getSqueakContextSize();
+        getOrCreateTruffleFrame().setInt(getClosureOrMethod().stackPointerSlot, intValue);
     }
 
     @Override

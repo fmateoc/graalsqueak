@@ -95,7 +95,7 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
         return source;
     }
 
-    public final int sqContextSize() {
+    public final int getSqueakContextSize() {
         return needsLargeFrame ? CONTEXT.LARGE_FRAMESIZE : CONTEXT.SMALL_FRAMESIZE;
     }
 
@@ -110,7 +110,7 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
          * Arguments and copied values are also pushed onto the stack in {@link EnterCodeNode},
          * therefore there must be enough slots for all these values as well as the Squeak stack.
          */
-        final int numFrameSlots = getNumArgsAndCopied() + sqContextSize();
+        final int numFrameSlots = getNumArgsAndCopied() + getSqueakContextSize();
         stackSlots = new FrameSlot[numFrameSlots];
         for (int i = 0; i < numFrameSlots; i++) {
             stackSlots[i] = frameDescriptor.addFrameSlot(i, FrameSlotKind.Illegal);

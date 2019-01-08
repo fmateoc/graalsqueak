@@ -78,16 +78,15 @@ public final class FrameAccess {
     }
 
     public static Object getContextOrMarker(final Frame frame) {
-        return FrameUtil.getObjectSafe(frame, getMethod(frame).thisContextOrMarkerSlot);
+        return FrameUtil.getObjectSafe(frame, getBlockOrMethod(frame).thisContextOrMarkerSlot);
+    }
+
+    public static int getStackPointer(final Frame frame) {
+        return FrameUtil.getIntSafe(frame, getBlockOrMethod(frame).stackPointerSlot);
     }
 
     public static int getStackSize(final Frame frame) {
-        final BlockClosureObject closure = getClosure(frame);
-        if (closure != null) {
-            return closure.getCompiledBlock().sqContextSize();
-        } else {
-            return getMethod(frame).sqContextSize();
-        }
+        return getBlockOrMethod(frame).getSqueakContextSize();
     }
 
     public static boolean isGraalSqueakFrame(final Frame frame) {
@@ -130,17 +129,29 @@ public final class FrameAccess {
     @TruffleBoundary
     public static Frame findFrameForMarker(final FrameMarker frameMarker) {
         CompilerDirectives.bailout("Finding materializable frames should never be part of compiled code as it triggers deopts");
-        return Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Frame>() {
-            @Override
-            public Frame visitFrame(final FrameInstance frameInstance) {
-                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                if (!isGraalSqueakFrame(current)) {
-                    return null;
-                }
-                final Object contextOrMarker = getContextOrMarker(current);
-                if (frameMarker == contextOrMarker || (contextOrMarker instanceof ContextObject && ((ContextObject) contextOrMarker).getFrameMarker() == frameMarker)) {
-                    return frameInstance.getFrame(FrameInstance.FrameAccess.MATERIALIZE);
-                }
+        return Truffle.getRuntime().iterateFrames(frameInstance -> {
+            final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+            if (!isGraalSqueakFrame(current)) {
+                return null;
+            }
+            final Object contextOrMarker = getContextOrMarker(current);
+            if (frameMarker == contextOrMarker || (contextOrMarker instanceof ContextObject && ((ContextObject) contextOrMarker).getFrameMarker() == frameMarker)) {
+                return frameInstance.getFrame(FrameInstance.FrameAccess.MATERIALIZE);
+            }
+            return null;
+        });
+    }
+
+    public static <T> T iterateFrames(final SqueakFrameVisitor<T> visitor) {
+        return iterateFrames(visitor, FrameInstance.FrameAccess.READ_ONLY);
+    }
+
+    public static <T> T iterateFrames(final SqueakFrameVisitor<T> visitor, final FrameInstance.FrameAccess access) {
+        return Truffle.getRuntime().iterateFrames(frameInstance -> {
+            final Frame frame = frameInstance.getFrame(access);
+            if (isGraalSqueakFrame(frame)) {
+                return visitor.visitFrame(frameInstance, frame);
+            } else {
                 return null;
             }
         });
