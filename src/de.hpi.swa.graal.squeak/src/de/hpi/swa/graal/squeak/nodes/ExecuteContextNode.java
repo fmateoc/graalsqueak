@@ -18,7 +18,6 @@ import com.oracle.truffle.api.profiles.ConditionProfile;
 import de.hpi.swa.graal.squeak.exceptions.ProcessSwitch;
 import de.hpi.swa.graal.squeak.exceptions.Returns.LocalReturn;
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
-import de.hpi.swa.graal.squeak.exceptions.Returns.NonVirtualReturn;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
@@ -41,10 +40,8 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
     @Children private AbstractBytecodeNode[] bytecodeNodes;
     @Child private HandleLocalReturnNode handleLocalReturnNode;
     @Child private HandleNonLocalReturnNode handleNonLocalReturnNode;
-    @Child private HandleNonVirtualReturnNode handleNonVirtualReturnNode;
     @Child private TriggerInterruptHandlerNode triggerInterruptHandlerNode;
 
-    private final BranchProfile nonVirtualReturnProfile = BranchProfile.create();
     private final BranchProfile processSwitchProfile = BranchProfile.create();
 
     @Child private UpdateInstructionPointerNode updateInstructionPointerNode;
@@ -88,10 +85,6 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
         } catch (NonLocalReturn nlr) {
             /** {@link getHandleNonLocalReturnNode()} acts as {@link BranchProfile} */
             return getHandleNonLocalReturnNode().executeHandle(frame, nlr);
-        } catch (NonVirtualReturn nvr) {
-            nonVirtualReturnProfile.enter();
-            getOrCreateContextNode.executeGet(frame).markEscaped();
-            return getHandleNonVirtualReturnNode().executeHandle(frame, nvr);
         } catch (ProcessSwitch ps) {
             processSwitchProfile.enter();
             getOrCreateContextNode.executeGet(frame).markEscaped();
@@ -126,9 +119,6 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
         } catch (NonLocalReturn nlr) {
             /** {@link getHandleNonLocalReturnNode()} acts as {@link BranchProfile} */
             return getHandleNonLocalReturnNode().executeHandle(frame, nlr);
-        } catch (NonVirtualReturn nvr) {
-            nonVirtualReturnProfile.enter();
-            return getHandleNonVirtualReturnNode().executeHandle(frame, nvr);
         } finally {
             MaterializeContextOnMethodExitNode.stopMaterializationHere();
         }
@@ -320,14 +310,6 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
             handleNonLocalReturnNode = insert(HandleNonLocalReturnNode.create(code));
         }
         return handleNonLocalReturnNode;
-    }
-
-    private HandleNonVirtualReturnNode getHandleNonVirtualReturnNode() {
-        if (handleNonVirtualReturnNode == null) {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
-            handleNonVirtualReturnNode = insert(HandleNonVirtualReturnNode.create());
-        }
-        return handleNonVirtualReturnNode;
     }
 
     private StackPushNode getStackPushNode() {

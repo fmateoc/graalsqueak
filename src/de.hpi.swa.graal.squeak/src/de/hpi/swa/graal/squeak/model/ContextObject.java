@@ -68,11 +68,23 @@ public final class ContextObject extends AbstractPointersObject {
 
     public ContextObject(final ContextObject original) {
         super(original.image, original.image.methodContextClass);
-        truffleFrame = original.truffleFrame;
+        final CompiledCodeObject blockOrMethod = FrameAccess.getBlockOrMethod(original.truffleFrame);
+        final FrameDescriptor frameDescriptor = blockOrMethod.getFrameDescriptor();
         frameMarker = new FrameMarker(null); // FIXME
         hasModifiedSender = false;
         escaped = true; // FIXME
-        throw new SqueakException("Shallow copy of ContextObjects not yet finished");
+        // Create shallow copy of Truffle frame
+        truffleFrame = Truffle.getRuntime().createMaterializedFrame(original.truffleFrame.getArguments(), frameDescriptor);
+        // Copy frame slot values
+        truffleFrame.setObject(blockOrMethod.thisContextOrMarkerSlot, this);
+        truffleFrame.setInt(blockOrMethod.instructionPointerSlot, FrameUtil.getIntSafe(original.truffleFrame, blockOrMethod.instructionPointerSlot));
+        truffleFrame.setInt(blockOrMethod.stackPointerSlot, FrameUtil.getIntSafe(original.truffleFrame, blockOrMethod.stackPointerSlot));
+        // Copy stack
+        final int numStackSlots = blockOrMethod.getNumStackSlots();
+        for (int i = 0; i < numStackSlots; i++) {
+            final FrameSlot slot = blockOrMethod.getStackSlot(i);
+            truffleFrame.setObject(slot, original.truffleFrame.getValue(slot));
+        }
     }
 
     public void fillIn(final Object[] pointers) {

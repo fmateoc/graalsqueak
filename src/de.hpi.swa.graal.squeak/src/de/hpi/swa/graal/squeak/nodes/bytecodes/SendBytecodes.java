@@ -3,6 +3,7 @@ package de.hpi.swa.graal.squeak.nodes.bytecodes;
 import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveWithoutResultException;
+import de.hpi.swa.graal.squeak.exceptions.Returns.NonVirtualReturn;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
@@ -12,6 +13,7 @@ import de.hpi.swa.graal.squeak.nodes.accessing.CompiledCodeNodes.GetCompiledMeth
 import de.hpi.swa.graal.squeak.nodes.context.LookupClassNode;
 import de.hpi.swa.graal.squeak.nodes.context.stack.StackPopNReversedNode;
 import de.hpi.swa.graal.squeak.nodes.context.stack.StackPushNode;
+import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public final class SendBytecodes {
 
@@ -46,10 +48,17 @@ public final class SendBytecodes {
             try {
                 result = executeSend(frame);
                 assert result != null : "Result of a message send should not be null";
+                pushNode.executeWrite(frame, result);
             } catch (PrimitiveWithoutResultException e) {
                 return; // ignoring result
+            } catch (NonVirtualReturn nvr) {
+                final Object contextOrMarker = FrameAccess.getContextOrMarker(frame);
+                if (contextOrMarker == nvr.getTargetContext() || contextOrMarker == nvr.getTargetContext().getFrameMarker()) {
+                    pushNode.executeWrite(frame, nvr.getReturnValue());
+                } else {
+                    throw nvr;
+                }
             }
-            pushNode.executeWrite(frame, result);
         }
 
         public final Object executeSend(final VirtualFrame frame) {
