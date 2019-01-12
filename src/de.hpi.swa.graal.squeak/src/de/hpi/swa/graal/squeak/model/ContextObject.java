@@ -69,9 +69,10 @@ public final class ContextObject extends AbstractPointersObject {
     public ContextObject(final ContextObject original) {
         super(original.image, original.image.methodContextClass);
         truffleFrame = original.truffleFrame;
-        frameMarker = original.frameMarker;
-        hasModifiedSender = original.hasModifiedSender;
-        escaped = original.escaped;
+        frameMarker = new FrameMarker(null); // FIXME
+        hasModifiedSender = false;
+        escaped = true; // FIXME
+        throw new SqueakException("Shallow copy of ContextObjects not yet finished");
     }
 
     public void fillIn(final Object[] pointers) {
@@ -172,8 +173,10 @@ public final class ContextObject extends AbstractPointersObject {
             case CONTEXT.SENDER_OR_NIL:
                 assert value != null && !(value instanceof FrameMarker) : "sender should not be null or a marker anymore";
                 image.printVerbose("Sender of", this, " set to", value);
-                if (value != image.nil) {
+                if (!hasModifiedSender && value != image.nil) {
                     hasModifiedSender = true;
+                } else if (hasModifiedSender) {
+                    hasModifiedSender = false;
                 }
                 getOrCreateTruffleFrame().getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] = value;
                 break;
@@ -626,6 +629,10 @@ public final class ContextObject extends AbstractPointersObject {
     public boolean hasMaterializedSender() {
         final Object sender = FrameAccess.getSender(truffleFrame);
         return sender == image.nil || sender instanceof ContextObject;
+    }
+
+    public boolean hasFrameMarker() {
+        return frameMarker != null;
     }
 
     public FrameMarker getFrameMarker() {

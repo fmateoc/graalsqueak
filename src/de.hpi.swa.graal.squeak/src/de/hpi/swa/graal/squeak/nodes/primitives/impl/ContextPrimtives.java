@@ -17,6 +17,7 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.Node.Child;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
+import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
@@ -46,13 +47,29 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
             contextNode = GetOrCreateContextNode.create(method);
         }
 
-        @Specialization
-        @TruffleBoundary
+        @Specialization(guards = "!receiver.hasFrameMarker()")
+        protected final Object doFindNextMaterialized(final ContextObject receiver, final AbstractSqueakObject previousContextOrNil) {
+            ContextObject current = receiver;
+            while (current != previousContextOrNil) {
+                final Object sender = current.getSender();
+                if (sender == code.image.nil || sender == previousContextOrNil) {
+                    break;
+                } else {
+                    current = (ContextObject) sender;
+                    if (current.isUnwindContext()) {
+                        return current;
+                    }
+                }
+            }
+            return code.image.nil;
+        }
+
+        @Specialization(guards = "receiver.hasFrameMarker()")
         protected final Object doFindNextVirtualized(final ContextObject receiver, final ContextObject previousContext) {
             return doFindNextMarkers(receiver.getFrameMarker(), previousContext.getFrameMarker());
         }
 
-        @Specialization
+        @Specialization(guards = "receiver.hasFrameMarker()")
         protected final Object doFindNextVirtualizedNil(final ContextObject receiver, @SuppressWarnings("unused") final NilObject nil) {
             return doFindNextMarkers(receiver.getFrameMarker(), null);
         }
@@ -74,6 +91,7 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
 
         @Specialization
         protected final Object doFindNextMarkers(final FrameMarker receiver, final FrameMarker previousMarker) {
+            final ContextObject[] topContextOnTruffleStack = new ContextObject[1];
             final Object handlerContext = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
                 boolean foundMyself = false;
 
@@ -380,7 +398,8 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
                 }
                 final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
                 if (receiver == contextOrMarker) {
-                    writeNode.execute(current, receiver, CONTEXT.TEMP_FRAME_START + index - 1, value);
+                    final Frame currentWritable = frameInstance.getFrame(FrameInstance.FrameAccess.READ_WRITE);
+                    writeNode.execute(currentWritable, receiver, CONTEXT.TEMP_FRAME_START + index - 1, value);
                     return value;
                 } else if (contextOrMarker instanceof ContextObject && receiver == ((ContextObject) contextOrMarker).getFrameMarker()) {
                     ((ContextObject) contextOrMarker).atTemp(index - 1);

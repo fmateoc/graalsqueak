@@ -187,6 +187,7 @@ public final class SqueakImageContext {
             try {
                 evaluate("[Smalltalk processStartUpList: true] value");
             } catch (Exception e) {
+                printToStdErr("startUpList failed:");
                 e.printStackTrace();
             }
             // Set author information.
