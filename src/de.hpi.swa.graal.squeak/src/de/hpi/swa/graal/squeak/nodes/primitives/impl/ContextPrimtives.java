@@ -108,7 +108,7 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
                         }
                     } else {
                         if (previousMarker != null && previousMarker.matchesContextOrMarker(contextOrMarker)) {
-                            return null;
+                            return code.image.nil;
                         }
                         if (FrameAccess.getMethod(current).isUnwindMarked()) {
                             return FrameAccess.returnMarkerOrContext(contextOrMarker, frameInstance);
@@ -124,28 +124,29 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
                 }
             });
             // Continue search in materialized contexts if necessary.
-            if (bottomContextOnTruffleStack[0] != null) {
+            if (handlerContext == null) {
                 ContextObject current = bottomContextOnTruffleStack[0];
+                if (current == null) {
+                    return code.image.nil;
+                }
                 while (current.getFrameMarker() != previousMarker) {
                     final Object sender = current.getSender();
                     if (sender == code.image.nil || sender == previousMarker) {
                         break;
                     } else {
                         current = (ContextObject) sender;
-                        if (current.isUnwindContext()) {
+                        if (current.getFrameMarker() == previousMarker) {
+                            return code.image.nil;
+                        } else if (current.isUnwindContext()) {
                             return current;
                         }
                     }
                 }
                 return code.image.nil;
-            }
-            if (handlerContext == null) {
-                return code.image.nil;
             } else {
                 return handlerContext;
             }
         }
-
     }
 
     @GenerateNodeFactory
@@ -162,7 +163,7 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
              * Terminate all the Contexts between me and previousContext, if previousContext is on
              * my Context stack. Make previousContext my sender.
              */
-            terminateBetween(receiver.getFrameMarker(), previousContext.getFrameMarker());
+            terminateBetween(receiver, previousContext);
             receiver.atput0(CONTEXT.SENDER_OR_NIL, previousContext); // flagging context as dirty
             return receiver;
         }
@@ -232,6 +233,63 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
             return receiver;
         }
 
+        private void terminateBetween(final ContextObject start, final ContextObject end) {
+            ContextObject current = start;
+            while (current.hasMaterializedSender()) {
+                final Object sender = start.getSender();
+                current.terminate();
+                if (sender == code.image.nil || sender == end) {
+                    return;
+                } else if (sender instanceof FrameMarker) {
+                    throw new SqueakException("Not yet supported"); // FIXME
+                } else {
+                    current = (ContextObject) sender;
+                }
+            }
+            terminateBetween(current.getFrameMarker(), end);
+// throw new SqueakException("virtual sender not yet supported"); // FIXME
+        }
+
+        private void terminateBetween(final FrameMarker start, final ContextObject end) {
+            assert start != null;
+            final ContextObject[] bottomContextOnTruffleStack = new ContextObject[1];
+            final ContextObject result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<ContextObject>() {
+                boolean foundMyself = false;
+
+                @Override
+                public ContextObject visitFrame(final FrameInstance frameInstance) {
+                    final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                    if (!FrameAccess.isGraalSqueakFrame(current)) {
+                        return null;
+                    }
+                    final CompiledCodeObject currentCode = FrameAccess.getMethod(current);
+                    final Object contextOrMarker = current.getValue(currentCode.thisContextOrMarkerSlot);
+                    if (!foundMyself) {
+                        if (FrameAccess.matchesContextOrMarker(start, contextOrMarker)) {
+                            foundMyself = true;
+                        }
+                    } else {
+                        if (contextOrMarker == end) {
+                            return end;
+                        }
+                        if (contextOrMarker instanceof ContextObject) {
+                            bottomContextOnTruffleStack[0] = (ContextObject) contextOrMarker;
+                        } else {
+                            bottomContextOnTruffleStack[0] = null;
+                        }
+                        final Frame currentWritable = frameInstance.getFrame(FrameInstance.FrameAccess.READ_WRITE);
+                        // Terminate frame
+                        currentWritable.setInt(currentCode.instructionPointerSlot, -1);
+                        currentWritable.getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] = code.image.nil;
+                    }
+                    return null;
+                }
+            });
+            if (result == null && bottomContextOnTruffleStack[0] != null) {
+                terminateBetween(bottomContextOnTruffleStack[0], end);
+            }
+        }
+
         private void terminateBetween(final FrameMarker start, final FrameMarker end) {
             assert start != null && end != null;
             final Object result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
@@ -255,9 +313,8 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
                         } else {
                             final Frame currentWritable = frameInstance.getFrame(FrameInstance.FrameAccess.READ_WRITE);
                             // Terminate frame
-                            // currentWritable.getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] =
-                            // code.image.nil;
                             currentWritable.setInt(currentCode.instructionPointerSlot, -1);
+                            currentWritable.getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] = code.image.nil;
                         }
                     }
                     return null;
