@@ -48,11 +48,6 @@ public abstract class AboutToReturnNode extends AbstractNodeWithCode {
         try {
             dispatchNode.executeBlock(block, getFrameArguments.execute(block, getContextOrMarker(frame), new Object[0]));
         } catch (LocalReturn blockLR) { // ignore
-        } catch (NonLocalReturn blockNLR) {
-            nonLocalReturnProfile.enter();
-            if (!blockNLR.hasArrivedAtTargetContext()) {
-                throw blockNLR;
-            }
         }
     }
 

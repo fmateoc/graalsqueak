@@ -170,15 +170,7 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
                 } else {
                     final int successor = getGetSuccessorNode().executeGeneric(frame, node);
                     getUpdateInstructionPointerNode().executeUpdate(frame, successor);
-                    try {
-                        node.executeVoid(frame);
-                    } catch (NonLocalReturn nlr) {
-                        if (nlr.hasArrivedAtTargetContext()) {
-                            getStackPushNode().executeWrite(frame, nlr.getReturnValue());
-                        } else {
-                            throw nlr;
-                        }
-                    }
+                    node.executeVoid(frame);
                     pc = successor;
                     node = fetchNextBytecodeNode(pc);
                     continue;
@@ -199,15 +191,7 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
         while (pc >= 0) {
             final int successor = getGetSuccessorNode().executeGeneric(frame, node);
             getUpdateInstructionPointerNode().executeUpdate(frame, successor);
-            try {
-                node.executeVoid(frame);
-            } catch (NonLocalReturn nlr) {
-                if (nlr.hasArrivedAtTargetContext()) {
-                    getStackPushNode().executeWrite(frame, nlr.getReturnValue());
-                } else {
-                    throw nlr;
-                }
-            }
+            node.executeVoid(frame);
             pc = successor;
             node = fetchNextBytecodeNode(pc);
         }

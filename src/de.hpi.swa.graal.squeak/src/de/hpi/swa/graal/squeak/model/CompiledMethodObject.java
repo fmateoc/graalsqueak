@@ -131,7 +131,7 @@ public final class CompiledMethodObject extends CompiledCodeObject {
         return new CompiledMethodObject(this);
     }
 
-    public final boolean isExceptionHandlerMarked() {
+    public boolean isExceptionHandlerMarked() {
         return hasPrimitive() && primitiveIndex() == 199;
     }
 

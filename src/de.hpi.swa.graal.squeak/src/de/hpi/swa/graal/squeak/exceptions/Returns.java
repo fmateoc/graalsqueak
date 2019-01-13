@@ -34,29 +34,20 @@ public final class Returns {
 
     public static final class NonLocalReturn extends AbstractReturn {
         private static final long serialVersionUID = 1L;
-        private final ContextObject targetContext;
-        private boolean arrivedAtTargetContext = false;
+        private final Object targetContext;
 
-        public NonLocalReturn(final Object returnValue, final ContextObject targetContext) {
+        public NonLocalReturn(final Object returnValue, final Object targetContext) {
             super(returnValue);
             this.targetContext = targetContext;
         }
 
-        public ContextObject getTargetContext() {
+        public Object getTargetContext() {
             return targetContext;
-        }
-
-        public boolean hasArrivedAtTargetContext() {
-            return arrivedAtTargetContext;
-        }
-
-        public void setArrivedAtTargetContext() {
-            arrivedAtTargetContext = true;
         }
 
         @Override
         public String toString() {
-            return "NLR (value: " + returnValue + ", arrived: " + arrivedAtTargetContext + ", target: " + targetContext + ")";
+            return "NLR (value: " + returnValue + ", target: " + targetContext + ")";
         }
     }
 

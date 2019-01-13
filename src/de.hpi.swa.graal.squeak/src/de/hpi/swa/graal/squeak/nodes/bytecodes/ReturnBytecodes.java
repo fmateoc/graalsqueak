@@ -58,14 +58,15 @@ public final class ReturnBytecodes {
         }
 
         @Specialization(guards = {"closure == null", "!isVirtualized(frame)", "hasModifiedSender(frame)"})
-        protected final void doNonLocalReturn(final VirtualFrame frame, @SuppressWarnings("unused") final Object closure,
-                        @Cached("create(code)") final GetOrCreateContextNode getContextNode) {
-            throw new NonLocalReturn(getReturnValue(frame), getContextNode.executeGet(frame));
+        protected final void doNonLocalReturn(final VirtualFrame frame, @SuppressWarnings("unused") final Object closure) {
+            // Target is new sender.
+            throw new NonLocalReturn(getReturnValue(frame), FrameAccess.getSender(frame));
         }
 
         @Specialization(guards = {"closure != null"})
         protected final void doNonLocalReturn(final VirtualFrame frame, final BlockClosureObject closure) {
-            throw new NonLocalReturn(getReturnValue(frame), closure.getHomeContext());
+            // Target is sender of closure's home context.
+            throw new NonLocalReturn(getReturnValue(frame), closure.getHomeContext().getSender());
         }
 
         @Fallback

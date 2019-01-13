@@ -29,7 +29,7 @@ public abstract class HandleNonLocalReturnNode extends AbstractNodeWithCode {
     protected final Object handleModifiedSender(final VirtualFrame frame, final NonLocalReturn nlr) {
         aboutToReturnNode.executeAboutToReturn(frame, nlr); // handle ensure: or ifCurtailed:
         final ContextObject newSender = getContext(frame).getNotNilSender(); // sender has changed
-        final ContextObject target = nlr.getTargetContext().getNotNilSender();
+        final ContextObject target = (ContextObject) nlr.getTargetContext();
         terminateNode.executeTerminate(frame);
 // if (newSender == target) {
 // return nlr.getReturnValue();
@@ -42,9 +42,6 @@ public abstract class HandleNonLocalReturnNode extends AbstractNodeWithCode {
     protected final Object handleVirtualized(final VirtualFrame frame, final NonLocalReturn nlr) {
         aboutToReturnNode.executeAboutToReturn(frame, nlr); // handle ensure: or ifCurtailed:
         terminateNode.executeTerminate(frame);
-        if (nlr.getTargetContext() == getContextOrMarker(frame)) {
-            nlr.setArrivedAtTargetContext();
-        }
         throw nlr;
     }
 }

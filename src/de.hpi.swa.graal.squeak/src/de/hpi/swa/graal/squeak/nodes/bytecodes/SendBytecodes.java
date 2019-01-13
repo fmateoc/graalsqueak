@@ -3,9 +3,11 @@ package de.hpi.swa.graal.squeak.nodes.bytecodes;
 import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveWithoutResultException;
+import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonVirtualReturn;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
+import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
 import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
@@ -51,6 +53,14 @@ public final class SendBytecodes {
                 pushNode.executeWrite(frame, result);
             } catch (PrimitiveWithoutResultException e) {
                 return; // ignoring result
+            } catch (NonLocalReturn nlr) {
+                final Object contextOrMarker = FrameAccess.getContextOrMarker(frame);
+                final Object target = nlr.getTargetContext();
+                if (contextOrMarker == nlr.getTargetContext() || (target instanceof ContextObject && contextOrMarker == ((ContextObject) target).getFrameMarker())) {
+                    pushNode.executeWrite(frame, nlr.getReturnValue());
+                } else {
+                    throw nlr;
+                }
             } catch (NonVirtualReturn nvr) {
                 final Object contextOrMarker = FrameAccess.getContextOrMarker(frame);
                 if (contextOrMarker == nvr.getTargetContext() || contextOrMarker == nvr.getTargetContext().getFrameMarker()) {
