@@ -46,8 +46,6 @@ public final class FrameAccess {
      * </pre>
      */
 
-    public static final boolean ALWAYS_USE_MATERIALIZED_CONTEXTS = true;
-
     public static CompiledMethodObject getMethod(final Frame frame) {
         return (CompiledMethodObject) frame.getArguments()[METHOD];
     }
@@ -144,21 +142,16 @@ public final class FrameAccess {
     }
 
     public static Object returnMarkerOrContext(final Object contextOrMarker, final FrameInstance frameInstance) {
-        if (!ALWAYS_USE_MATERIALIZED_CONTEXTS) {
+        if (contextOrMarker instanceof FrameMarker) {
+            final Frame frame = frameInstance.getFrame(FrameInstance.FrameAccess.MATERIALIZE);
+            final CompiledCodeObject method = FrameAccess.getBlockOrMethod(frame);
+            assert FrameUtil.getObjectSafe(frame, method.thisContextOrMarkerSlot) == contextOrMarker : "ContextObject should not be allocated";
+            final ContextObject context = ContextObject.create(method.image, method.getSqueakContextSize(), frame.materialize(), (FrameMarker) contextOrMarker);
+            frame.setObject(method.thisContextOrMarkerSlot, context);
+            return context;
+        } else {
             assert contextOrMarker instanceof ContextObject;
             return contextOrMarker;
-        } else {
-            if (contextOrMarker instanceof FrameMarker) {
-                final Frame frame = frameInstance.getFrame(FrameInstance.FrameAccess.MATERIALIZE);
-                final CompiledCodeObject method = FrameAccess.getBlockOrMethod(frame);
-                assert FrameUtil.getObjectSafe(frame, method.thisContextOrMarkerSlot) == contextOrMarker : "ContextObject should not be allocated";
-                final ContextObject context = ContextObject.create(method.image, method.getSqueakContextSize(), frame.materialize(), (FrameMarker) contextOrMarker);
-                frame.setObject(method.thisContextOrMarkerSlot, context);
-                return context;
-            } else {
-                assert contextOrMarker instanceof ContextObject;
-                return contextOrMarker;
-            }
         }
     }
 

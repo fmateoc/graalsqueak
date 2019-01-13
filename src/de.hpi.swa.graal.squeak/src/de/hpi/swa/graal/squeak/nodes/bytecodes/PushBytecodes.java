@@ -50,18 +50,12 @@ public final class PushBytecodes {
 
         public PushActiveContextNode(final CompiledCodeObject code, final int index) {
             super(code, index);
-            if (FrameAccess.ALWAYS_USE_MATERIALIZED_CONTEXTS) {
-                getContextNode = GetOrCreateContextNode.create(code);
-            }
+            getContextNode = GetOrCreateContextNode.create(code);
         }
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            if (FrameAccess.ALWAYS_USE_MATERIALIZED_CONTEXTS) {
-                pushNode.executeWrite(frame, getContextNode.executeGet(frame));
-            } else {
-                pushNode.executeWrite(frame, FrameAccess.getContextOrMarker(frame));
-            }
+            pushNode.executeWrite(frame, getContextNode.executeGet(frame));
         }
 
         @Override

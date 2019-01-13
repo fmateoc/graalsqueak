@@ -7,7 +7,6 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
-import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithCode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameSlotWriteNode;
@@ -26,26 +25,6 @@ public abstract class TemporaryWriteNode extends AbstractNodeWithCode {
         this.tempIndex = tempIndex;
     }
 
-    @Specialization(guards = {"isVirtualized(frame)", "value.matches(frame)"})
-    protected final void doWriteVirtualizedMatching(final VirtualFrame frame, final FrameMarker value,
-                    @Cached("create(code.getStackSlot(tempIndex))") final FrameSlotWriteNode writeNode) {
-        assert value != null;
-        assert 0 <= tempIndex && tempIndex <= CONTEXT.MAX_STACK_SIZE;
-        final ContextObject context = value.getMaterializedContext(frame);
-        context.markEscaped();
-        writeNode.executeWrite(frame, context);
-    }
-
-    @Specialization(guards = {"isVirtualized(frame)", "!value.matches(frame)"})
-    protected final void doWriteVirtualizedNotMatching(final VirtualFrame frame, final FrameMarker value,
-                    @Cached("create(code.getStackSlot(tempIndex))") final FrameSlotWriteNode writeNode) {
-        assert value != null;
-        assert 0 <= tempIndex && tempIndex <= CONTEXT.MAX_STACK_SIZE;
-        final ContextObject context = value.getMaterializedContext();
-        context.markEscaped();
-        writeNode.executeWrite(frame, context);
-    }
-
     @Specialization(guards = {"isVirtualized(frame)"})
     protected final void doWriteVirtualized(final VirtualFrame frame, final ContextObject value,
                     @Cached("create(code.getStackSlot(tempIndex))") final FrameSlotWriteNode writeNode) {
@@ -55,7 +34,7 @@ public abstract class TemporaryWriteNode extends AbstractNodeWithCode {
         writeNode.executeWrite(frame, value);
     }
 
-    @Specialization(guards = {"isVirtualized(frame)", "!isFrameMarker(value)", "!isContextObject(value)"})
+    @Specialization(guards = {"isVirtualized(frame)", "!isContextObject(value)"})
     protected final void doWriteVirtualized(final VirtualFrame frame, final Object value,
                     @Cached("create(code.getStackSlot(tempIndex))") final FrameSlotWriteNode writeNode) {
         assert value != null;

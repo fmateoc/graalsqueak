@@ -1,11 +1,8 @@
 package de.hpi.swa.graal.squeak.nodes.accessing;
 
-import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
-import com.oracle.truffle.api.frame.Frame;
-import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.Node;
 
@@ -18,7 +15,6 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.EmptyObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
-import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
@@ -26,9 +22,7 @@ import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ReadArrayObjectNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ReadClassObjectNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.ReadNativeObjectNode;
-import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public abstract class SqueakObjectAt0Node extends Node {
 
@@ -52,34 +46,6 @@ public abstract class SqueakObjectAt0Node extends Node {
     @Specialization
     protected static final Object doContext(final ContextObject obj, final long index) {
         return obj.at0(index);
-    }
-
-    @Specialization(guards = {"obj.matches(frame)"})
-    protected static final Object doContextVirtualizedMatching(final VirtualFrame frame, final FrameMarker obj, final long index,
-                    @Cached("create()") final ContextObjectReadNode readNode) {
-        return readNode.execute(frame, obj, index);
-    }
-
-    @Specialization(guards = {"!obj.matches(frame)"})
-    protected static final Object doContextVirtualizedNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker obj, final long index,
-                    @Cached("create()") final ContextObjectReadNode readNode) {
-        final Object result = Truffle.getRuntime().iterateFrames(frameInstance -> {
-            final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-            if (!FrameAccess.isGraalSqueakFrame(current)) {
-                return null;
-            }
-            final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-            if (obj == contextOrMarker) {
-                return readNode.execute(current, obj, index);
-            } else if (contextOrMarker instanceof ContextObject && obj == ((ContextObject) contextOrMarker).getFrameMarker()) {
-                return ((ContextObject) contextOrMarker).at0(index);
-            }
-            return null;
-        });
-        if (result == null) {
-            throw new SqueakException("Unable to find frameMarker:", obj);
-        }
-        return result;
     }
 
     @Specialization

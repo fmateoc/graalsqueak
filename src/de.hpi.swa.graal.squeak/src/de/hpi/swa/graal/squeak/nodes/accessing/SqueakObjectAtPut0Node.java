@@ -15,7 +15,6 @@ import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.EmptyObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
-import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
@@ -24,7 +23,6 @@ import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.WriteArrayObjectNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.WriteClassObjectNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.WriteNativeObjectNode;
 
 @ImportStatic({NativeObject.class, SqueakGuards.class})
@@ -50,12 +48,6 @@ public abstract class SqueakObjectAtPut0Node extends Node {
     @Specialization
     protected static final void doContext(final ContextObject obj, final long index, final Object value) {
         obj.atput0(index, value);
-    }
-
-    @Specialization
-    protected static final void doContextVirtualized(final VirtualFrame frame, final FrameMarker obj, final long index, final Object value,
-                    @Cached("create()") final ContextObjectWriteNode writeNode) {
-        writeNode.execute(frame, obj, index, value);
     }
 
     @Specialization

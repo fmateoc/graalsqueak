@@ -426,11 +426,16 @@ public final class ContextObject extends AbstractSqueakObject {
         return FrameUtil.getIntSafe(truffleFrame, getMethod().instructionPointerSlot);
     }
 
-    public Object getSender() {
+    public AbstractSqueakObject getSender() {
         if (truffleFrame == null) {
             return null;
         } else {
-            return FrameAccess.getSender(truffleFrame);
+            final Object value = FrameAccess.getSender(truffleFrame);
+            if (value instanceof FrameMarker) {
+                return ((FrameMarker) value).getMaterializedContext();
+            } else {
+                return (AbstractSqueakObject) value;
+            }
         }
     }
 

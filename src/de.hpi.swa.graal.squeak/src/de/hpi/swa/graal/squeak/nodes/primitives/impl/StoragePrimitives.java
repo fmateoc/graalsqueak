@@ -24,19 +24,15 @@ import de.hpi.swa.graal.squeak.model.CharacterObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
-import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
-import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
-import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.ERROR_TABLE;
 import de.hpi.swa.graal.squeak.nodes.GetAllInstancesNode;
 import de.hpi.swa.graal.squeak.nodes.NewObjectNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.GetObjectArrayNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ReadArrayObjectNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectBecomeNode;
@@ -411,27 +407,6 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
         @Specialization
         protected static final long doSqueakObject(final AbstractSqueakObject obj) {
             return obj.getSqueakHash();
-        }
-    }
-
-    @GenerateNodeFactory
-    @SqueakPrimitive(indices = 76)
-    protected abstract static class PrimStoreStackPointerNode extends AbstractPrimitiveNode implements BinaryPrimitive {
-        protected PrimStoreStackPointerNode(final CompiledMethodObject method) {
-            super(method);
-        }
-
-        @Specialization
-        protected static final AbstractSqueakObject store(final ContextObject receiver, final long value) {
-            receiver.setStackPointer(value);
-            return receiver;
-        }
-
-        @Specialization
-        protected static final Object store(final VirtualFrame frame, final FrameMarker receiver, final long value,
-                        @Cached("create()") final ContextObjectWriteNode writeNode) {
-            writeNode.execute(frame, receiver, CONTEXT.STACKPOINTER, value);
-            return receiver;
         }
     }
 
