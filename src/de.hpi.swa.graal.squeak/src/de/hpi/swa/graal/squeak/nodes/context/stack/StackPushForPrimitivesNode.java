@@ -35,7 +35,7 @@ public abstract class StackPushForPrimitivesNode extends Node {
 
     @Specialization(guards = {"isVirtualized(frame, codeObject)"}, limit = "1")
     protected static final void doWriteVirtualized(final VirtualFrame frame, final Object value,
-                    @Cached("getMethod(frame)") final CompiledMethodObject codeObject,
+                    @Cached("getBlockOrMethod(frame)") final CompiledCodeObject codeObject,
                     @Cached("create(codeObject)") final FrameStackWriteNode writeNode) {
         assert value != null;
         final int currentStackPointer = FrameUtil.getIntSafe(frame, codeObject.stackPointerSlot);
