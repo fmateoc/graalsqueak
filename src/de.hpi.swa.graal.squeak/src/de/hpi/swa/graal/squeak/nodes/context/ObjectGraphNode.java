@@ -16,7 +16,6 @@ import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameInstance;
-import com.oracle.truffle.api.frame.FrameInstanceVisitor;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.nodes.Node;
 
@@ -184,7 +183,7 @@ public abstract class ObjectGraphNode extends AbstractNodeWithImage {
         }
 
         @Specialization
-        protected static final Object[] doContext(final ContextObject object) {
+        protected static final Object[] doContext(@SuppressWarnings("unused") final ContextObject object) {
             return new Object[0]; // FIXME
         }
 

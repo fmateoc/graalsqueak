@@ -4,7 +4,6 @@ import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.nodes.Node;
 
-import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 
 public abstract class FillInContextNode extends Node {
@@ -22,8 +21,10 @@ public abstract class FillInContextNode extends Node {
         // obj.getPointers().length : "ContextObject has wrong size";
     }
 
+    @SuppressWarnings("unused")
     @Specialization(guards = "obj.hasTruffleFrame()")
     protected static final void doContextFail(final ContextObject obj, final SqueakImageChunk chunk) {
+        // FIXME
         // throw new SqueakException("Context already has a truffleFrame");
     }
 

@@ -4,7 +4,6 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
-import com.oracle.truffle.api.profiles.BranchProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.Returns.LocalReturn;
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
@@ -41,8 +40,7 @@ public abstract class AboutToReturnNode extends AbstractNodeWithCode {
                     @Cached("createTemporaryWriteNode(0)") final SqueakNode blockArgumentNode,
                     @SuppressWarnings("unused") @Cached("createTemporaryWriteNode(1)") final SqueakNode completeTempReadNode,
                     @Cached("create(code, 1)") final TemporaryWriteNode completeTempWriteNode,
-                    @Cached("create()") final BlockActivationNode dispatchNode,
-                    @Cached("create()") final BranchProfile nonLocalReturnProfile) {
+                    @Cached("create()") final BlockActivationNode dispatchNode) {
         completeTempWriteNode.executeWrite(frame, code.image.sqTrue);
         final BlockClosureObject block = (BlockClosureObject) blockArgumentNode.executeRead(frame);
         try {

@@ -8,7 +8,6 @@ import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameInstance;
-import com.oracle.truffle.api.frame.FrameInstanceVisitor;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.FrameUtil;
@@ -16,8 +15,6 @@ import com.oracle.truffle.api.frame.MaterializedFrame;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.source.Source;
 
-import de.hpi.swa.graal.squeak.exceptions.InstructionPointerModification;
-import de.hpi.swa.graal.squeak.exceptions.ProcessSwitch;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
@@ -258,8 +255,8 @@ public final class ContextObject extends AbstractPointersObject {
                 break;
             case CONTEXT.STACKPOINTER:
                 final int intValue = (int) (long) value;
-                assert 0 <= intValue && intValue <= getClosureOrMethod().getSqueakContextSize();
-                getOrCreateTruffleFrame().setInt(getClosureOrMethod().stackPointerSlot, intValue);
+                assert 0 <= intValue && intValue <= getBlockOrMethod().getSqueakContextSize();
+                getOrCreateTruffleFrame().setInt(getBlockOrMethod().stackPointerSlot, intValue);
                 break;
             case CONTEXT.METHOD:
                 assert value instanceof CompiledMethodObject : "CompiledMethodObject expected";
@@ -391,7 +388,7 @@ public final class ContextObject extends AbstractPointersObject {
         return truffleFrame;
     }
 
-    public CompiledCodeObject getClosureOrMethod() {
+    public CompiledCodeObject getBlockOrMethod() {
         final BlockClosureObject closure = getClosure();
         if (closure != null) {
             return closure.getCompiledBlock();
@@ -426,10 +423,6 @@ public final class ContextObject extends AbstractPointersObject {
 
     private int getFramePC() {
         return FrameUtil.getIntSafe(truffleFrame, getMethod().instructionPointerSlot);
-    }
-
-    private boolean truffleFrameMarkedAsTerminated() {
-        return truffleFrame != null && getFramePC() < 0;
     }
 
     public Object getSender() {
@@ -498,17 +491,17 @@ public final class ContextObject extends AbstractPointersObject {
     }
 
     public int getFrameInstructionPointer() {
-        return FrameUtil.getIntSafe(truffleFrame, getClosureOrMethod().instructionPointerSlot);
+        return FrameUtil.getIntSafe(truffleFrame, getBlockOrMethod().instructionPointerSlot);
     }
 
     public long getStackPointer() {
-        return FrameUtil.getIntSafe(truffleFrame, getMethod().stackPointerSlot);
+        return FrameUtil.getIntSafe(truffleFrame, getBlockOrMethod().stackPointerSlot);
     }
 
     public void setStackPointer(final long value) {
         final int intValue = (int) value;
-        assert 0 <= intValue && intValue <= getClosureOrMethod().getSqueakContextSize();
-        getOrCreateTruffleFrame().setInt(getClosureOrMethod().stackPointerSlot, intValue);
+        assert 0 <= intValue && intValue <= getBlockOrMethod().getSqueakContextSize();
+        getOrCreateTruffleFrame().setInt(getBlockOrMethod().stackPointerSlot, intValue);
     }
 
     @Override
@@ -593,14 +586,6 @@ public final class ContextObject extends AbstractPointersObject {
         return arguments;
     }
 
-    public MaterializedFrame getTruffleFrame(final int numArgs) {
-        assert truffleFrame == null || FrameAccess.getMethod(truffleFrame) != null : "Frame without method should not leak";
-        if (truffleFrame != null) {
-            return truffleFrame;
-        }
-        throw new SqueakException("Invalid state");
-    }
-
     /*
      * Helper function for debugging purposes.
      */
@@ -608,7 +593,7 @@ public final class ContextObject extends AbstractPointersObject {
     public void printSqStackTrace() {
         ContextObject current = this;
         while (current != null) {
-            final CompiledCodeObject code = current.getClosureOrMethod();
+            final CompiledCodeObject code = current.getBlockOrMethod();
             final Object[] rcvrAndArgs = current.getReceiverAndNArguments(code.getNumArgsAndCopied());
             image.getOutput().println(MiscUtils.format("%s #(%s) [%s]", current, ArrayUtils.toJoinedString(", ", rcvrAndArgs), current.getFrameMarker()));
             final Object sender = current.getSender();
@@ -656,13 +641,14 @@ public final class ContextObject extends AbstractPointersObject {
      */
     public void restartIfTerminated() {
         if (isTerminated()) {
-            atput0(CONTEXT.INSTRUCTION_POINTER, (long) ((CompiledMethodObject) getMethod()).getInitialPC());
+            assert getClosure() == null;
+            atput0(CONTEXT.INSTRUCTION_POINTER, (long) getMethod().getInitialPC());
         }
     }
 
     // The context represents primitive call which needs to be skipped when unwinding call stack.
     public boolean isPrimitiveContext() {
-        final CompiledCodeObject codeObject = getClosureOrMethod();
+        final CompiledCodeObject codeObject = getBlockOrMethod();
         return codeObject.hasPrimitive() && codeObject instanceof CompiledMethodObject &&
                         (getInstructionPointer() - ((CompiledMethodObject) codeObject).getInitialPC() == CallPrimitiveNode.NUM_BYTECODES);
     }

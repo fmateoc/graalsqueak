@@ -27,6 +27,6 @@ public abstract class UpdateInstructionPointerNode extends AbstractNodeWithCode 
     @Fallback
     protected final void doUpdate(final VirtualFrame frame, final int value) {
         final ContextObject context = getContext(frame);
-        getContext(frame).getTruffleFrame().setInt(context.getClosureOrMethod().instructionPointerSlot, value);
+        getContext(frame).getTruffleFrame().setInt(context.getBlockOrMethod().instructionPointerSlot, value);
     }
 }

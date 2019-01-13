@@ -3,7 +3,6 @@ package de.hpi.swa.graal.squeak.nodes.primitives.impl;
 import java.util.List;
 
 import com.oracle.truffle.api.Truffle;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.ImportStatic;
@@ -12,9 +11,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameInstanceVisitor;
-import com.oracle.truffle.api.frame.FrameUtil;
 import com.oracle.truffle.api.frame.VirtualFrame;
-import com.oracle.truffle.api.nodes.Node.Child;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
@@ -29,10 +26,10 @@ import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectR
 import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
-import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.BinaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.TernaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.UnaryPrimitive;
+import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
@@ -321,44 +318,6 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
                 }
             });
             assert result != null : "did not terminate anything";
-        }
-
-        /*
-         * Answer whether the receiver is strictly above context on the stack (Context>>hasSender:).
-         */
-        private boolean hasSender(final ContextObject context, final ContextObject previousContext) {
-            if (context == previousContext) {
-                return false;
-            }
-            Object sender = context.getSender();
-            final FrameMarker[] senderMarker = new FrameMarker[1];
-            while (sender != code.image.nil) {
-                if (sender == previousContext) {
-                    return true;
-                } else if (sender instanceof FrameMarker) {
-                    senderMarker[0] = (FrameMarker) sender;
-                    break;
-                } else {
-                    sender = ((ContextObject) sender).getSender();
-                }
-            }
-            if (senderMarker[0] != null) {
-                final Frame frame = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Frame>() {
-                    public Frame visitFrame(final FrameInstance frameInstance) {
-                        final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                        if (!FrameAccess.isGraalSqueakFrame(current)) {
-                            return null;
-                        }
-                        final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                        if (senderMarker[0].matchesContextOrMarker(contextOrMarker)) {
-                            return current;
-                        }
-                        return null;
-                    }
-                });
-                return frame != null;
-            }
-            return false;
         }
     }
 

@@ -13,7 +13,6 @@ import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
-import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.SimulationPrimitiveNode;
@@ -55,6 +54,7 @@ public abstract class FillInNode extends Node {
         obj.fillin(chunk);
     }
 
+    @SuppressWarnings("unused")
     @Specialization
     protected static final void doContext(final ContextObject obj, final SqueakImageChunk chunk) {
         // do nothing TODO: better comment "FillInContextNode"

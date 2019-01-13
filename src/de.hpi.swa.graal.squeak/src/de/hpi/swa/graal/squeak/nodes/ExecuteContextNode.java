@@ -29,7 +29,6 @@ import de.hpi.swa.graal.squeak.nodes.bytecodes.JumpBytecodes.ConditionalJumpNode
 import de.hpi.swa.graal.squeak.nodes.bytecodes.JumpBytecodes.UnconditionalJumpNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodes.PushClosureNode;
 import de.hpi.swa.graal.squeak.nodes.context.UpdateInstructionPointerNode;
-import de.hpi.swa.graal.squeak.nodes.context.stack.StackPushNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 import de.hpi.swa.graal.squeak.util.InterruptHandlerNode;
 import de.hpi.swa.graal.squeak.util.SqueakBytecodeDecoder;
@@ -46,7 +45,6 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
 
     @Child private UpdateInstructionPointerNode updateInstructionPointerNode;
     @Child private GetSuccessorNode getSuccessorNode;
-    @Child private StackPushNode pushStackNode;
     @Child private CalculcatePCOffsetNode calculcatePCOffsetNode;
 
     public static ExecuteContextNode create(final CompiledCodeObject code) {
@@ -97,7 +95,7 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
     @Fallback
     protected final Object doNonVirtualized(final VirtualFrame frame, final ContextObject context) {
         // maybe persist newContext, so there's no need to lookup the context to update its pc.
-        assert code == context.getClosureOrMethod();
+        assert code == context.getBlockOrMethod();
         assert context.getMethod() == FrameAccess.getMethod(frame);
         assert frame.getFrameDescriptor() == code.getFrameDescriptor();
 
@@ -125,7 +123,7 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
     }
 
     private long getAndDecodeSqueakPC(final ContextObject newContext) {
-        return newContext.getInstructionPointer() - getCalculcatePCOffsetNode().execute(newContext.getClosureOrMethod());
+        return newContext.getInstructionPointer() - getCalculcatePCOffsetNode().execute(newContext.getBlockOrMethod());
     }
 
     /*
@@ -294,14 +292,6 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
             handleNonLocalReturnNode = insert(HandleNonLocalReturnNode.create(code));
         }
         return handleNonLocalReturnNode;
-    }
-
-    private StackPushNode getStackPushNode() {
-        if (pushStackNode == null) {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
-            pushStackNode = insert(StackPushNode.create(code));
-        }
-        return pushStackNode;
     }
 
     private CalculcatePCOffsetNode getCalculcatePCOffsetNode() {

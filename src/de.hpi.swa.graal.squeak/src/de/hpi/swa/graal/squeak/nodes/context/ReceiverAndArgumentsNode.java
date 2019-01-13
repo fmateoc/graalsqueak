@@ -35,7 +35,7 @@ public abstract class ReceiverAndArgumentsNode extends AbstractNodeWithCode {
     @ExplodeLoop
     protected final Object[] doRcvrAndArgs(final VirtualFrame frame) {
         final ContextObject context = (ContextObject) frame.getValue(code.thisContextOrMarkerSlot);
-        final int numArgsAndCopied = context.getClosureOrMethod().getNumArgsAndCopied();
+        final int numArgsAndCopied = context.getBlockOrMethod().getNumArgsAndCopied();
         return context.getReceiverAndNArguments(numArgsAndCopied);
     }
 }

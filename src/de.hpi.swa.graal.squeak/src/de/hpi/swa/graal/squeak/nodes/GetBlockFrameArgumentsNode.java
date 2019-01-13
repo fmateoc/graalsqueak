@@ -8,8 +8,6 @@ import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.Node;
 
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
-import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
-import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public abstract class GetBlockFrameArgumentsNode extends Node {

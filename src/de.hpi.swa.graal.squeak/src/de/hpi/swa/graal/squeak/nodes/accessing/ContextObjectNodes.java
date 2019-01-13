@@ -6,7 +6,6 @@ import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameInstance;
-import com.oracle.truffle.api.frame.FrameInstanceVisitor;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.FrameUtil;
@@ -42,6 +41,7 @@ public final class ContextObjectNodes {
             return doSenderMatching(getReadableFrame(obj), obj, index);
         }
 
+        @SuppressWarnings("unused")
         @Specialization(guards = {"obj.matches(frame)", "index == SENDER_OR_NIL"})
         protected static final Object doSenderMatching(final Frame frame, final FrameMarker obj, final long index) {
             return FrameAccess.getSender(frame);
