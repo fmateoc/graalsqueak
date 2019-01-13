@@ -177,16 +177,34 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
     }
 
     @GenerateNodeFactory
-    @SqueakPrimitive(indices = 197)
+    @SqueakPrimitive(indices = 397) // FIXME
     protected abstract static class PrimNextHandlerContextNode extends AbstractPrimitiveNode implements UnaryPrimitive {
         protected PrimNextHandlerContextNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        @Specialization
+        @Specialization(guards = {"receiver.hasMaterializedSender()"})
         protected final Object findNext(final ContextObject receiver) {
+            ContextObject context = receiver;
+            while (true) {
+                if (context.getMethod().isExceptionHandlerMarked()) {
+                    return context;
+                }
+                final AbstractSqueakObject sender = context.getSender();
+                if (sender instanceof ContextObject) {
+                    context = (ContextObject) sender;
+                } else {
+                    assert sender == code.image.nil;
+                    return code.image.nil;
+                }
+            }
+        }
+
+        @Specialization(guards = {"!receiver.hasMaterializedSender()"})
+        protected final Object findNextAvoidingMaterialization(final ContextObject receiver) {
+            final boolean[] foundMyself = new boolean[1];
+            final Object[] foo = new Object[1];
             final Object result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
-                boolean foundMyself = false;
 
                 public Object visitFrame(final FrameInstance frameInstance) {
                     final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
@@ -194,20 +212,31 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
                         return null;
                     }
                     final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                    if (!foundMyself) {
+                    if (!foundMyself[0]) {
                         if (contextOrMarker == receiver || contextOrMarker == receiver.getFrameMarker()) {
-                            foundMyself = true;
+                            foundMyself[0] = true;
                         }
                     } else {
                         if (FrameAccess.getMethod(current).isExceptionHandlerMarked()) {
                             assert FrameAccess.getClosure(current) == null : "Context with closure cannot be exception handler";
                             return FrameAccess.returnContextObject(contextOrMarker, frameInstance);
+                        } else {
+                            foo[0] = contextOrMarker;
                         }
                     }
                     return null;
                 }
             });
-            return result != null ? result : code.image.nil;
+            if (result == null) {
+                if (foo[0] instanceof ContextObject) {
+                    return findNext((ContextObject) foo[0]);
+                } else {
+                    return code.image.nil;
+                }
+            } else {
+                return result;
+            }
+
         }
     }
 
@@ -257,6 +286,7 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
         protected static final long doSizeWithoutFrame(final ContextObject receiver) {
             return receiver.size() - receiver.instsize();
         }
+
     }
 
     @Override
