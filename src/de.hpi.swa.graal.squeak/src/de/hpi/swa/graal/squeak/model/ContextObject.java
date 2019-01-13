@@ -23,7 +23,7 @@ import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
-public final class ContextObject extends AbstractPointersObject {
+public final class ContextObject extends AbstractSqueakObject {
     private MaterializedFrame truffleFrame;
     private FrameMarker frameMarker;
     private int size;
@@ -563,9 +563,6 @@ public final class ContextObject extends AbstractPointersObject {
     public void become(final ContextObject other) {
         becomeOtherClass(other);
         // FIXME:
-        final Object[] otherPointers = other.getPointers();
-        other.setPointers(this.getPointers());
-        setPointers(otherPointers);
         throw new SqueakException("Not implemented yet");
     }
 
@@ -654,8 +651,19 @@ public final class ContextObject extends AbstractPointersObject {
                         (getInstructionPointer() - ((CompiledMethodObject) codeObject).getInitialPC() == CallPrimitiveNode.NUM_BYTECODES);
     }
 
-    @Override
     public int size() {
         return size;
+    }
+
+    public boolean pointsTo(final Object thang) {
+        // TODO: make sure this works correctly
+        if (truffleFrame != null) {
+            for (int i = 0; i < size(); i++) {
+                if (at0(i) == thang) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
