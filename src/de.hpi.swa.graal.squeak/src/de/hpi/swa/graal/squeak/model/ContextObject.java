@@ -7,12 +7,10 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameDescriptor;
-import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.FrameUtil;
 import com.oracle.truffle.api.frame.MaterializedFrame;
-import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.source.Source;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
@@ -67,9 +65,9 @@ public final class ContextObject extends AbstractSqueakObject {
         super(original.image, original.image.methodContextClass);
         final CompiledCodeObject blockOrMethod = FrameAccess.getBlockOrMethod(original.truffleFrame);
         final FrameDescriptor frameDescriptor = blockOrMethod.getFrameDescriptor();
-        frameMarker = new FrameMarker(Truffle.getRuntime().getCurrentFrame().getFrame(FrameInstance.FrameAccess.READ_ONLY)); // FIXME
+        frameMarker = new FrameMarker(null);
         hasModifiedSender = original.hasModifiedSender();
-        escaped = original.escaped; // FIXME
+        escaped = original.escaped;
         size = original.size;
         // Create shallow copy of Truffle frame
         truffleFrame = Truffle.getRuntime().createMaterializedFrame(original.truffleFrame.getArguments(), frameDescriptor);
@@ -119,11 +117,6 @@ public final class ContextObject extends AbstractSqueakObject {
         }
     }
 
-    public boolean isMatchingFrame(final VirtualFrame frame) {
-        final Object contextOrMarker = FrameAccess.getContextOrMarker(frame);
-        return this == contextOrMarker || frameMarker == contextOrMarker;
-    }
-
     public void terminate() {
         // remove pc and sender without flagging as dirty
         atput0(CONTEXT.INSTRUCTION_POINTER, image.nil);
@@ -141,7 +134,7 @@ public final class ContextObject extends AbstractSqueakObject {
             case CONTEXT.SENDER_OR_NIL:
                 return getSender();
             case CONTEXT.INSTRUCTION_POINTER:
-                final int pc = getFramePC();
+                final int pc = getFrameInstructionPointer();
                 if (pc < 0) {
                     return image.nil;
                 } else {
@@ -181,58 +174,14 @@ public final class ContextObject extends AbstractSqueakObject {
         switch (index) {
             case CONTEXT.SENDER_OR_NIL:
                 assert value != null && !(value instanceof FrameMarker) : "sender should not be null or a marker anymore";
-// if (value == image.nil && getMethod().isExceptionHandlerMarked()) {
-// image.printToStdErr("Removing sender from", this);
-// }
                 if (!hasModifiedSender && value != image.nil && (truffleFrame == null || FrameAccess.getSender(truffleFrame) != ((ContextObject) value).getFrameMarker())) {
                     hasModifiedSender = true;
                 }
                 getOrCreateTruffleFrame().getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] = value;
                 break;
             case CONTEXT.INSTRUCTION_POINTER:
-// final ContextObject[] lastSender = new ContextObject[]{null};
-// final boolean isActiveOnTruffleStack = Truffle.getRuntime().iterateFrames(new
-// FrameInstanceVisitor<Boolean>() {
-// public Boolean visitFrame(final FrameInstance frameInstance) {
-// final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-// if (!FrameAccess.isGraalSqueakFrame(current)) {
-// return null;
-// }
-// final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-// final Object sender = FrameAccess.getSender(current);
-// if (sender instanceof ContextObject) {
-// lastSender[0] = (ContextObject) sender;
-// } else {
-// lastSender[0] = null;
-// }
-// if (contextOrMarker == this || contextOrMarker == getFrameMarker()) {
-// return true;
-// }
-// return null;
-// }
-// }) != null;
-// boolean isActiveOnSqueakStack = false;
-// final boolean isActive;
-// if (lastSender[0] != null && !isActiveOnTruffleStack) {
-// ContextObject current = lastSender[0];
-// while (true) {
-// if (current == this) {
-// isActiveOnSqueakStack = true;
-// break;
-// }
-// final Object sender = current.getSender();
-// if (sender == null || sender == image.nil) {
-// break;
-// } else {
-// current = (ContextObject) sender;
-// }
-// }
-// isActive = isActiveOnSqueakStack == true;
-// } else {
-// isActive = isActiveOnTruffleStack == true;
-// }
+                // TODO: adjust control flow when pc of active context is changed.
                 if (value == image.nil) {
-// assert !isActive : "Cannot terminate active context";
                     truffleFrame.setInt(FrameAccess.getMethod(truffleFrame).instructionPointerSlot, -1);
                 } else {
                     final BlockClosureObject closure = getClosure();
@@ -244,14 +193,6 @@ public final class ContextObject extends AbstractSqueakObject {
                     }
                     final int newPC = (int) (long) value - initalPC;
                     getOrCreateTruffleFrame().setInt(FrameAccess.getMethod(truffleFrame).instructionPointerSlot, newPC);
-// if (isActiveOnTruffleStack) {
-// throw new SqueakException("Signal InstructionPointerModification?");
-// // FIXME: throw new InstructionPointerModification(frameMarker, newPC);
-// } else if (isActiveOnSqueakStack) {
-// throw new SqueakException("Switch to this context?");
-// // FIXME: throw new ProcessSwitch(this); ?
-// }
-
                 }
                 break;
             case CONTEXT.STACKPOINTER:
@@ -276,12 +217,9 @@ public final class ContextObject extends AbstractSqueakObject {
                 if (FrameAccess.ARGUMENTS_START + stackIndex < frameArguments.length) {
                     getOrCreateTruffleFrame().getArguments()[FrameAccess.ARGUMENTS_START + stackIndex] = value;
                 }
-                final CompiledCodeObject code = FrameAccess.getMethod(truffleFrame);
-                if (stackIndex >= code.getNumStackSlots()) {
-                    throw new SqueakException("unexpected store"); // TODO: make this better.
-                } else {
-                    getOrCreateTruffleFrame().setObject(code.getStackSlot(stackIndex), value);
-                }
+                final CompiledCodeObject code = FrameAccess.getBlockOrMethod(truffleFrame);
+                assert stackIndex < code.getNumStackSlots() : "Invalid context stack access at #" + stackIndex;
+                getOrCreateTruffleFrame().setObject(code.getStackSlot(stackIndex), value);
         }
     }
 
@@ -377,9 +315,6 @@ public final class ContextObject extends AbstractSqueakObject {
                 stackPointer = 0;
             }
             assert frameArguments[FrameAccess.RECEIVER] != null : "Receiver should probably not be null here";
-// if (frameArguments[FrameAccess.RECEIVER] == null) {
-// frameArguments[FrameAccess.RECEIVER] = closure.getReceiver();
-// }
             assert frameArguments[FrameAccess.SENDER_OR_SENDER_MARKER] != null;
             truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, compiledBlock.getFrameDescriptor());
             truffleFrame.setInt(compiledBlock.instructionPointerSlot, instructionPointer);
@@ -422,58 +357,18 @@ public final class ContextObject extends AbstractSqueakObject {
         return hasModifiedSender;
     }
 
-    private int getFramePC() {
-        return FrameUtil.getIntSafe(truffleFrame, getMethod().instructionPointerSlot);
-    }
-
     public AbstractSqueakObject getSender() {
-        if (truffleFrame == null) {
-            return null;
+        final Object value = FrameAccess.getSender(truffleFrame);
+        if (value instanceof FrameMarker) {
+            return ((FrameMarker) value).getMaterializedContext();
         } else {
-            final Object value = FrameAccess.getSender(truffleFrame);
-            if (value instanceof FrameMarker) {
-                return ((FrameMarker) value).getMaterializedContext();
-            } else {
-                return (AbstractSqueakObject) value;
-            }
-        }
-    }
-
-    public AbstractSqueakObject getSenderDeprecated() { // FIXME: remove
-        if (truffleFrame == null) {
-            return image.nil; // Signaling not initialized, FIXME
-        }
-        final AbstractSqueakObject actualSender;
-        final Object senderOrMarker = FrameAccess.getSender(truffleFrame);
-        if (senderOrMarker instanceof FrameMarker) {
-            final Frame frame = FrameAccess.findFrameForMarker((FrameMarker) senderOrMarker);
-            if (frame == null) {
-                throw new SqueakException("Unable to find frame for marker:", senderOrMarker);
-            }
-            actualSender = getOrCreateContextFor(frame.materialize());
-            assert actualSender != null;
-            setSender(actualSender);
-            return actualSender;
-        } else {
-            return (AbstractSqueakObject) senderOrMarker;
-        }
-    }
-
-    public static ContextObject getOrCreateContextFor(final MaterializedFrame frame) {
-        final Object contextOrMarker = FrameAccess.getContextOrMarker(frame);
-        if (contextOrMarker instanceof FrameMarker) {
-            final CompiledMethodObject method = FrameAccess.getMethod(frame);
-            final ContextObject context = ContextObject.create(method.image, method.getSqueakContextSize(), frame, (FrameMarker) contextOrMarker);
-            frame.setObject(method.thisContextOrMarkerSlot, context);
-            return context;
-        } else {
-            return (ContextObject) contextOrMarker;
+            return (AbstractSqueakObject) value;
         }
     }
 
     // should only be used when sender is not nil
-    public ContextObject getNotNilSender() { // FIXME
-        return (ContextObject) getSenderDeprecated();
+    public ContextObject getNotNilSender() {
+        return (ContextObject) getSender();
     }
 
     /*
@@ -541,12 +436,7 @@ public final class ContextObject extends AbstractSqueakObject {
     }
 
     public Object atTemp(final long argumentIndex) {
-        final Object value = at0(CONTEXT.TEMP_FRAME_START + argumentIndex);
-        if (value == null) {
-            return image.nil;
-        } else {
-            return value;
-        }
+        return at0(CONTEXT.TEMP_FRAME_START + argumentIndex);
     }
 
     public void atTempPut(final long argumentIndex, final Object value) {

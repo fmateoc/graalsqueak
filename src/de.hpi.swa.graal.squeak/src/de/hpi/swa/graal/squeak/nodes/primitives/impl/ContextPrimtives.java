@@ -11,7 +11,6 @@ import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameInstanceVisitor;
 
-import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
@@ -19,7 +18,6 @@ import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
-import de.hpi.swa.graal.squeak.nodes.GetOrCreateContextNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.BinaryPrimitive;
@@ -47,15 +45,12 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 195)
     protected abstract static class PrimFindNextUnwindContextUpToNode extends AbstractPrimitiveNode implements BinaryPrimitive {
-        @Child private GetOrCreateContextNode contextNode;
-
         public PrimFindNextUnwindContextUpToNode(final CompiledMethodObject method) {
             super(method);
-            contextNode = GetOrCreateContextNode.create(method);
         }
 
-        @Specialization
-        protected final Object doFindNextMaterialized(final ContextObject receiver, final AbstractSqueakObject previousContextOrNil) {
+        @Specialization(guards = "receiver.hasMaterializedSender()")
+        protected final Object doFindNext(final ContextObject receiver, final AbstractSqueakObject previousContextOrNil) {
             ContextObject current = receiver;
             while (current != previousContextOrNil) {
                 final Object sender = current.getSender();
@@ -70,12 +65,41 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
             }
             return code.image.nil;
         }
+
+        @Specialization(guards = "!receiver.hasMaterializedSender()")
+        protected final Object doFindNextAvoidingMaterialization(final ContextObject receiver, final AbstractSqueakObject previousContextOrNil) {
+            // Sender is not materialized, so avoid materialization by walking Truffle frames.
+            final Object result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
+                boolean foundMyself = false;
+
+                public Object visitFrame(final FrameInstance frameInstance) {
+                    final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                    if (!FrameAccess.isGraalSqueakFrame(current)) {
+                        return null;
+                    }
+                    final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+                    if (!foundMyself) {
+                        if (contextOrMarker == receiver || contextOrMarker == receiver.getFrameMarker()) {
+                            foundMyself = true;
+                        }
+                    } else {
+                        if (contextOrMarker == code.image.nil || contextOrMarker == previousContextOrNil) {
+                            return code.image.nil;
+                        } else if (FrameAccess.getMethod(current).isUnwindMarked()) {
+                            return FrameAccess.returnContextObject(contextOrMarker, frameInstance);
+                        }
+                    }
+                    return null;
+                }
+            });
+            assert result != null;
+            return result;
+        }
     }
 
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 196)
     protected abstract static class PrimTerminateToNode extends AbstractPrimitiveNode implements BinaryPrimitive {
-
         public PrimTerminateToNode(final CompiledMethodObject method) {
             super(method);
         }
@@ -100,18 +124,15 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
         private void terminateBetween(final ContextObject start, final ContextObject end) {
             ContextObject current = start;
             while (current.hasMaterializedSender()) {
-                final Object sender = start.getSender();
+                final AbstractSqueakObject sender = start.getSender();
                 current.terminate();
                 if (sender == code.image.nil || sender == end) {
                     return;
-                } else if (sender instanceof FrameMarker) {
-                    throw new SqueakException("Not yet supported"); // FIXME
                 } else {
                     current = (ContextObject) sender;
                 }
             }
             terminateBetween(current.getFrameMarker(), end);
-// throw new SqueakException("virtual sender not yet supported"); // FIXME
         }
 
         private void terminateBetween(final FrameMarker start, final ContextObject end) {
@@ -158,11 +179,8 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 197)
     protected abstract static class PrimNextHandlerContextNode extends AbstractPrimitiveNode implements UnaryPrimitive {
-        @Child private GetOrCreateContextNode contextNode;
-
         protected PrimNextHandlerContextNode(final CompiledMethodObject method) {
             super(method);
-            contextNode = GetOrCreateContextNode.create(code);
         }
 
         @Specialization
@@ -183,7 +201,7 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
                     } else {
                         if (FrameAccess.getMethod(current).isExceptionHandlerMarked()) {
                             assert FrameAccess.getClosure(current) == null : "Context with closure cannot be exception handler";
-                            return FrameAccess.returnMarkerOrContext(contextOrMarker, frameInstance);
+                            return FrameAccess.returnContextObject(contextOrMarker, frameInstance);
                         }
                     }
                     return null;

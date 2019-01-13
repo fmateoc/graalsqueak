@@ -14,7 +14,6 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.EmptyObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
-import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
@@ -67,16 +66,6 @@ public abstract class SqueakObjectShallowCopyNode extends AbstractNodeWithImage 
     @Specialization
     protected static final Object doContext(final ContextObject receiver) {
         return receiver.shallowCopy();
-    }
-
-    @Specialization(guards = "receiver.matches(frame)")
-    protected static final Object doFrameMarkerMatching(final VirtualFrame frame, final FrameMarker receiver) {
-        return receiver.getMaterializedContext(frame).shallowCopy();
-    }
-
-    @Specialization(guards = "!receiver.matches(frame)")
-    protected static final Object doFrameMarkerNotMatching(@SuppressWarnings("unused") final VirtualFrame frame, final FrameMarker receiver) {
-        return receiver.getMaterializedContext().shallowCopy();
     }
 
     @Specialization

@@ -141,7 +141,7 @@ public final class FrameAccess {
         });
     }
 
-    public static Object returnMarkerOrContext(final Object contextOrMarker, final FrameInstance frameInstance) {
+    public static Object returnContextObject(final Object contextOrMarker, final FrameInstance frameInstance) {
         if (contextOrMarker instanceof FrameMarker) {
             final Frame frame = frameInstance.getFrame(FrameInstance.FrameAccess.MATERIALIZE);
             final CompiledCodeObject method = FrameAccess.getBlockOrMethod(frame);

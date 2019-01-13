@@ -18,7 +18,7 @@ public final class FrameMarker implements TruffleObject {
 
     public FrameMarker(final Frame frame) {
         if (LOG_ALLOCATIONS) {
-            logAllocations(frame.getArguments());
+            logAllocations(frame != null ? frame.getArguments() : new Object[0]);
         }
     }
 
@@ -33,14 +33,6 @@ public final class FrameMarker implements TruffleObject {
         return "FrameMarker@" + Integer.toHexString(System.identityHashCode(this));
     }
 
-    public boolean matches(final Frame frame) {
-        return this == FrameAccess.getContextOrMarker(frame);
-    }
-
-    public boolean matchesContextOrMarker(final Object contextOrMarker) {
-        return this == contextOrMarker || (contextOrMarker instanceof ContextObject && this == ((ContextObject) contextOrMarker).getFrameMarker());
-    }
-
     public ContextObject getMaterializedContext() {
         final Frame targetFrame = FrameAccess.findFrameForMarker(this);
         if (targetFrame == null) {
@@ -49,13 +41,13 @@ public final class FrameMarker implements TruffleObject {
         return getMaterializedContext(targetFrame);
     }
 
-    public ContextObject getMaterializedContext(final Frame matchingFrame) {
+    private ContextObject getMaterializedContext(final Frame matchingFrame) {
         final Object contextOrMarker = FrameAccess.getContextOrMarker(matchingFrame);
         if (contextOrMarker instanceof ContextObject) {
             assert ((ContextObject) contextOrMarker).getFrameMarker() == this;
             return (ContextObject) contextOrMarker; // TODO: Refactor this code path.
         }
-        assert matches(matchingFrame) : "Frame does not match";
+        assert this == contextOrMarker : "Frame does not match";
         final CompiledCodeObject code = FrameAccess.getMethod(matchingFrame);
         final MaterializedFrame materializedFrame = matchingFrame.materialize();
         final ContextObject context = ContextObject.create(code.image, code.getSqueakContextSize(), materializedFrame, this);
