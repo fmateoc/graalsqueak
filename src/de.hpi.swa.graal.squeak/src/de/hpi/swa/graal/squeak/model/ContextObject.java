@@ -70,7 +70,7 @@ public final class ContextObject extends AbstractPointersObject {
         super(original.image, original.image.methodContextClass);
         final CompiledCodeObject blockOrMethod = FrameAccess.getBlockOrMethod(original.truffleFrame);
         final FrameDescriptor frameDescriptor = blockOrMethod.getFrameDescriptor();
-        frameMarker = new FrameMarker(null); // FIXME
+        frameMarker = new FrameMarker(Truffle.getRuntime().getCurrentFrame().getFrame(FrameInstance.FrameAccess.READ_ONLY)); // FIXME
         hasModifiedSender = false;
         escaped = true; // FIXME
         // Create shallow copy of Truffle frame
@@ -133,8 +133,8 @@ public final class ContextObject extends AbstractPointersObject {
     }
 
     public boolean isTerminated() {
-        return at0(CONTEXT.INSTRUCTION_POINTER) == image.nil &&
-                        at0(CONTEXT.SENDER_OR_NIL) == image.nil;
+        return at0(CONTEXT.INSTRUCTION_POINTER) == image.nil;
+// && at0(CONTEXT.SENDER_OR_NIL) == image.nil;
     }
 
     public Object at0(final long longIndex) {
@@ -184,11 +184,11 @@ public final class ContextObject extends AbstractPointersObject {
         switch (index) {
             case CONTEXT.SENDER_OR_NIL:
                 assert value != null && !(value instanceof FrameMarker) : "sender should not be null or a marker anymore";
-                image.printVerbose("Sender of", this, " set to", value);
-                if (!hasModifiedSender && value != image.nil) {
+// if (value == image.nil && getMethod().isExceptionHandlerMarked()) {
+// image.printToStdErr("Removing sender from", this);
+// }
+                if (!hasModifiedSender && value != image.nil && (truffleFrame == null || FrameAccess.getSender(truffleFrame) != ((ContextObject) value).getFrameMarker())) {
                     hasModifiedSender = true;
-                } else if (hasModifiedSender) {
-                    hasModifiedSender = false;
                 }
                 getOrCreateTruffleFrame().getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] = value;
                 break;
@@ -402,7 +402,7 @@ public final class ContextObject extends AbstractPointersObject {
     }
 
     private boolean hasMethod() {
-        return getMethod() != null;
+        return hasTruffleFrame() && getMethod() != null;
     }
 
     public CompiledMethodObject getMethod() {
@@ -517,12 +517,12 @@ public final class ContextObject extends AbstractPointersObject {
         if (hasMethod()) {
             final BlockClosureObject closure = getClosure();
             if (closure != null) {
-                return "CTX [] in " + getMethod();
+                return "CTX [] in " + getMethod() + "-" + hashCode();
             } else {
-                return "CTX " + getMethod();
+                return "CTX " + getMethod() + "-" + hashCode();
             }
         } else {
-            return "CTX without method";
+            return "CTX without method" + "-" + hashCode();
         }
     }
 

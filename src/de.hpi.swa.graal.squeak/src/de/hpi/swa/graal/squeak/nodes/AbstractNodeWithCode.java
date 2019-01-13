@@ -26,7 +26,8 @@ public abstract class AbstractNodeWithCode extends Node {
     }
 
     protected final boolean isVirtualized(final VirtualFrame frame) {
-        return !(getContextOrMarker(frame) instanceof ContextObject);
+        final Object contextOrMarker = getContextOrMarker(frame);
+        return !(contextOrMarker instanceof ContextObject) || !((ContextObject) contextOrMarker).hasModifiedSender();
     }
 
     protected final boolean isFullyVirtualized(final VirtualFrame frame) {

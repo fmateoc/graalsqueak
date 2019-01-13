@@ -1,6 +1,7 @@
 package de.hpi.swa.graal.squeak.nodes;
 
 import com.oracle.truffle.api.dsl.TypeSystemReference;
+import com.oracle.truffle.api.frame.FrameUtil;
 import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
@@ -19,11 +20,12 @@ public abstract class SqueakNodeWithCode extends SqueakNode {
     }
 
     protected final boolean isVirtualized(final VirtualFrame frame) {
-        return frame.getValue(code.thisContextOrMarkerSlot) instanceof FrameMarker;
+        final Object contextOrMarker = FrameUtil.getObjectSafe(frame, code.thisContextOrMarkerSlot);
+        return contextOrMarker instanceof FrameMarker || !((ContextObject) contextOrMarker).hasMaterializedSender();
     }
 
     protected final Object getContextOrMarker(final VirtualFrame frame) {
-        return frame.getValue(code.thisContextOrMarkerSlot);
+        return FrameUtil.getObjectSafe(frame, code.thisContextOrMarkerSlot);
     }
 
     protected final ContextObject getContext(final VirtualFrame frame) {

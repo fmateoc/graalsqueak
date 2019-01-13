@@ -17,7 +17,7 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 public final class FrameMarker implements TruffleObject {
     private static final boolean LOG_ALLOCATIONS = false;
 
-    public FrameMarker(final VirtualFrame frame) {
+    public FrameMarker(final Frame frame) {
         if (LOG_ALLOCATIONS) {
             logAllocations(frame.getArguments());
         }

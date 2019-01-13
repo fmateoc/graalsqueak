@@ -56,7 +56,8 @@ public abstract class StackPushForPrimitivesNode extends Node {
     }
 
     protected static final boolean isVirtualized(final VirtualFrame frame, final CompiledCodeObject codeObject) {
-        return !(FrameUtil.getObjectSafe(frame, codeObject.thisContextOrMarkerSlot) instanceof ContextObject);
+        final Object contextOrMarker = FrameUtil.getObjectSafe(frame, codeObject.thisContextOrMarkerSlot);
+        return !(contextOrMarker instanceof ContextObject) || !((ContextObject) contextOrMarker).hasModifiedSender();
     }
 
     protected static final ContextObject getContext(final VirtualFrame frame, final CompiledCodeObject codeObject) {

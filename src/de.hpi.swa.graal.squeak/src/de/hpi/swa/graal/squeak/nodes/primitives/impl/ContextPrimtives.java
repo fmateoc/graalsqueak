@@ -38,7 +38,7 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
 
     @GenerateNodeFactory
-    @SqueakPrimitive(indices = 195)
+    @SqueakPrimitive(indices = 395)
     protected abstract static class PrimFindNextUnwindContextUpToNode extends AbstractPrimitiveNode implements BinaryPrimitive {
         @Child private GetOrCreateContextNode contextNode;
 
@@ -91,7 +91,7 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
 
         @Specialization
         protected final Object doFindNextMarkers(final FrameMarker receiver, final FrameMarker previousMarker) {
-            final ContextObject[] topContextOnTruffleStack = new ContextObject[1];
+            final ContextObject[] bottomContextOnTruffleStack = new ContextObject[1];
             final Object handlerContext = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
                 boolean foundMyself = false;
 
@@ -111,12 +111,34 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
                             return null;
                         }
                         if (FrameAccess.getMethod(current).isUnwindMarked()) {
-                            return contextOrMarker;
+                            return FrameAccess.returnMarkerOrContext(contextOrMarker, frameInstance);
+                        }
+                        if (contextOrMarker instanceof ContextObject) {
+                            bottomContextOnTruffleStack[0] = (ContextObject) contextOrMarker;
+                        } else { // Unset otherwise
+                            assert contextOrMarker instanceof FrameMarker;
+                            bottomContextOnTruffleStack[0] = null;
                         }
                     }
                     return null;
                 }
             });
+            // Continue search in materialized contexts if necessary.
+            if (bottomContextOnTruffleStack[0] != null) {
+                ContextObject current = bottomContextOnTruffleStack[0];
+                while (current.getFrameMarker() != previousMarker) {
+                    final Object sender = current.getSender();
+                    if (sender == code.image.nil || sender == previousMarker) {
+                        break;
+                    } else {
+                        current = (ContextObject) sender;
+                        if (current.isUnwindContext()) {
+                            return current;
+                        }
+                    }
+                }
+                return code.image.nil;
+            }
             if (handlerContext == null) {
                 return code.image.nil;
             } else {
@@ -127,7 +149,7 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
     }
 
     @GenerateNodeFactory
-    @SqueakPrimitive(indices = 196)
+    @SqueakPrimitive(indices = 396)
     protected abstract static class PrimTerminateToNode extends AbstractPrimitiveNode implements BinaryPrimitive {
 
         public PrimTerminateToNode(final CompiledMethodObject method) {
@@ -233,7 +255,8 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
                         } else {
                             final Frame currentWritable = frameInstance.getFrame(FrameInstance.FrameAccess.READ_WRITE);
                             // Terminate frame
-                            currentWritable.getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] = code.image.nil;
+                            // currentWritable.getArguments()[FrameAccess.SENDER_OR_SENDER_MARKER] =
+                            // code.image.nil;
                             currentWritable.setInt(currentCode.instructionPointerSlot, -1);
                         }
                     }
@@ -283,7 +306,7 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
     }
 
     @GenerateNodeFactory
-    @SqueakPrimitive(indices = 197)
+    @SqueakPrimitive(indices = 397)
     protected abstract static class PrimNextHandlerContextNode extends AbstractPrimitiveNode implements UnaryPrimitive {
         @Child private GetOrCreateContextNode contextNode;
 
@@ -307,15 +330,15 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
                     if (!FrameAccess.isGraalSqueakFrame(current)) {
                         return null;
                     }
-                    final CompiledCodeObject codeObject = FrameAccess.getBlockOrMethod(current);
-                    final Object contextOrMarker = FrameUtil.getObjectSafe(current, codeObject.thisContextOrMarkerSlot);
+                    final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
                     if (!foundMyself) {
                         if (receiver.matchesContextOrMarker(contextOrMarker)) {
                             foundMyself = true;
                         }
                     } else {
-                        if (codeObject.isExceptionHandlerMarked()) {
-                            return contextOrMarker;
+                        if (FrameAccess.getMethod(current).isExceptionHandlerMarked()) {
+                            assert FrameAccess.getClosure(current) == null : "Context with closure cannot be exception handler";
+                            return FrameAccess.returnMarkerOrContext(contextOrMarker, frameInstance);
                         }
                     }
                     return null;

@@ -41,13 +41,13 @@ public abstract class MaterializeContextOnMethodExitNode extends AbstractNodeWit
         if (context != lastSeenContext) {
             assert context.hasTruffleFrame();
             setSenderNode.execute(lastSeenContext, context);
-            if (context.hasEscaped()) {
-                // Materialization needs to continue in parent frame.
-                lastSeenContext = context;
-            } else {
-                // If context has not escaped, materialization can terminate here.
-                lastSeenContext = null;
-            }
+// if (context.hasEscaped()) {
+// Materialization needs to continue in parent frame.
+            lastSeenContext = context;
+// } else {
+// // If context has not escaped, materialization can terminate here.
+// lastSeenContext = null;
+// }
         }
     }
 

@@ -46,20 +46,18 @@ public final class PushBytecodes {
 
     @NodeInfo(cost = NodeCost.NONE)
     public static final class PushActiveContextNode extends AbstractPushNode {
-        private static final boolean ALWAYS_PUSH_MATERIALIZED_CONTEXT = false;
-
         @Child private GetOrCreateContextNode getContextNode;
 
         public PushActiveContextNode(final CompiledCodeObject code, final int index) {
             super(code, index);
-            if (ALWAYS_PUSH_MATERIALIZED_CONTEXT) {
+            if (FrameAccess.ALWAYS_USE_MATERIALIZED_CONTEXTS) {
                 getContextNode = GetOrCreateContextNode.create(code);
             }
         }
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            if (ALWAYS_PUSH_MATERIALIZED_CONTEXT) {
+            if (FrameAccess.ALWAYS_USE_MATERIALIZED_CONTEXTS) {
                 pushNode.executeWrite(frame, getContextNode.executeGet(frame));
             } else {
                 pushNode.executeWrite(frame, FrameAccess.getContextOrMarker(frame));

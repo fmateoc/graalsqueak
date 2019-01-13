@@ -131,6 +131,10 @@ public final class CompiledMethodObject extends CompiledCodeObject {
         return new CompiledMethodObject(this);
     }
 
+    public final boolean isExceptionHandlerMarked() {
+        return hasPrimitive() && primitiveIndex() == 199;
+    }
+
     /*
      * Answer the program counter for the receiver's first bytecode.
      *
