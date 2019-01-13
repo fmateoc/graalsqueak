@@ -68,8 +68,9 @@ public final class ContextObject extends AbstractPointersObject {
         final CompiledCodeObject blockOrMethod = FrameAccess.getBlockOrMethod(original.truffleFrame);
         final FrameDescriptor frameDescriptor = blockOrMethod.getFrameDescriptor();
         frameMarker = new FrameMarker(Truffle.getRuntime().getCurrentFrame().getFrame(FrameInstance.FrameAccess.READ_ONLY)); // FIXME
-        hasModifiedSender = false;
-        escaped = true; // FIXME
+        hasModifiedSender = original.hasModifiedSender();
+        escaped = original.escaped; // FIXME
+        size = original.size;
         // Create shallow copy of Truffle frame
         truffleFrame = Truffle.getRuntime().createMaterializedFrame(original.truffleFrame.getArguments(), frameDescriptor);
         // Copy frame slot values

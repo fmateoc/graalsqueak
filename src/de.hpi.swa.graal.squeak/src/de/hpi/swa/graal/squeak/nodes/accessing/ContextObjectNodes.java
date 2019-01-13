@@ -55,7 +55,7 @@ public final class ContextObjectNodes {
         @SuppressWarnings("unused")
         @Specialization(guards = {"obj.matches(frame)", "index == INSTRUCTION_POINTER"})
         protected static final Object doPCMatching(final Frame frame, final FrameMarker obj, final long index) {
-            final CompiledCodeObject blockOrMethod = FrameAccess.getMethod(frame);
+            final CompiledCodeObject blockOrMethod = FrameAccess.getBlockOrMethod(frame);
             final int pc = FrameUtil.getIntSafe(frame, blockOrMethod.instructionPointerSlot);
             if (pc < 0) {
                 return blockOrMethod.image.nil;
