@@ -133,8 +133,7 @@ public final class ContextObject extends AbstractPointersObject {
     }
 
     public boolean isTerminated() {
-        return at0(CONTEXT.INSTRUCTION_POINTER) == image.nil;
-// && at0(CONTEXT.SENDER_OR_NIL) == image.nil;
+        return at0(CONTEXT.INSTRUCTION_POINTER) == image.nil && at0(CONTEXT.SENDER_OR_NIL) == image.nil;
     }
 
     public Object at0(final long longIndex) {

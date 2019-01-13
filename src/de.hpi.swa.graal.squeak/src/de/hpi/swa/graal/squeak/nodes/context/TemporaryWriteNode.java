@@ -46,7 +46,16 @@ public abstract class TemporaryWriteNode extends AbstractNodeWithCode {
         writeNode.executeWrite(frame, context);
     }
 
-    @Specialization(guards = {"isVirtualized(frame)", "!isFrameMarker(value)"})
+    @Specialization(guards = {"isVirtualized(frame)"})
+    protected final void doWriteVirtualized(final VirtualFrame frame, final ContextObject value,
+                    @Cached("create(code.getStackSlot(tempIndex))") final FrameSlotWriteNode writeNode) {
+        assert value != null;
+        assert 0 <= tempIndex && tempIndex <= CONTEXT.MAX_STACK_SIZE;
+        value.markEscaped();
+        writeNode.executeWrite(frame, value);
+    }
+
+    @Specialization(guards = {"isVirtualized(frame)", "!isFrameMarker(value)", "!isContextObject(value)"})
     protected final void doWriteVirtualized(final VirtualFrame frame, final Object value,
                     @Cached("create(code.getStackSlot(tempIndex))") final FrameSlotWriteNode writeNode) {
         assert value != null;

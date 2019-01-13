@@ -2,6 +2,7 @@ package de.hpi.swa.graal.squeak.nodes;
 
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
+import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.Node;
@@ -9,6 +10,7 @@ import com.oracle.truffle.api.nodes.Node;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.MaterializeContextOnMethodExitNodeGen.SetSenderNodeGen;
+import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public abstract class MaterializeContextOnMethodExitNode extends AbstractNodeWithCode {
     protected static ContextObject lastSeenContext;
@@ -33,7 +35,12 @@ public abstract class MaterializeContextOnMethodExitNode extends AbstractNodeWit
         }
     }
 
-    @Specialization(guards = {"lastSeenContext != null || !isFullyVirtualized(frame)"})
+    @Specialization(guards = {"!hasLastSeenContext(frame)", "!isFullyVirtualized(frame)", "getContext(frame).hasEscaped()"})
+    protected final void doMaterializeFoo(final VirtualFrame frame) {
+        lastSeenContext = getContext(frame);
+    }
+
+    @Specialization(guards = {"hasLastSeenContext(frame)"})
     protected static final void doMaterialize(final VirtualFrame frame,
                     @Cached("create(code)") final GetOrCreateContextNode getOrCreateContextNode,
                     @Cached("create()") final SetSenderNode setSenderNode) {
@@ -41,13 +48,13 @@ public abstract class MaterializeContextOnMethodExitNode extends AbstractNodeWit
         if (context != lastSeenContext) {
             assert context.hasTruffleFrame();
             setSenderNode.execute(lastSeenContext, context);
-// if (context.hasEscaped()) {
-// Materialization needs to continue in parent frame.
-            lastSeenContext = context;
-// } else {
-// // If context has not escaped, materialization can terminate here.
-// lastSeenContext = null;
-// }
+            if (!context.isTerminated()) {
+                // Materialization needs to continue in parent frame.
+                lastSeenContext = context;
+            } else {
+                // If context has not escaped, materialization can terminate here.
+                lastSeenContext = null;
+            }
         }
     }
 
@@ -57,6 +64,10 @@ public abstract class MaterializeContextOnMethodExitNode extends AbstractNodeWit
          * Nothing to do because neither was a child context materialized nor has this context been
          * requested and allocated.
          */
+    }
+
+    protected static final boolean hasLastSeenContext(@SuppressWarnings("unused") final VirtualFrame frame) {
+        return lastSeenContext != null;
     }
 
     protected abstract static class SetSenderNode extends Node {
