@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.TruffleFile;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
@@ -568,8 +567,7 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
             try {
                 printWriter.append(asString(content), byteStart, byteEnd);
             } catch (IndexOutOfBoundsException e) {
-                CompilerDirectives.transferToInterpreter();
-                e.printStackTrace(); // TODO: handle exception correctly
+                content.image.printToStdErr(e); // TODO: handle exception correctly
             }
             printWriter.flush();
             return byteEnd - byteStart;
