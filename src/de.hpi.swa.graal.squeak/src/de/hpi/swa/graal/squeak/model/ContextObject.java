@@ -158,7 +158,7 @@ public final class ContextObject extends AbstractSqueakObject {
                 return FrameAccess.getReceiver(truffleFrame);
             default:
                 final int stackIndex = index - CONTEXT.TEMP_FRAME_START;
-                final CompiledCodeObject code = getMethod();
+                final CompiledCodeObject code = getBlockOrMethod();
                 assert stackIndex < code.getNumStackSlots() : "Invalid context stack access at #" + stackIndex;
                 final Object value = truffleFrame.getValue(code.getStackSlot(stackIndex));
                 return value == null ? image.nil : value;
@@ -213,7 +213,7 @@ public final class ContextObject extends AbstractSqueakObject {
                 final int stackIndex = index - CONTEXT.TEMP_FRAME_START;
                 final Object[] frameArguments = getOrCreateTruffleFrame().getArguments();
                 if (FrameAccess.ARGUMENTS_START + stackIndex < frameArguments.length) {
-                    getOrCreateTruffleFrame().getArguments()[FrameAccess.ARGUMENTS_START + stackIndex] = value;
+                    frameArguments[FrameAccess.ARGUMENTS_START + stackIndex] = value;
                 }
                 final CompiledCodeObject code = FrameAccess.getBlockOrMethod(truffleFrame);
                 assert stackIndex < code.getNumStackSlots() : "Invalid context stack access at #" + stackIndex;

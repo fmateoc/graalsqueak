@@ -10,6 +10,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameInstanceVisitor;
+import com.oracle.truffle.api.frame.MaterializedFrame;
 
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
@@ -247,9 +248,15 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
+        /** Inline version of {@link ContextObject#at0}. */
         @Specialization(guards = {"index < receiver.getStackSize()"})
         protected static final Object doContextObject(final ContextObject receiver, final long index) {
-            return receiver.atTemp(index - 1);
+            final int stackIndex = (int) (index - 1);
+            final MaterializedFrame frame = receiver.getTruffleFrame();
+            final CompiledCodeObject code = FrameAccess.getBlockOrMethod(frame);
+            assert stackIndex < code.getNumStackSlots() : "Invalid context stack access at #" + stackIndex;
+            final Object value = frame.getValue(code.getStackSlot(stackIndex));
+            return value == null ? code.image.nil : value;
         }
     }
 
@@ -261,9 +268,19 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
+        /** Inline version of {@link ContextObject#atput0}. */
         @Specialization(guards = "index < receiver.getStackSize()")
         protected static final Object doContextObject(final ContextObject receiver, final long index, final Object value) {
-            receiver.atTempPut(index - 1, value);
+            final MaterializedFrame frame = receiver.getTruffleFrame();
+            final int stackIndex = (int) (index - 1);
+            final Object[] frameArguments = frame.getArguments();
+            if (FrameAccess.ARGUMENTS_START + stackIndex < frameArguments.length) {
+                frameArguments[FrameAccess.ARGUMENTS_START + stackIndex] = value;
+            }
+            final CompiledCodeObject code = FrameAccess.getBlockOrMethod(frame);
+            assert stackIndex < code.getNumStackSlots() : "Invalid context stack access at #" + stackIndex;
+            final Object valueOrNull = value == code.image.nil ? null : value;
+            frame.setObject(code.getStackSlot(stackIndex), valueOrNull);
             return value;
         }
     }
