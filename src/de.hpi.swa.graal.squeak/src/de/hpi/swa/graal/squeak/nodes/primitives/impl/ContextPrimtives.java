@@ -69,31 +69,28 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
         @Specialization(guards = "!receiver.hasMaterializedSender()")
         protected final Object doFindNextAvoidingMaterialization(final ContextObject receiver, final AbstractSqueakObject previousContextOrNil) {
             // Sender is not materialized, so avoid materialization by walking Truffle frames.
-            final Object result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
-                boolean foundMyself = false;
-
-                public Object visitFrame(final FrameInstance frameInstance) {
-                    final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                    if (!FrameAccess.isGraalSqueakFrame(current)) {
-                        return null;
-                    }
-                    final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
-                    if (!foundMyself) {
-                        if (contextOrMarker == receiver || contextOrMarker == receiver.getFrameMarker()) {
-                            foundMyself = true;
-                        }
-                    } else {
-                        if (contextOrMarker == code.image.nil || contextOrMarker == previousContextOrNil) {
-                            return code.image.nil;
-                        } else if (FrameAccess.getMethod(current).isUnwindMarked()) {
-                            return FrameAccess.returnContextObject(contextOrMarker, frameInstance);
-                        }
-                    }
+            final boolean[] foundMyself = {false};
+            final Object result = Truffle.getRuntime().iterateFrames((frameInstance) -> {
+                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                if (!FrameAccess.isGraalSqueakFrame(current)) {
                     return null;
                 }
+                final Object contextOrMarker = FrameAccess.getContextOrMarker(current);
+                if (!foundMyself[0]) {
+                    if (contextOrMarker == receiver || contextOrMarker == receiver.getFrameMarker()) {
+                        foundMyself[0] = true;
+                    }
+                } else {
+                    if (contextOrMarker == code.image.nil || contextOrMarker == previousContextOrNil) {
+                        return code.image.nil;
+                    } else if (FrameAccess.getMethod(current).isUnwindMarked()) {
+                        return FrameAccess.returnContextObject(contextOrMarker, frameInstance);
+                    }
+                }
+                return null;
             });
-            assert result != null;
-            return result;
+            assert foundMyself[0] : "Did not find receiver with virtual sender on Truffle stack";
+            return result != null ? result : code.image.nil;
         }
     }
 
