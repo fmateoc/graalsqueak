@@ -15,6 +15,7 @@ import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
+import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.EnterCodeNode;
 import de.hpi.swa.graal.squeak.nodes.GetOrCreateContextNode;
 import de.hpi.swa.graal.squeak.nodes.SqueakNode;
@@ -65,7 +66,6 @@ public final class PushBytecodes {
     }
 
     public static final class PushClosureNode extends AbstractPushNode {
-        private static final boolean ALWAYS_PUSH_MATERIALIZED_CONTEXT = true;
         protected final int blockSize;
         protected final int numArgs;
         protected final int numCopied;
@@ -89,9 +89,7 @@ public final class PushBytecodes {
             blockSize = (j << 8) | k;
             popNReversedNode = StackPopNReversedNode.create(code, numCopied);
             receiverNode = ReceiverNode.create(code);
-            if (ALWAYS_PUSH_MATERIALIZED_CONTEXT) {
-                getOrCreateContextNode = GetOrCreateContextNode.create(code);
-            }
+            getOrCreateContextNode = GetOrCreateContextNode.create(code);
         }
 
         private CompiledBlockObject getBlock() {
@@ -115,12 +113,7 @@ public final class PushBytecodes {
         private BlockClosureObject createClosure(final VirtualFrame frame) {
             final Object receiver = receiverNode.executeRead(frame);
             final Object[] copiedValues = (Object[]) popNReversedNode.executeRead(frame);
-            final Object outerContext;
-            if (ALWAYS_PUSH_MATERIALIZED_CONTEXT) {
-                outerContext = getOrCreateContextNode.executeGet(frame);
-            } else {
-                outerContext = FrameAccess.getContextOrMarker(frame);
-            }
+            final ContextObject outerContext = getOrCreateContextNode.executeGet(frame);
             return new BlockClosureObject(getBlock(), blockCallTarget, receiver, copiedValues, outerContext);
         }
 

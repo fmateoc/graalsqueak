@@ -94,7 +94,7 @@ public final class ContextObject extends AbstractSqueakObject {
         final Object[] frameArguments = FrameAccess.newWith(method, sender, closure, arguments);
         final FrameDescriptor frameDescriptor;
         if (closure != null) {
-            if (!closure.hasHomeContext() || !((ContextObject) closure.getOuterContext()).hasTruffleFrame()) {
+            if (!closure.hasHomeContext() || !closure.getOuterContext().hasTruffleFrame()) {
                 // FIXME: this is hacky and slow (2nd loop needed in reader).
                 return; // block closure not ready try again later
             }
@@ -404,12 +404,12 @@ public final class ContextObject extends AbstractSqueakObject {
         if (hasMethod()) {
             final BlockClosureObject closure = getClosure();
             if (closure != null) {
-                return "CTX [] in " + getMethod() + "-" + hashCode();
+                return "CTX [] in " + getMethod() + " #" + hashCode();
             } else {
-                return "CTX " + getMethod() + "-" + hashCode();
+                return "CTX " + getMethod() + " #" + hashCode();
             }
         } else {
-            return "CTX without method" + "-" + hashCode();
+            return "CTX without method" + " #" + hashCode();
         }
     }
 

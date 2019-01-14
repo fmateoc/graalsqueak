@@ -62,9 +62,6 @@ public final class Returns {
 
         public NonVirtualReturn(final Object returnValue, final ContextObject targetContext, final ContextObject currentContext) {
             super(returnValue);
-            targetContext.markEscaped(); // FIXME: needed?
-// assert !targetContext.hasVirtualSender();
-// assert !currentContext.hasVirtualSender();
             this.targetContext = targetContext;
             this.currentContext = currentContext;
         }
