@@ -217,7 +217,8 @@ public final class ContextObject extends AbstractSqueakObject {
                 }
                 final CompiledCodeObject code = FrameAccess.getBlockOrMethod(truffleFrame);
                 assert stackIndex < code.getNumStackSlots() : "Invalid context stack access at #" + stackIndex;
-                getOrCreateTruffleFrame().setObject(code.getStackSlot(stackIndex), value);
+                final Object valueOrNull = value == image.nil ? null : value;
+                getOrCreateTruffleFrame().setObject(code.getStackSlot(stackIndex), valueOrNull);
         }
     }
 
