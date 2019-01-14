@@ -177,7 +177,7 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
     }
 
     @GenerateNodeFactory
-    @SqueakPrimitive(indices = 397) // FIXME
+    @SqueakPrimitive(indices = 197)
     protected abstract static class PrimNextHandlerContextNode extends AbstractPrimitiveNode implements UnaryPrimitive {
         protected PrimNextHandlerContextNode(final CompiledMethodObject method) {
             super(method);
@@ -203,7 +203,7 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
         @Specialization(guards = {"!receiver.hasMaterializedSender()"})
         protected final Object findNextAvoidingMaterialization(final ContextObject receiver) {
             final boolean[] foundMyself = new boolean[1];
-            final Object[] foo = new Object[1];
+            final Object[] lastSender = new Object[1];
             final Object result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<Object>() {
 
                 public Object visitFrame(final FrameInstance frameInstance) {
@@ -221,22 +221,24 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
                             assert FrameAccess.getClosure(current) == null : "Context with closure cannot be exception handler";
                             return FrameAccess.returnContextObject(contextOrMarker, frameInstance);
                         } else {
-                            foo[0] = contextOrMarker;
+                            lastSender[0] = FrameAccess.getSender(current);
                         }
                     }
                     return null;
                 }
             });
             if (result == null) {
-                if (foo[0] instanceof ContextObject) {
-                    return findNext((ContextObject) foo[0]);
+                if (!foundMyself[0]) {
+                    return findNext(receiver); // Fallback to other version.
+                }
+                if (lastSender[0] instanceof ContextObject) {
+                    return findNext((ContextObject) lastSender[0]);
                 } else {
                     return code.image.nil;
                 }
             } else {
                 return result;
             }
-
         }
     }
 
