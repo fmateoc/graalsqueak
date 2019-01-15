@@ -57,7 +57,7 @@ public abstract class FillInNode extends Node {
     @SuppressWarnings("unused")
     @Specialization
     protected static final void doContext(final ContextObject obj, final SqueakImageChunk chunk) {
-        // do nothing TODO: better comment "FillInContextNode"
+        obj.fillIn(chunk.getPointers());
     }
 
     @Specialization(guards = "obj.isShortType()")

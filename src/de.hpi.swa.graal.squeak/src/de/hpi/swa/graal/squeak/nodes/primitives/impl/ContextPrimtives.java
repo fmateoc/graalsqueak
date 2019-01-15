@@ -38,7 +38,7 @@ public class ContextPrimtives extends AbstractPrimitiveFactoryHolder {
 
         @Specialization
         protected static final ContextObject store(final ContextObject receiver, final long value) {
-            receiver.setStackPointer(value);
+            receiver.setStackPointer((int) value);
             return receiver;
         }
     }

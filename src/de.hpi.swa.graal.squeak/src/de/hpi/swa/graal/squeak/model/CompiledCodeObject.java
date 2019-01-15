@@ -3,7 +3,6 @@ package de.hpi.swa.graal.squeak.model;
 import com.oracle.truffle.api.Assumption;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.FrameDescriptor;
@@ -28,11 +27,11 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
     }
 
     // frame info
-    @CompilationFinal private FrameDescriptor frameDescriptor;
-    @CompilationFinal public FrameSlot thisContextOrMarkerSlot;
-    @CompilationFinal public FrameSlot instructionPointerSlot;
-    @CompilationFinal public FrameSlot stackPointerSlot;
-    @CompilationFinal(dimensions = 1) private FrameSlot[] stackSlots;
+    private final FrameDescriptor frameDescriptor;
+    public final FrameSlot thisContextOrMarkerSlot;
+    public final FrameSlot instructionPointerSlot;
+    public final FrameSlot stackPointerSlot;
+    @CompilationFinal(dimensions = 1) protected FrameSlot[] stackSlots;
     // header info and data
     @CompilationFinal(dimensions = 1) protected Object[] literals;
     @CompilationFinal(dimensions = 1) protected byte[] bytes;
@@ -52,26 +51,57 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
     @CompilationFinal private RootCallTarget callTarget;
     private final CyclicAssumption callTargetStable = new CyclicAssumption("CompiledCodeObject assumption");
 
-    protected CompiledCodeObject(final SqueakImageContext image, final int numCopiedValues) {
+    protected CompiledCodeObject(final SqueakImageContext image) {
+        // Always use CompiledMethod, CompiledBlock not needed.
+        super(image, image.compiledMethodClass);
+        if (ALWAYS_NON_VIRTUALIZED) {
+            invalidateCanBeVirtualizedAssumption();
+        }
+        this.numCopiedValues = 0;
+
+        frameDescriptor = new FrameDescriptor();
+        thisContextOrMarkerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.THIS_CONTEXT_OR_MARKER, FrameSlotKind.Object);
+        instructionPointerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.INSTRUCTION_POINTER, FrameSlotKind.Int);
+        stackPointerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.STACK_POINTER, FrameSlotKind.Int);
+    }
+
+    protected CompiledCodeObject(final SqueakImageContext image, final int numCopiedValues, final CompiledMethodObject method) {
         // Always use CompiledMethod, CompiledBlock not needed.
         super(image, image.compiledMethodClass);
         if (ALWAYS_NON_VIRTUALIZED) {
             invalidateCanBeVirtualizedAssumption();
         }
         this.numCopiedValues = numCopiedValues;
+
+        frameDescriptor = method.getFrameDescriptor();
+        thisContextOrMarkerSlot = method.thisContextOrMarkerSlot;
+        instructionPointerSlot = method.instructionPointerSlot;
+        stackPointerSlot = method.stackPointerSlot;
+        stackSlots = method.getStackSlots();
     }
 
-    protected CompiledCodeObject(final SqueakImageContext image, final int hash, final int numCopiedValues) {
+    protected CompiledCodeObject(final int hash, final SqueakImageContext image) {
         // Always use CompiledMethod, CompiledBlock not needed.
         super(image, hash, image.compiledMethodClass);
         if (ALWAYS_NON_VIRTUALIZED) {
             invalidateCanBeVirtualizedAssumption();
         }
-        this.numCopiedValues = numCopiedValues;
+        this.numCopiedValues = 0;
+
+        frameDescriptor = new FrameDescriptor();
+        thisContextOrMarkerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.THIS_CONTEXT_OR_MARKER, FrameSlotKind.Object);
+        instructionPointerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.INSTRUCTION_POINTER, FrameSlotKind.Int);
+        stackPointerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.STACK_POINTER, FrameSlotKind.Int);
     }
 
     protected CompiledCodeObject(final CompiledCodeObject original) {
-        this(original.image, original.numCopiedValues);
+        super(original.image, original.image.compiledMethodClass);
+        this.numCopiedValues = original.numCopiedValues;
+        frameDescriptor = original.frameDescriptor;
+        thisContextOrMarkerSlot = original.thisContextOrMarkerSlot;
+        instructionPointerSlot = original.instructionPointerSlot;
+        stackPointerSlot = original.stackPointerSlot;
+        stackSlots = original.stackSlots;
         setLiteralsAndBytes(original.literals.clone(), original.bytes.clone());
     }
 
@@ -97,24 +127,6 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
 
     public final int getSqueakContextSize() {
         return needsLargeFrame ? CONTEXT.LARGE_FRAMESIZE : CONTEXT.SMALL_FRAMESIZE;
-    }
-
-    @TruffleBoundary
-    private void prepareFrameDescriptor() {
-        CompilerDirectives.transferToInterpreterAndInvalidate();
-        frameDescriptor = new FrameDescriptor();
-        thisContextOrMarkerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.THIS_CONTEXT_OR_MARKER, FrameSlotKind.Object);
-        instructionPointerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.INSTRUCTION_POINTER, FrameSlotKind.Int);
-        stackPointerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.STACK_POINTER, FrameSlotKind.Int);
-        /**
-         * Arguments and copied values are also pushed onto the stack in {@link EnterCodeNode},
-         * therefore there must be enough slots for all these values as well as the Squeak stack.
-         */
-        final int numFrameSlots = getNumArgsAndCopied() + getSqueakContextSize();
-        stackSlots = new FrameSlot[numFrameSlots];
-        for (int i = 0; i < numFrameSlots; i++) {
-            stackSlots[i] = frameDescriptor.addFrameSlot(i, FrameSlotKind.Illegal);
-        }
     }
 
     public RootCallTarget getSplitCallTarget() {
@@ -157,13 +169,30 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
         return numLiterals;
     }
 
+    public final FrameSlot[] getStackSlots() {
+        if (stackSlots == null) {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            /**
+             * Arguments and copied values are also pushed onto the stack in {@link EnterCodeNode},
+             * therefore there must be enough slots for all these values as well as the Squeak
+             * stack.
+             */
+            final int numFrameSlots = getNumStackSlots();
+            stackSlots = new FrameSlot[numFrameSlots];
+            for (int i = 0; i < numFrameSlots; i++) {
+                stackSlots[i] = frameDescriptor.addFrameSlot(i, FrameSlotKind.Illegal);
+            }
+        }
+        return stackSlots;
+    }
+
     public final FrameSlot getStackSlot(final int i) {
         assert i >= 0 : "Bad stack access";
-        return stackSlots[i];
+        return getStackSlots()[i];
     }
 
     public final int getNumStackSlots() {
-        return stackSlots.length;
+        return getNumArgsAndCopied() + getSqueakContextSize();
     }
 
     public final void fillin(final SqueakImageChunk chunk) {
@@ -192,7 +221,6 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
         numArgs = splitHeader[5];
         // TODO: accessModifier = splitHeader[6];
         // TODO: altInstructionSet = splitHeader[7] == 1;
-        prepareFrameDescriptor();
     }
 
     public final int getHeader() {

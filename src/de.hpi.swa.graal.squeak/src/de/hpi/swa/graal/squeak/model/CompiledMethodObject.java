@@ -15,18 +15,18 @@ public final class CompiledMethodObject extends CompiledCodeObject {
     }
 
     public CompiledMethodObject(final SqueakImageContext image, final int hash) {
-        super(image, hash, 0);
+        super(hash, image);
     }
 
     public CompiledMethodObject(final SqueakImageContext image, final byte[] bc, final Object[] lits) {
-        super(image, 0);
+        super(image);
         literals = lits;
         decodeHeader();
         bytes = bc;
     }
 
     public CompiledMethodObject(final int size, final SqueakImageContext image) {
-        super(image, 0);
+        super(image);
         bytes = new byte[size];
     }
 

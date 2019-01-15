@@ -38,7 +38,7 @@ public abstract class StackPopNReversedNode extends AbstractStackPopNode {
     @Fallback
     protected final Object[] doPopN(final VirtualFrame frame) {
         final ContextObject context = getContext(frame);
-        final long sp = context.getStackPointer();
+        final int sp = context.getStackPointer();
         assert sp - numPop >= 0;
         final Object[] result = new Object[numPop];
         for (int i = 0; i < numPop; i++) {

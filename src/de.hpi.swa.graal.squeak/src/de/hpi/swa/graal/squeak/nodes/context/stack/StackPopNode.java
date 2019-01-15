@@ -29,7 +29,7 @@ public abstract class StackPopNode extends AbstractStackPopNode {
     @Fallback
     protected final Object doPop(final VirtualFrame frame) {
         final ContextObject context = getContext(frame);
-        final long sp = context.getStackPointer();
+        final int sp = context.getStackPointer();
         if (sp > 0) {
             context.setStackPointer(sp - 1);
         }
