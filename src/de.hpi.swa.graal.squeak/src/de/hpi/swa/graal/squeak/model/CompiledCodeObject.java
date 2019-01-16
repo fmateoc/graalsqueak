@@ -1,5 +1,7 @@
 package de.hpi.swa.graal.squeak.model;
 
+import java.util.Arrays;
+
 import com.oracle.truffle.api.Assumption;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
@@ -141,7 +143,8 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
         return numLiterals;
     }
 
-    public final void ensureStackSlotsAreInitialized() {
+    public final void ensureCorrectNumberOfStackSlots() {
+        final int requiredNumberOfStackSlots = getNumStackSlots();
         if (stackSlots == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
             /**
@@ -149,17 +152,28 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
              * therefore there must be enough slots for all these values as well as the Squeak
              * stack.
              */
-            final int numFrameSlots = getNumStackSlots();
-            stackSlots = new FrameSlot[numFrameSlots];
-            for (int i = 0; i < numFrameSlots; i++) {
+            stackSlots = new FrameSlot[requiredNumberOfStackSlots];
+            for (int i = 0; i < requiredNumberOfStackSlots; i++) {
                 stackSlots[i] = frameDescriptor.addFrameSlot(i, FrameSlotKind.Illegal);
             }
+            return;
         }
-        /*
-         * Assert number of stack slots is correct. This might be the case when the method's header
-         * is changed to a header with different context size. Not if this needs to be supported.
-         */
-        assert stackSlots.length == getNumStackSlots() : "Incorrect number of stackSlots";
+        final int currentNumberOfStackSlots = stackSlots.length;
+        if (currentNumberOfStackSlots < requiredNumberOfStackSlots) {
+            // Grow number of stack slots.
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            stackSlots = Arrays.copyOf(stackSlots, requiredNumberOfStackSlots);
+            for (int i = currentNumberOfStackSlots; i < requiredNumberOfStackSlots; i++) {
+                stackSlots[i] = frameDescriptor.addFrameSlot(i, FrameSlotKind.Illegal);
+            }
+        } else if (currentNumberOfStackSlots > requiredNumberOfStackSlots) {
+            // Shrink number of stack slots.
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            for (int i = requiredNumberOfStackSlots; i < currentNumberOfStackSlots; i++) {
+                frameDescriptor.removeFrameSlot(i);
+            }
+            stackSlots = Arrays.copyOf(stackSlots, requiredNumberOfStackSlots);
+        }
     }
 
     public final FrameSlot getStackSlot(final int i) {
@@ -197,7 +211,7 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
         numArgs = splitHeader[5];
         // TODO: accessModifier = splitHeader[6];
         // TODO: altInstructionSet = splitHeader[7] == 1;
-        ensureStackSlotsAreInitialized();
+        ensureCorrectNumberOfStackSlots();
     }
 
     public final int getHeader() {
