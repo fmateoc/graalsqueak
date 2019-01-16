@@ -20,6 +20,8 @@ import de.hpi.swa.graal.squeak.util.CompiledCodeObjectPrinter;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
 public abstract class CompiledCodeObject extends AbstractSqueakObject {
+    private static final int[] HEADER_SPLIT_PATTERN = new int[]{15, 1, 1, 1, 6, 4, 2, 1};
+
     public enum SLOT_IDENTIFIER {
         THIS_CONTEXT_OR_MARKER,
         INSTRUCTION_POINTER,
@@ -51,42 +53,12 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
     @CompilationFinal private RootCallTarget callTarget;
     private final CyclicAssumption callTargetStable = new CyclicAssumption("CompiledCodeObject assumption");
 
-    protected CompiledCodeObject(final SqueakImageContext image) {
-        // Always use CompiledMethod, CompiledBlock not needed.
-        super(image, image.compiledMethodClass);
-        if (ALWAYS_NON_VIRTUALIZED) {
-            invalidateCanBeVirtualizedAssumption();
-        }
-        this.numCopiedValues = 0;
-
-        frameDescriptor = new FrameDescriptor();
-        thisContextOrMarkerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.THIS_CONTEXT_OR_MARKER, FrameSlotKind.Object);
-        instructionPointerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.INSTRUCTION_POINTER, FrameSlotKind.Int);
-        stackPointerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.STACK_POINTER, FrameSlotKind.Int);
-    }
-
-    protected CompiledCodeObject(final SqueakImageContext image, final int numCopiedValues, final CompiledMethodObject method) {
-        // Always use CompiledMethod, CompiledBlock not needed.
-        super(image, image.compiledMethodClass);
-        if (ALWAYS_NON_VIRTUALIZED) {
-            invalidateCanBeVirtualizedAssumption();
-        }
-        this.numCopiedValues = numCopiedValues;
-
-        frameDescriptor = method.getFrameDescriptor();
-        thisContextOrMarkerSlot = method.thisContextOrMarkerSlot;
-        instructionPointerSlot = method.instructionPointerSlot;
-        stackPointerSlot = method.stackPointerSlot;
-        stackSlots = method.getStackSlots();
-    }
-
-    protected CompiledCodeObject(final int hash, final SqueakImageContext image) {
-        // Always use CompiledMethod, CompiledBlock not needed.
+    protected CompiledCodeObject(final SqueakImageContext image, final int hash, final int numCopiedValues) {
         super(image, hash, image.compiledMethodClass);
         if (ALWAYS_NON_VIRTUALIZED) {
             invalidateCanBeVirtualizedAssumption();
         }
-        this.numCopiedValues = 0;
+        this.numCopiedValues = numCopiedValues;
 
         frameDescriptor = new FrameDescriptor();
         thisContextOrMarkerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.THIS_CONTEXT_OR_MARKER, FrameSlotKind.Object);
@@ -169,7 +141,7 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
         return numLiterals;
     }
 
-    public final FrameSlot[] getStackSlots() {
+    public final void ensureStackSlotsAreInitialized() {
         if (stackSlots == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
             /**
@@ -183,12 +155,16 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
                 stackSlots[i] = frameDescriptor.addFrameSlot(i, FrameSlotKind.Illegal);
             }
         }
-        return stackSlots;
+        /*
+         * Assert number of stack slots is correct. This might be the case when the method's header
+         * is changed to a header with different context size. Not if this needs to be supported.
+         */
+        assert stackSlots.length == getNumStackSlots() : "Incorrect number of stackSlots";
     }
 
     public final FrameSlot getStackSlot(final int i) {
         assert i >= 0 : "Bad stack access";
-        return getStackSlots()[i];
+        return stackSlots[i];
     }
 
     public final int getNumStackSlots() {
@@ -212,7 +188,7 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
     protected final void decodeHeader() {
         CompilerDirectives.transferToInterpreterAndInvalidate();
         final int hdr = getHeader();
-        final int[] splitHeader = MiscUtils.bitSplitter(hdr, new int[]{15, 1, 1, 1, 6, 4, 2, 1});
+        final int[] splitHeader = MiscUtils.bitSplitter(hdr, HEADER_SPLIT_PATTERN);
         numLiterals = splitHeader[0];
         // TODO: isOptimized = splitHeader[1] == 1;
         hasPrimitive = splitHeader[2] == 1;
@@ -221,6 +197,7 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
         numArgs = splitHeader[5];
         // TODO: accessModifier = splitHeader[6];
         // TODO: altInstructionSet = splitHeader[7] == 1;
+        ensureStackSlotsAreInitialized();
     }
 
     public final int getHeader() {

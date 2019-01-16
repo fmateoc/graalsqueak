@@ -1,5 +1,7 @@
 package de.hpi.swa.graal.squeak.model;
 
+import java.util.Arrays;
+
 import com.oracle.truffle.api.Assumption;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
@@ -63,10 +65,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         outerContext = (ContextObject) pointers[BLOCK_CLOSURE.OUTER_CONTEXT];
         pc = (long) pointers[BLOCK_CLOSURE.START_PC];
         numArgs = (long) pointers[BLOCK_CLOSURE.ARGUMENT_COUNT];
-        copied = new Object[pointers.length - BLOCK_CLOSURE.FIRST_COPIED_VALUE];
-        for (int i = 0; i < copied.length; i++) {
-            copied[i] = pointers[BLOCK_CLOSURE.FIRST_COPIED_VALUE + i];
-        }
+        copied = Arrays.copyOfRange(pointers, BLOCK_CLOSURE.FIRST_COPIED_VALUE, pointers.length);
     }
 
     public long getStartPC() {
@@ -170,23 +169,28 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         return callTargetStable.getAssumption();
     }
 
+    private void initializeCompiledBlock(final CompiledMethodObject method) {
+        CompilerDirectives.transferToInterpreterAndInvalidate();
+        assert pc >= 0;
+        final int offset = (int) pc - method.getInitialPC();
+        final int j = method.getBytes()[offset - 2];
+        final int k = method.getBytes()[offset - 1];
+        final int blockSize = (j << 8) | (k & 0xff);
+        block = CompiledBlockObject.create(method, method, (int) numArgs, copied.length, offset, blockSize);
+        callTarget = Truffle.getRuntime().createCallTarget(EnterCodeNode.create(block.image.getLanguage(), block));
+    }
+
     public CompiledBlockObject getCompiledBlock() {
         if (block == null) {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
-            assert pc >= 0;
-            final CompiledCodeObject code = outerContext.getMethod();
-            final CompiledMethodObject method;
-            if (code instanceof CompiledMethodObject) {
-                method = (CompiledMethodObject) code;
-            } else {
-                method = ((CompiledBlockObject) code).getMethod();
-            }
-            final int offset = (int) pc - method.getInitialPC();
-            final int j = code.getBytes()[offset - 2];
-            final int k = code.getBytes()[offset - 1];
-            final int blockSize = (j << 8) | (k & 0xff);
-            block = CompiledBlockObject.create(code, method, ((Long) numArgs).intValue(), copied.length, offset, blockSize);
-            callTarget = Truffle.getRuntime().createCallTarget(EnterCodeNode.create(block.image.getLanguage(), block));
+            initializeCompiledBlock(outerContext.getMethod());
+        }
+        return block;
+    }
+
+    /** Special version of getCompiledBlock for image loader. */
+    public CompiledBlockObject getCompiledBlock(final CompiledMethodObject method) {
+        if (block == null) {
+            initializeCompiledBlock(method);
         }
         return block;
     }
