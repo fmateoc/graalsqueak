@@ -21,7 +21,9 @@ import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.api.source.SourceSection;
 
 import de.hpi.swa.graal.squeak.SqueakLanguage;
+import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
+import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.context.stack.StackPushNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
@@ -106,7 +108,8 @@ public abstract class EnterCodeNode extends Node implements InstrumentableNode {
 
     private static void initializeSlots(final CompiledCodeObject code, final VirtualFrame frame) {
         FrameAccess.initializeMarker(frame, code);
-        FrameAccess.setInstructionPointer(frame, code, 0);
+// FrameAccess.setInstructionPointer(frame, code, 0);
+        FrameAccess.setInstructionPointer(frame, code, code instanceof CompiledMethodObject ? ((CompiledMethodObject) code).getInitialPC() : ((CompiledBlockObject) code).getInitialPC());
         FrameAccess.setStackPointer(frame, code, 0);
     }
 

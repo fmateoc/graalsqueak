@@ -6,6 +6,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.ControlFlowException;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.LoopNode;
 import com.oracle.truffle.api.nodes.Node;
@@ -18,7 +19,9 @@ import de.hpi.swa.graal.squeak.exceptions.Returns.LocalReturn;
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonVirtualReturn;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
+import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
+import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.ExecuteContextNodeGen.GetSuccessorNodeGen;
 import de.hpi.swa.graal.squeak.nodes.ExecuteContextNodeGen.TriggerInterruptHandlerNodeGen;
@@ -26,6 +29,7 @@ import de.hpi.swa.graal.squeak.nodes.accessing.CompiledCodeNodes.CalculcatePCOff
 import de.hpi.swa.graal.squeak.nodes.bytecodes.AbstractBytecodeNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.JumpBytecodes.ConditionalJumpNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.JumpBytecodes.UnconditionalJumpNode;
+import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodes.PushActiveContextNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodes.PushClosureNode;
 import de.hpi.swa.graal.squeak.nodes.context.UpdateInstructionPointerNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
@@ -174,10 +178,26 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
                     pc = successor;
                     node = fetchNextBytecodeNode(pc);
                     continue;
+// } else if (node instanceof PushActiveContextNode) {
+// final int successor = getGetSuccessorNode().executeGeneric(frame, node);
+// node.executeVoid(frame);
+// getUpdateInstructionPointerNode().executeUpdate(frame, pc);
+// pc = successor;
+// node = fetchNextBytecodeNode(pc);
+// continue;
                 } else {
                     final int successor = getGetSuccessorNode().executeGeneric(frame, node);
                     getUpdateInstructionPointerNode().executeUpdate(frame, successor);
-                    node.executeVoid(frame);
+                    try {
+                        node.executeVoid(frame);
+                    } catch (ControlFlowException ps) {
+                        if (FrameAccess.getInstructionPointer(frame, code) == 0) {
+                            code.image.printToStdErr("frame", FrameAccess.getInstructionPointer(frame, code), "pc", pc, "successor", successor);
+                            final int initialPC = code instanceof CompiledMethodObject ? ((CompiledMethodObject) code).getInitialPC() : ((CompiledBlockObject) code).getInitialPC();
+                            FrameAccess.setInstructionPointer(frame, code, initialPC + pc);
+                        }
+                        throw ps;
+                    }
                     pc = successor;
                     node = fetchNextBytecodeNode(pc);
                     continue;
