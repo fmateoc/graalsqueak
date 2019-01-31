@@ -28,7 +28,7 @@ public final class SqueakOptions {
     public static final OptionKey<Boolean> DisableInterruptHandler = new OptionKey<>(false);
 
     @Option(category = OptionCategory.DEBUG, help = "Trace process switches")
-    public static final OptionKey<Boolean> TraceProcessSwitches = new OptionKey<>(true);
+    public static final OptionKey<Boolean> TraceProcessSwitches = new OptionKey<>(false);
 
     @Option(category = OptionCategory.DEBUG, help = "Enable verbose output")
     public static final OptionKey<Boolean> Verbose = new OptionKey<>(false);

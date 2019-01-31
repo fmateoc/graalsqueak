@@ -21,10 +21,9 @@ import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.api.source.SourceSection;
 
 import de.hpi.swa.graal.squeak.SqueakLanguage;
-import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
-import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
+import de.hpi.swa.graal.squeak.nodes.accessing.CompiledCodeNodes.GetInitialPCNode;
 import de.hpi.swa.graal.squeak.nodes.context.stack.StackPushNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
@@ -35,6 +34,7 @@ public abstract class EnterCodeNode extends Node implements InstrumentableNode {
 
     @Child private ExecuteContextNode executeContextNode;
     @Child private StackPushNode pushStackNode;
+    @Child private GetInitialPCNode initialPCNode = GetInitialPCNode.create();
 
     protected EnterCodeNode(final EnterCodeNode codeNode) {
         this(codeNode.code);
@@ -92,24 +92,23 @@ public abstract class EnterCodeNode extends Node implements InstrumentableNode {
     @Specialization(assumptions = {"code.getCanBeVirtualizedAssumption()"})
     protected final Object enterVirtualized(final VirtualFrame frame) {
         CompilerDirectives.ensureVirtualized(frame);
-        initializeSlots(code, frame);
+        initializeSlots(frame);
         initializeArgumentsAndTemps(frame);
         return executeContextNode.executeContext(frame, null);
     }
 
     @Fallback
     protected final Object enter(final VirtualFrame frame) {
-        initializeSlots(code, frame);
+        initializeSlots(frame);
         final ContextObject newContext = ContextObject.create(frame);
         assert newContext == FrameAccess.getContext(frame, code);
         initializeArgumentsAndTemps(frame);
         return executeContextNode.executeContext(frame, newContext);
     }
 
-    private static void initializeSlots(final CompiledCodeObject code, final VirtualFrame frame) {
+    private void initializeSlots(final VirtualFrame frame) {
         FrameAccess.initializeMarker(frame, code);
-// FrameAccess.setInstructionPointer(frame, code, 0);
-        FrameAccess.setInstructionPointer(frame, code, code instanceof CompiledMethodObject ? ((CompiledMethodObject) code).getInitialPC() : ((CompiledBlockObject) code).getInitialPC());
+        FrameAccess.setInstructionPointer(frame, code, initialPCNode.execute(code)); // initialPC.
         FrameAccess.setStackPointer(frame, code, 0);
     }
 
