@@ -43,6 +43,7 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
     @CompilationFinal(dimensions = 1) protected byte[] bytes;
     @CompilationFinal private int numArgs;
     @CompilationFinal protected int numLiterals;
+    @CompilationFinal protected int initialPC;
     @CompilationFinal private boolean hasPrimitive;
     @CompilationFinal protected boolean needsLargeFrame = false;
     @CompilationFinal private int numTemps;
@@ -163,6 +164,10 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
         return numLiterals;
     }
 
+    public final int getInitialPC() {
+        return initialPC;
+    }
+
     public final FrameSlot getStackSlot(final int i) {
         assert 0 <= i && i < stackSlots.length : "Bad stack access";
         return stackSlots[i];
@@ -203,6 +208,8 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
         final int header = getHeader();
         final int[] splitHeader = MiscUtils.bitSplitter(header, HEADER_SPLIT_PATTERN);
         numLiterals = splitHeader[0];
+        // pc is offsetted by header + numLiterals, +1 for one-based addressing
+        initialPC = getBytecodeOffset() + 1;
         // TODO: isOptimized = splitHeader[1] == 1;
         hasPrimitive = splitHeader[2] == 1;
         needsLargeFrame = splitHeader[3] == 1;

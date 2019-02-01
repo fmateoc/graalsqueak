@@ -14,8 +14,9 @@ import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
 import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.CompiledCodeNodes.GetCompiledMethodNode;
-import de.hpi.swa.graal.squeak.nodes.context.LookupClassNode;
+import de.hpi.swa.graal.squeak.nodes.context.LookupClassNodes.AbstractLookupClassNode;
+import de.hpi.swa.graal.squeak.nodes.context.LookupClassNodes.LookupClassNode;
+import de.hpi.swa.graal.squeak.nodes.context.LookupClassNodes.LookupSuperClassNode;
 import de.hpi.swa.graal.squeak.nodes.context.stack.StackPopNReversedNode;
 import de.hpi.swa.graal.squeak.nodes.context.stack.StackPushNode;
 
@@ -25,7 +26,7 @@ public final class SendBytecodes {
         protected final NativeObject selector;
         private final int argumentCount;
 
-        @Child protected LookupClassNode lookupClassNode;
+        @Child protected AbstractLookupClassNode lookupClassNode;
         @Child private LookupMethodNode lookupMethodNode;
         @Child private DispatchSendNode dispatchSendNode;
         @Child private StackPopNReversedNode popNReversedNode;
@@ -34,18 +35,18 @@ public final class SendBytecodes {
         private final BranchProfile nlrProfile = BranchProfile.create();
         private final BranchProfile nvrProfile = BranchProfile.create();
 
-        private AbstractSendNode(final CompiledCodeObject code, final int index, final int numBytecodes, final Object sel, final int argcount) {
+        private AbstractSendNode(final CompiledCodeObject code, final int index, final int numBytecodes, final Object sel, final int argcount, final boolean needsSuperClassLookup) {
             super(code, index, numBytecodes);
             selector = sel instanceof NativeObject ? (NativeObject) sel : code.image.doesNotUnderstand;
             argumentCount = argcount;
             lookupMethodNode = LookupMethodNode.create(code.image);
-            lookupClassNode = LookupClassNode.create(code.image);
+            lookupClassNode = needsSuperClassLookup ? LookupSuperClassNode.create(code) : LookupClassNode.create(code.image);
             dispatchSendNode = DispatchSendNode.create(code.image);
             popNReversedNode = StackPopNReversedNode.create(code, 1 + argumentCount);
         }
 
         protected AbstractSendNode(final AbstractSendNode original) {
-            this(original.code, original.index, original.numBytecodes, original.selector, original.argumentCount);
+            this(original.code, original.index, original.numBytecodes, original.selector, original.argumentCount, original.lookupClassNode instanceof LookupSuperClassNode);
         }
 
         @Override
@@ -113,13 +114,13 @@ public final class SendBytecodes {
 
     public static final class SecondExtendedSendNode extends AbstractSendNode {
         public SecondExtendedSendNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int i) {
-            super(code, index, numBytecodes, code.getLiteral(i & 63), i >> 6);
+            super(code, index, numBytecodes, code.getLiteral(i & 63), i >> 6, false);
         }
     }
 
     public static final class SendLiteralSelectorNode extends AbstractSendNode {
         public SendLiteralSelectorNode(final CompiledCodeObject code, final int index, final int numBytecodes, final Object selector, final int argCount) {
-            super(code, index, numBytecodes, selector, argCount);
+            super(code, index, numBytecodes, selector, argCount, false);
         }
 
         public static AbstractBytecodeNode create(final CompiledCodeObject code, final int index, final int numBytecodes, final int literalIndex, final int argCount) {
@@ -130,7 +131,7 @@ public final class SendBytecodes {
 
     public static final class SendSelectorNode extends AbstractSendNode {
         public SendSelectorNode(final CompiledCodeObject code, final int index, final int numBytecodes, final Object selector, final int argcount) {
-            super(code, index, numBytecodes, selector, argcount);
+            super(code, index, numBytecodes, selector, argcount, false);
         }
 
         public static SendSelectorNode createForSpecialSelector(final CompiledCodeObject code, final int index, final int selectorIndex) {
@@ -142,46 +143,23 @@ public final class SendBytecodes {
 
     public static final class SendSelfSelector extends AbstractSendNode {
         public SendSelfSelector(final CompiledCodeObject code, final int index, final int numBytecodes, final Object selector, final int numArgs) {
-            super(code, index, numBytecodes, selector, numArgs);
+            super(code, index, numBytecodes, selector, numArgs, false);
         }
     }
 
     public static final class SingleExtendedSendNode extends AbstractSendNode {
         public SingleExtendedSendNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int param) {
-            super(code, index, numBytecodes, code.getLiteral(param & 31), param >> 5);
+            super(code, index, numBytecodes, code.getLiteral(param & 31), param >> 5, false);
         }
     }
 
     public static final class SingleExtendedSuperNode extends AbstractSendNode {
-
-        protected static class SqueakLookupClassSuperNode extends LookupClassNode {
-            @Child private GetCompiledMethodNode getMethodNode = GetCompiledMethodNode.create();
-            private final CompiledCodeObject code;
-
-            public SqueakLookupClassSuperNode(final CompiledCodeObject code) {
-                super(code.image);
-                this.code = code; // storing both, image and code, because of class hierarchy
-            }
-
-            @Override
-            public ClassObject executeLookup(final Object receiver) {
-                final ClassObject compiledInClass = getMethodNode.execute(code).getCompiledInClass();
-                final Object superclass = compiledInClass.getSuperclass();
-                if (superclass == code.image.nil) {
-                    return compiledInClass;
-                } else {
-                    return (ClassObject) superclass;
-                }
-            }
-        }
-
         public SingleExtendedSuperNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int rawByte) {
             this(code, index, numBytecodes, rawByte & 31, rawByte >> 5);
         }
 
         public SingleExtendedSuperNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int literalIndex, final int numArgs) {
-            super(code, index, numBytecodes, code.getLiteral(literalIndex), numArgs);
-            lookupClassNode = new SqueakLookupClassSuperNode(code);
+            super(code, index, numBytecodes, code.getLiteral(literalIndex), numArgs, true);
         }
 
         @Override

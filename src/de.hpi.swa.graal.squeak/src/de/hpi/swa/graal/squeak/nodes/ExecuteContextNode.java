@@ -22,7 +22,6 @@ import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.ExecuteContextNodeGen.GetSuccessorNodeGen;
 import de.hpi.swa.graal.squeak.nodes.ExecuteContextNodeGen.TriggerInterruptHandlerNodeGen;
-import de.hpi.swa.graal.squeak.nodes.accessing.CompiledCodeNodes.CalculcatePCOffsetNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.AbstractBytecodeNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.JumpBytecodes.ConditionalJumpNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.JumpBytecodes.UnconditionalJumpNode;
@@ -43,7 +42,6 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
     @Child private UpdateInstructionPointerNode updateInstructionPointerNode;
     @Child private GetOrCreateContextNode getOrCreateContextNode;
     @Child private GetSuccessorNode getSuccessorNode;
-    @Child private CalculcatePCOffsetNode calculcatePCOffsetNode;
 
     protected ExecuteContextNode(final CompiledCodeObject code) {
         super(code);
@@ -102,13 +100,13 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
 
         try {
             triggerInterruptHandlerNode.executeGeneric(frame, code.hasPrimitive(), bytecodeNodes.length);
-            final long initialPC = getAndDecodeSqueakPC(context);
-            if (initialPC == 0) {
+            final long currentPC = context.getInstructionPointer() - context.getBlockOrMethod().getInitialPC();
+            if (currentPC == 0) {
                 startBytecode(frame);
             } else {
                 // Avoid optimizing cases in which a context is resumed.
                 CompilerDirectives.transferToInterpreter();
-                resumeBytecode(frame, initialPC);
+                resumeBytecode(frame, currentPC);
             }
             CompilerAsserts.neverPartOfCompilation();
             throw new SqueakException("Method did not return");
@@ -129,10 +127,6 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
             getOrCreateContextNode = insert(GetOrCreateContextNode.create(code));
         }
         return getOrCreateContextNode;
-    }
-
-    private long getAndDecodeSqueakPC(final ContextObject newContext) {
-        return newContext.getInstructionPointer() - getCalculcatePCOffsetNode().execute(newContext.getBlockOrMethod());
     }
 
     /*
@@ -301,14 +295,6 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
             handleNonLocalReturnNode = insert(HandleNonLocalReturnNode.create(code));
         }
         return handleNonLocalReturnNode;
-    }
-
-    private CalculcatePCOffsetNode getCalculcatePCOffsetNode() {
-        if (calculcatePCOffsetNode == null) {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
-            calculcatePCOffsetNode = insert(CalculcatePCOffsetNode.create());
-        }
-        return calculcatePCOffsetNode;
     }
 
     private UpdateInstructionPointerNode getUpdateInstructionPointerNode() {

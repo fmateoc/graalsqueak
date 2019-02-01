@@ -413,7 +413,7 @@ public final class ContextObject extends AbstractSqueakObject {
     public void restartIfTerminated() {
         if (isTerminated()) {
             assert getClosure() == null;
-            atput0(CONTEXT.INSTRUCTION_POINTER, (long) getMethod().getInitialPC());
+            atput0(CONTEXT.INSTRUCTION_POINTER, (long) getBlockOrMethod().getInitialPC());
         }
     }
 
@@ -530,7 +530,7 @@ public final class ContextObject extends AbstractSqueakObject {
     public boolean isPrimitiveContext() {
         final CompiledCodeObject codeObject = getBlockOrMethod();
         return codeObject.hasPrimitive() && codeObject instanceof CompiledMethodObject &&
-                        (getInstructionPointer() - ((CompiledMethodObject) codeObject).getInitialPC() == CallPrimitiveNode.NUM_BYTECODES);
+                        (getInstructionPointer() - codeObject.getInitialPC() == CallPrimitiveNode.NUM_BYTECODES);
     }
 
     public boolean pointsTo(final Object thang) {

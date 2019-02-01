@@ -1,6 +1,9 @@
 package de.hpi.swa.graal.squeak.model;
 
+import java.util.Arrays;
+
 import com.oracle.truffle.api.CompilerAsserts;
+import com.oracle.truffle.api.CompilerDirectives;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 
@@ -118,13 +121,12 @@ public final class CompiledMethodObject extends CompiledCodeObject {
     }
 
     public void setHeader(final long header) {
+        CompilerDirectives.transferToInterpreterAndInvalidate();
         literals = new Object[]{header};
         decodeHeader();
         literals = new Object[1 + numLiterals];
+        Arrays.fill(literals, image.nil);
         literals[0] = header;
-        for (int i = 1; i < literals.length; i++) {
-            literals[i] = image.nil;
-        }
     }
 
     public AbstractSqueakObject shallowCopy() {
@@ -133,15 +135,6 @@ public final class CompiledMethodObject extends CompiledCodeObject {
 
     public boolean isExceptionHandlerMarked() {
         return hasPrimitive() && primitiveIndex() == 199;
-    }
-
-    /*
-     * Answer the program counter for the receiver's first bytecode.
-     *
-     */
-    public int getInitialPC() {
-        // pc is offset by header + numLiterals, +1 for one-based addressing
-        return getBytecodeOffset() + 1;
     }
 
     public int size() {
