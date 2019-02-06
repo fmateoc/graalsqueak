@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.graalvm.collections.MapCursor;
+
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.TruffleFile;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
@@ -20,6 +22,7 @@ import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
+import de.hpi.swa.graal.squeak.image.GraalSqueakFileHandle;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
@@ -60,7 +63,7 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
 
         @TruffleBoundary
         protected SeekableByteChannel getFileOrPrimFail(final long fileDescriptor) {
-            final SeekableByteChannel handle = method.image.filePluginHandles.get(fileDescriptor);
+            final SeekableByteChannel handle = method.image.filePluginHandles.get(fileDescriptor).getFile();
             if (handle == null) {
                 throw new PrimitiveFailed();
             }
@@ -79,6 +82,41 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
     }
 
     @TruffleBoundary
+    protected static Object createFileHandleOrPrimFailWithRetry(final SqueakImageContext image, final TruffleFile truffleFile, final Boolean writableFlag) {
+        final EnumSet<StandardOpenOption> options;
+        if (writableFlag) {
+            options = EnumSet.<StandardOpenOption> of(StandardOpenOption.WRITE, StandardOpenOption.CREATE);
+        } else {
+            options = EnumSet.<StandardOpenOption> of(StandardOpenOption.READ);
+        }
+        try {
+            final SeekableByteChannel file = truffleFile.newByteChannel(options);
+            final long fileId = file.hashCode();
+            image.filePluginHandles.put(fileId, new GraalSqueakFileHandle(truffleFile, file));
+            return fileId;
+        } catch (IOException | UnsupportedOperationException | SecurityException e) {
+            // On Windows an existing FileHandle can block a new one from being acquired
+            // Solution for now: Close the existing handle and try opening again
+            try {
+                final MapCursor<Long, GraalSqueakFileHandle> iterator = image.filePluginHandles.getEntries();
+                while (iterator.advance()) {
+                    final GraalSqueakFileHandle current = iterator.getValue();
+                    if (current.getTruffleFile().getPath().equals(truffleFile.getPath())) {
+                        current.getFile().close();
+                        image.filePluginHandles.removeKey(iterator.getKey());
+                        final SeekableByteChannel file = truffleFile.newByteChannel(options);
+                        final long fileId = file.hashCode();
+                        image.filePluginHandles.put(fileId, new GraalSqueakFileHandle(truffleFile, file));
+                        return fileId;
+                    }
+                }
+            } catch (IOException ex) {
+            }
+            throw new PrimitiveFailed();
+        }
+    }
+
+    @TruffleBoundary
     protected static Object createFileHandleOrPrimFail(final SqueakImageContext image, final TruffleFile truffleFile, final Boolean writableFlag) {
         try {
             final EnumSet<StandardOpenOption> options;
@@ -89,7 +127,7 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
             }
             final SeekableByteChannel file = truffleFile.newByteChannel(options);
             final long fileId = file.hashCode();
-            image.filePluginHandles.put(fileId, file);
+            image.filePluginHandles.put(fileId, new GraalSqueakFileHandle(truffleFile, file));
             return fileId;
         } catch (IOException | UnsupportedOperationException | SecurityException e) {
             throw new PrimitiveFailed();
@@ -372,10 +410,16 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(guards = "nativeFileName.isByteType()")
+        @Specialization(guards = {"nativeFileName.isByteType()", "method.image.os.isWindows()"})
+        protected final Object doWindowsOpen(@SuppressWarnings("unused") final PointersObject receiver, final NativeObject nativeFileName, final Boolean writableFlag) {
+            return createFileHandleOrPrimFailWithRetry(method.image, asTruffleFile(nativeFileName), writableFlag);
+        }
+
+        @Specialization(guards = {"nativeFileName.isByteType()", "!method.image.os.isWindows()"})
         protected final Object doOpen(@SuppressWarnings("unused") final PointersObject receiver, final NativeObject nativeFileName, final Boolean writableFlag) {
             return createFileHandleOrPrimFail(method.image, asTruffleFile(nativeFileName), writableFlag);
         }
+
     }
 
     @GenerateNodeFactory

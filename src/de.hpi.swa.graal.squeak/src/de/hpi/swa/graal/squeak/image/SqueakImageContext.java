@@ -160,7 +160,7 @@ public final class SqueakImageContext {
     @CompilationFinal private PointersObject scheduler = null;
 
     public final PrimitiveNodeFactory primitiveNodeFactory = new PrimitiveNodeFactory();
-    public final EconomicMap<Long, SeekableByteChannel> filePluginHandles = EconomicMap.create();
+    public final EconomicMap<Long, GraalSqueakFileHandle> filePluginHandles = EconomicMap.create();
     public final EconomicMap<Long, SqueakSocket> socketPluginHandles = EconomicMap.create();
     public final EconomicMap<Long, SqSSL> squeakSSLHandles = EconomicMap.create();
     public String[] dropPluginFileList = new String[0];
