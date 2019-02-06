@@ -1,5 +1,7 @@
 package de.hpi.swa.graal.squeak.exceptions;
 
+import java.util.Arrays;
+
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.nodes.ControlFlowException;
 
@@ -42,6 +44,12 @@ public final class PrimitiveExceptions {
      */
     public static final class PrimitiveFailed extends AbstractPrimitiveFailed {
         private static final long serialVersionUID = 1L;
+        private final Object[] suppliedValues;
+
+        public PrimitiveFailed(final Object... values) {
+            super(ERROR_TABLE.GENERIC_ERROR);
+            suppliedValues = values;
+        }
 
         public PrimitiveFailed() {
             this(ERROR_TABLE.GENERIC_ERROR);
@@ -49,6 +57,7 @@ public final class PrimitiveExceptions {
 
         public PrimitiveFailed(final long reasonCode) {
             super(reasonCode);
+            suppliedValues = null;
         }
 
         public static PrimitiveFailed andTransferToInterpreter() {
@@ -59,6 +68,19 @@ public final class PrimitiveExceptions {
         public static PrimitiveFailed andTransferToInterpreter(final long reason) {
             CompilerDirectives.transferToInterpreter();
             throw new PrimitiveFailed(reason);
+        }
+
+        @Override
+        public String getMessage() {
+            if (suppliedValues == null) {
+                return super.getMessage();
+            }
+            final StringBuilder str = new StringBuilder();
+            str.append(Arrays.toString(suppliedValues)).append(", [");
+            for (int i = 0; i < suppliedValues.length; i++) {
+                str.append(i == 0 ? "" : ",").append(suppliedValues[i] == null ? "null" : suppliedValues[i].getClass().getSimpleName());
+            }
+            return str.append("]").toString();
         }
     }
 

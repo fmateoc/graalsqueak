@@ -63,7 +63,7 @@ public final class MiscellaneousBytecodes {
                 throw new LocalReturn(primitiveNode.executePrimitive(frame));
             } catch (PrimitiveFailed e) {
                 primitiveFailureProfile.enter();
-                LOG.log(Level.FINE, "Primitive failure: {0}", primitiveNode);
+                LOG.log(Level.FINE, () -> primitiveNode + " failed (" + e.getMessage() + ")");
                 handlePrimFailed.executeHandle(frame, e);
             }
             // continue with fallback code
