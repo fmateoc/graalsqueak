@@ -3,7 +3,6 @@ package de.hpi.swa.graal.squeak.image;
 import java.io.File;
 import java.io.PrintWriter;
 import java.math.BigInteger;
-import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Paths;
 
 import org.graalvm.collections.EconomicMap;
