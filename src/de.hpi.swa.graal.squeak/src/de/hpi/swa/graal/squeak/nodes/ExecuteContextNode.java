@@ -10,8 +10,10 @@ import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.LoopNode;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
+import com.oracle.truffle.api.profiles.BranchProfile;
 import com.oracle.truffle.api.profiles.ConditionProfile;
 
+import de.hpi.swa.graal.squeak.exceptions.InstructionPointerModification;
 import de.hpi.swa.graal.squeak.exceptions.ProcessSwitch;
 import de.hpi.swa.graal.squeak.exceptions.Returns.LocalReturn;
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
@@ -43,6 +45,8 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
     @Child private GetOrCreateContextNode getOrCreateContextNode;
     @Child private GetSuccessorNode getSuccessorNode;
     @Child private GetInitialPCNode calculcatePCOffsetNode;
+
+    private final BranchProfile instructionPointerModificationProfile = BranchProfile.create();
 
     protected ExecuteContextNode(final CompiledCodeObject code) {
         super(code);
@@ -176,8 +180,17 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
                 } else {
                     final int successor = getGetSuccessorNode().executeGeneric(frame, node);
                     getUpdateInstructionPointerNode().executeUpdate(frame, successor);
-                    node.executeVoid(frame);
-                    pc = successor;
+                    try {
+                        node.executeVoid(frame);
+                        pc = successor;
+                    } catch (InstructionPointerModification ipm) {
+                        instructionPointerModificationProfile.enter();
+                        if (ipm.getTargetContext() == getContext(frame)) {
+                            pc = ipm.getNewBytecodeLoopPC();
+                        } else {
+                            throw ipm;
+                        }
+                    }
                     node = fetchNextBytecodeNode(pc);
                     continue;
                 }
@@ -197,8 +210,17 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
         while (pc >= 0) {
             final int successor = getGetSuccessorNode().executeGeneric(frame, node);
             getUpdateInstructionPointerNode().executeUpdate(frame, successor);
-            node.executeVoid(frame);
-            pc = successor;
+            try {
+                node.executeVoid(frame);
+                pc = successor;
+            } catch (InstructionPointerModification ipm) {
+                instructionPointerModificationProfile.enter();
+                if (ipm.getTargetContext() == getContext(frame)) {
+                    pc = ipm.getNewBytecodeLoopPC();
+                } else {
+                    throw ipm;
+                }
+            }
             node = fetchNextBytecodeNode(pc);
         }
     }

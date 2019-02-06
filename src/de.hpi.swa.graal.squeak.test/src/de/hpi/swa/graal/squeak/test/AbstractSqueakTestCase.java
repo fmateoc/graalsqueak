@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.Context.Builder;
+import org.junit.ClassRule;
 
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.VirtualFrame;
@@ -20,12 +21,10 @@ import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
-import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.nodes.ExecuteTopLevelContextNode;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
-import org.junit.ClassRule;
 
 public abstract class AbstractSqueakTestCase {
 
@@ -74,21 +73,21 @@ public abstract class AbstractSqueakTestCase {
         return createContext(code, receiver, ArrayUtils.EMPTY_ARRAY);
     }
 
-    protected static ExecuteTopLevelContextNode createContext(final CompiledMethodObject code, final Object receiver, final Object[] arguments) {
-        final ContextObject testContext = ContextObject.create(code.image, arguments.length + code.getSqueakContextSize());
-        testContext.atput0(CONTEXT.METHOD, code);
-        testContext.atput0(CONTEXT.RECEIVER, receiver);
-        testContext.atput0(CONTEXT.INSTRUCTION_POINTER, (long) code.getInitialPC());
-        testContext.atput0(CONTEXT.STACKPOINTER, 0L);
-        testContext.atput0(CONTEXT.CLOSURE_OR_NIL, code.image.nil);
-        testContext.atput0(CONTEXT.SENDER_OR_NIL, code.image.nil);
+    protected static ExecuteTopLevelContextNode createContext(final CompiledMethodObject method, final Object receiver, final Object[] arguments) {
+        final ContextObject testContext = ContextObject.create(method.image, arguments.length + method.getSqueakContextSize());
+        testContext.setMethod(method);
+        testContext.setReceiver(receiver);
+        testContext.setInstructionPointerUnsafe(method.getInitialPC());
+        testContext.setStackPointer(0);
+        testContext.setClosure(null);
+        testContext.removeSender();
         for (int i = 0; i < arguments.length; i++) {
             testContext.push(arguments[i]);
         }
         // Initialize temporary variables with nil in newContext.
-        final int numTemps = code.getNumTemps();
+        final int numTemps = method.getNumTemps();
         for (int i = 0; i < numTemps - arguments.length; i++) {
-            testContext.push(code.image.nil);
+            testContext.push(method.image.nil);
         }
         return ExecuteTopLevelContextNode.create(null, testContext, false);
     }

@@ -9,15 +9,12 @@ import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameInstance;
-import com.oracle.truffle.api.frame.FrameInstanceVisitor;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
-import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
-import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectReadNode;
@@ -115,71 +112,56 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization
-        protected final Object doUnwindAndTerminate(final ContextObject receiver, final ContextObject previousContext) {
+        @Specialization(guards = "hasSender(receiver, previousContext)")
+        protected final Object doUnwindAndTerminateHasSender(final ContextObject receiver, final ContextObject previousContext) {
             /*
              * Terminate all the Contexts between me and previousContext, if previousContext is on
              * my Context stack. Make previousContext my sender.
              */
-            terminateBetween(receiver, previousContext);
+            ContextObject current = receiver;
+            while (current != previousContext) {
+                final AbstractSqueakObject sender = current.getSender();
+                current.terminate();
+                if (sender == method.image.nil) {
+                    break;
+                } else {
+                    current = (ContextObject) sender;
+                }
+            }
             receiver.setSender(previousContext);
             return receiver;
         }
 
-        @Specialization
+        @Specialization(guards = "!hasSender(receiver, previousContext)")
+        protected static final Object doUnwindAndTerminateHasNoSender(final ContextObject receiver, final ContextObject previousContext) {
+            /*
+             * Make previousContext my sender.
+             */
+            receiver.setSender(previousContext);
+            return receiver;
+        }
+
+        @Specialization // hasSender is always false.
         protected static final Object doTerminate(final ContextObject receiver, @SuppressWarnings("unused") final NilObject nil) {
             receiver.removeSender();
             return receiver;
         }
 
-        private void terminateBetween(final ContextObject start, final ContextObject end) {
-            ContextObject current = start;
-            while (current.hasMaterializedSender()) {
-                final AbstractSqueakObject sender = start.getSender();
-                current.terminate();
-                if (sender == method.image.nil || sender == end) {
-                    return;
-                } else {
-                    current = (ContextObject) sender;
-                }
+        /*
+         * Answer whether the receiver is strictly above context on the stack (Context>>hasSender:).
+         */
+        protected boolean hasSender(final ContextObject context, final ContextObject previousContext) {
+            if (context == previousContext) {
+                return false;
             }
-            terminateBetween(current.getFrameMarker(), end);
-        }
-
-        private void terminateBetween(final FrameMarker start, final ContextObject end) {
-            assert start != null;
-            final ContextObject[] bottomContextOnTruffleStack = new ContextObject[1];
-            final ContextObject result = Truffle.getRuntime().iterateFrames(new FrameInstanceVisitor<ContextObject>() {
-                boolean foundMyself = false;
-
-                @Override
-                public ContextObject visitFrame(final FrameInstance frameInstance) {
-                    final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-                    if (!FrameAccess.isGraalSqueakFrame(current)) {
-                        return null;
-                    }
-                    final CompiledCodeObject currentCode = FrameAccess.getMethod(current);
-                    if (!foundMyself) {
-                        if (start == FrameAccess.getMarker(current)) {
-                            foundMyself = true;
-                        }
-                    } else {
-                        final ContextObject context = FrameAccess.getContext(current);
-                        if (context == end) {
-                            return end;
-                        }
-                        bottomContextOnTruffleStack[0] = context;
-                        final Frame currentWritable = frameInstance.getFrame(FrameInstance.FrameAccess.READ_WRITE);
-                        // Terminate frame
-                        FrameAccess.setInstructionPointer(currentWritable, currentCode, -1);
-                        FrameAccess.setSender(currentWritable, method.image.nil);
-                    }
-                    return null;
+            AbstractSqueakObject sender = context.getSender();
+            while (sender != method.image.nil) {
+                if (sender == previousContext) {
+                    return true;
                 }
-            });
-            if (result == null && bottomContextOnTruffleStack[0] != null) {
-                terminateBetween(bottomContextOnTruffleStack[0], end);
+                sender = ((ContextObject) sender).getSender();
             }
+            return false;
         }
     }
 

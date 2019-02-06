@@ -13,6 +13,7 @@ import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.MaterializedFrame;
 import com.oracle.truffle.api.source.Source;
 
+import de.hpi.swa.graal.squeak.exceptions.InstructionPointerModification;
 import de.hpi.swa.graal.squeak.exceptions.ProcessSwitch;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
@@ -24,6 +25,8 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
 public final class ContextObject extends AbstractSqueakObject {
+    private static final int PC_REMOVED_TAG = -1;
+
     @CompilationFinal private MaterializedFrame truffleFrame;
     @CompilationFinal private int size;
     private boolean hasModifiedSender = false;
@@ -113,10 +116,10 @@ public final class ContextObject extends AbstractSqueakObject {
         truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, code.getFrameDescriptor());
         FrameAccess.initializeMarker(truffleFrame, code);
         FrameAccess.setContext(truffleFrame, code, this);
-        atput0(CONTEXT.INSTRUCTION_POINTER, pointers[CONTEXT.INSTRUCTION_POINTER]);
-        atput0(CONTEXT.STACKPOINTER, pointers[CONTEXT.STACKPOINTER]);
+        setInstructionPointerUnsafe(pointers[CONTEXT.INSTRUCTION_POINTER] == image.nil ? PC_REMOVED_TAG : (int) (long) pointers[CONTEXT.INSTRUCTION_POINTER]);
+        setStackPointer((int) (long) pointers[CONTEXT.STACKPOINTER]);
         for (int i = CONTEXT.TEMP_FRAME_START; i < pointers.length; i++) {
-            atput0(i, pointers[i]);
+            atTempPut(i - CONTEXT.TEMP_FRAME_START, pointers[i]);
         }
     }
 
@@ -150,46 +153,6 @@ public final class ContextObject extends AbstractSqueakObject {
                 return getReceiver();
             default:
                 return atTemp(index - CONTEXT.TEMP_FRAME_START);
-        }
-    }
-
-    public void atput0(final long longIndex, final Object value) {
-        assert longIndex >= 0 && value != null;
-        final int index = (int) longIndex;
-        assert value != null : "null indicates a problem";
-        switch (index) {
-            case CONTEXT.SENDER_OR_NIL:
-                if (value == image.nil) {
-                    removeSender();
-                } else {
-                    setSender((ContextObject) value);
-                }
-                break;
-            case CONTEXT.INSTRUCTION_POINTER:
-                /**
-                 * TODO: Adjust control flow when pc of active context is changed. For this, an
-                 * exception could be used to unwind Truffle frames until the target frame is found.
-                 * However, this exception should only be thrown when the context object is actually
-                 * active. So it might need to be necessary to extend ContextObjects with an
-                 * `isActive` field to avoid the use of iterateFrames.
-                 */
-                setInstructionPointer(value == image.nil ? -1 : (int) (long) value);
-                break;
-            case CONTEXT.STACKPOINTER:
-                setStackPointer((int) (long) value);
-                break;
-            case CONTEXT.METHOD:
-                setMethod((CompiledMethodObject) value);
-                break;
-            case CONTEXT.CLOSURE_OR_NIL:
-                setClosure(value == image.nil ? null : (BlockClosureObject) value);
-                break;
-            case CONTEXT.RECEIVER:
-                setReceiver(value);
-                break;
-            default:
-                atTempPut(index - CONTEXT.TEMP_FRAME_START, value);
-                break;
         }
     }
 
@@ -326,7 +289,35 @@ public final class ContextObject extends AbstractSqueakObject {
     }
 
     public void setInstructionPointer(final int value) {
-        FrameAccess.setInstructionPointer(getOrCreateTruffleFrame(), getBlockOrMethod(), value);
+        final BlockClosureObject closure = getClosure();
+        if (closure != null) {
+            final CompiledBlockObject block = closure.getCompiledBlock();
+            FrameAccess.setInstructionPointer(getOrCreateTruffleFrame(), block, value);
+            if (value != PC_REMOVED_TAG && isActive()) { // active and not terminating.
+                throw InstructionPointerModification.create(this, value - block.getInitialPC());
+            }
+        } else {
+            final CompiledMethodObject method = getMethod();
+            FrameAccess.setInstructionPointer(getOrCreateTruffleFrame(), method, value);
+            if (value != PC_REMOVED_TAG && isActive()) { // active and not terminating.
+                throw InstructionPointerModification.create(this, value - method.getInitialPC());
+            }
+        }
+    }
+
+    /**
+     * Sets the instruction pointer without throwing a potential
+     * {@link InstructionPointerModification} exception.
+     */
+    public void setInstructionPointerUnsafe(final int value) {
+        final BlockClosureObject closure = getClosure();
+        if (closure != null) {
+            final CompiledBlockObject block = closure.getCompiledBlock();
+            FrameAccess.setInstructionPointer(getOrCreateTruffleFrame(), block, value);
+        } else {
+            final CompiledMethodObject method = getMethod();
+            FrameAccess.setInstructionPointer(getOrCreateTruffleFrame(), method, value);
+        }
     }
 
     public int getStackPointer() {
@@ -392,8 +383,8 @@ public final class ContextObject extends AbstractSqueakObject {
 
     public void terminate() {
         // Remove pc and sender.
-        atput0(CONTEXT.INSTRUCTION_POINTER, image.nil);
-        atput0(CONTEXT.SENDER_OR_NIL, image.nil);
+        setInstructionPointer(PC_REMOVED_TAG);
+        removeSender();
     }
 
     public boolean isTerminated() {
@@ -407,7 +398,7 @@ public final class ContextObject extends AbstractSqueakObject {
     public void restartIfTerminated() {
         if (isTerminated()) {
             assert getClosure() == null;
-            atput0(CONTEXT.INSTRUCTION_POINTER, (long) getMethod().getInitialPC());
+            setInstructionPointerUnsafe(getMethod().getInitialPC());
         }
     }
 
@@ -560,5 +551,20 @@ public final class ContextObject extends AbstractSqueakObject {
             }
         }
         return false;
+    }
+
+    public boolean isActive() {
+        final FrameMarker frameMarker = FrameAccess.getMarker(truffleFrame);
+        final Object foundMyself = Truffle.getRuntime().iterateFrames((frameInstance) -> {
+            final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+            if (!FrameAccess.isGraalSqueakFrame(current)) {
+                return null;
+            }
+            if (FrameAccess.getMarker(current) == frameMarker) {
+                return true;
+            }
+            return null;
+        });
+        return foundMyself != null;
     }
 }

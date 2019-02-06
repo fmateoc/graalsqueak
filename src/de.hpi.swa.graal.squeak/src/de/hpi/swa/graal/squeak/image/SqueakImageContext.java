@@ -40,7 +40,6 @@ import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.ASSOCIATION;
-import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.ENVIRONMENT;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS_SCHEDULER;
@@ -267,12 +266,12 @@ public final class SqueakImageContext {
         final CompiledMethodObject doItMethod = (CompiledMethodObject) methodNode.send("generate");
 
         final ContextObject doItContext = ContextObject.create(this, doItMethod.getSqueakContextSize());
-        doItContext.atput0(CONTEXT.METHOD, doItMethod);
-        doItContext.atput0(CONTEXT.INSTRUCTION_POINTER, (long) doItMethod.getInitialPC());
-        doItContext.atput0(CONTEXT.RECEIVER, nilClass);
-        doItContext.atput0(CONTEXT.STACKPOINTER, 0L);
-        doItContext.atput0(CONTEXT.CLOSURE_OR_NIL, nil);
-        doItContext.atput0(CONTEXT.SENDER_OR_NIL, nil);
+        doItContext.setMethod(doItMethod);
+        doItContext.setInstructionPointerUnsafe(doItMethod.getInitialPC());
+        doItContext.setReceiver(nilClass);
+        doItContext.setStackPointer(0);
+        doItContext.setClosure(null);
+        doItContext.removeSender();
         return ExecuteTopLevelContextNode.create(getLanguage(), doItContext, false);
     }
 
