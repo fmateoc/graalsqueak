@@ -13,7 +13,6 @@ import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.MaterializedFrame;
 import com.oracle.truffle.api.source.Source;
 
-import de.hpi.swa.graal.squeak.exceptions.InstructionPointerModification;
 import de.hpi.swa.graal.squeak.exceptions.ProcessSwitch;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
@@ -31,6 +30,8 @@ public final class ContextObject extends AbstractSqueakObject {
     @CompilationFinal private int size;
     private boolean hasModifiedSender = false;
     private boolean escaped = false;
+
+    @CompilationFinal private boolean hasNeverSeenActivePCModification = true;
 
     private ContextObject(final SqueakImageContext image, final long hash) {
         super(image, hash, image.methodContextClass);
@@ -288,26 +289,43 @@ public final class ContextObject extends AbstractSqueakObject {
         return FrameAccess.getInstructionPointer(truffleFrame);
     }
 
+    public int getInstructionPointerForBytecodeLoop() {
+        final BlockClosureObject closure = getClosure();
+        if (closure != null) {
+            final CompiledBlockObject block = closure.getCompiledBlock();
+            return FrameAccess.getInstructionPointer(truffleFrame, block) - block.getInitialPC();
+        } else {
+            final CompiledMethodObject method = getMethod();
+            return FrameAccess.getInstructionPointer(truffleFrame, method) - method.getInitialPC();
+        }
+    }
+
     public void setInstructionPointer(final int value) {
         final BlockClosureObject closure = getClosure();
         if (closure != null) {
             final CompiledBlockObject block = closure.getCompiledBlock();
             FrameAccess.setInstructionPointer(getOrCreateTruffleFrame(), block, value);
-            if (value != PC_REMOVED_TAG && isActive()) { // active and not terminating.
-                throw InstructionPointerModification.create(this, value - block.getInitialPC());
+            if (hasNeverSeenActivePCModification && value != PC_REMOVED_TAG && isActive()) {
+                CompilerDirectives.transferToInterpreterAndInvalidate();
+                hasNeverSeenActivePCModification = false;
             }
         } else {
             final CompiledMethodObject method = getMethod();
             FrameAccess.setInstructionPointer(getOrCreateTruffleFrame(), method, value);
-            if (value != PC_REMOVED_TAG && isActive()) { // active and not terminating.
-                throw InstructionPointerModification.create(this, value - method.getInitialPC());
+            if (hasNeverSeenActivePCModification && value != PC_REMOVED_TAG && isActive()) {
+                CompilerDirectives.transferToInterpreterAndInvalidate();
+                hasNeverSeenActivePCModification = false;
             }
         }
     }
 
+    public boolean hasNeverSeenActivePCModification() {
+        return hasNeverSeenActivePCModification;
+    }
+
     /**
-     * Sets the instruction pointer without throwing a potential
-     * {@link InstructionPointerModification} exception.
+     * Sets the instruction pointer without invalidating
+     * <code>hasNeverSeenActivePCModification</code>.
      */
     public void setInstructionPointerUnsafe(final int value) {
         final BlockClosureObject closure = getClosure();
