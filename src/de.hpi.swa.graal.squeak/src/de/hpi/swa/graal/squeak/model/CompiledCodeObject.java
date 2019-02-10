@@ -173,11 +173,7 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
     }
 
     public final int getNumStackSlots() {
-        /**
-         * Arguments and copied values are also pushed onto the stack in {@link EnterCodeNode},
-         * therefore there must be enough slots for all these values as well as the Squeak stack.
-         */
-        return getNumArgsAndCopied() + getSqueakContextSize();
+        return getSqueakContextSize();
     }
 
     public final void fillin(final SqueakImageChunk chunk) {

@@ -65,7 +65,7 @@ import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackWriteNode;
  */
 public final class FrameAccess {
 
-    private enum ArgumentIndicies {
+    public enum ArgumentIndicies {
         METHOD, // 0
         SENDER_OR_SENDER_MARKER, // 1
         CLOSURE_OR_NULL, // 2
@@ -119,19 +119,6 @@ public final class FrameAccess {
 
     public static Object getArgument(final Frame frame, final int index) {
         return frame.getArguments()[ArgumentIndicies.RECEIVER.ordinal() + index];
-    }
-
-    public static int getArgumentStartIndex() {
-        return ArgumentIndicies.ARGUMENTS_START.ordinal();
-    }
-
-    public static void setArgumentIfInRange(final Frame frame, final int index, final Object value) {
-        assert index >= 0;
-        final Object[] frameArguments = frame.getArguments();
-        final int argumentIndex = ArgumentIndicies.ARGUMENTS_START.ordinal() + index;
-        if (argumentIndex < frameArguments.length) {
-            frameArguments[argumentIndex] = value;
-        }
     }
 
     public static Object[] getReceiverAndArguments(final Frame frame) {

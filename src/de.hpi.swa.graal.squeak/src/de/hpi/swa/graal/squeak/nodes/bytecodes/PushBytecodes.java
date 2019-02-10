@@ -23,7 +23,7 @@ import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodesFactory.PushNewArrayNodeGen;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodesFactory.PushReceiverNodeGen;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodesFactory.PushReceiverVariableNodeGen;
-import de.hpi.swa.graal.squeak.nodes.context.frame.FrameSlotReadNode;
+import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackReadNode;
 import de.hpi.swa.graal.squeak.nodes.context.stack.StackPopNReversedNode;
 import de.hpi.swa.graal.squeak.nodes.context.stack.StackPushNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
@@ -273,7 +273,7 @@ public final class PushBytecodes {
     @NodeInfo(cost = NodeCost.NONE)
     public static final class PushRemoteTempNode extends AbstractPushNode {
         @Child private SqueakObjectAt0Node at0Node = SqueakObjectAt0Node.create();
-        @Child private FrameSlotReadNode readTempNode;
+        @Child private FrameStackReadNode readTempNode;
         private final int indexInArray;
         private final int indexOfArray;
 
@@ -281,12 +281,12 @@ public final class PushBytecodes {
             super(code, index, numBytecodes);
             this.indexInArray = indexInArray;
             this.indexOfArray = indexOfArray;
-            readTempNode = FrameSlotReadNode.create(code.getStackSlot(indexOfArray));
+            readTempNode = FrameStackReadNode.create(code);
         }
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            pushNode.executeWrite(frame, at0Node.execute(readTempNode.executeRead(frame), indexInArray));
+            pushNode.executeWrite(frame, at0Node.execute(readTempNode.executeTemp(frame, indexOfArray), indexInArray));
         }
 
         @Override
@@ -299,19 +299,19 @@ public final class PushBytecodes {
     @NodeInfo(cost = NodeCost.NONE)
     public static final class PushTemporaryLocationNode extends AbstractBytecodeNode {
         @Child private StackPushNode pushNode;
-        @Child private FrameSlotReadNode tempNode;
+        @Child private FrameStackReadNode tempNode;
         private final int tempIndex;
 
         public PushTemporaryLocationNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int tempIndex) {
             super(code, index, numBytecodes);
             this.tempIndex = tempIndex;
             pushNode = StackPushNode.create(code);
-            tempNode = FrameSlotReadNode.create(code.getStackSlot(tempIndex));
+            tempNode = FrameStackReadNode.create(code);
         }
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            pushNode.executeWrite(frame, tempNode.executeRead(frame));
+            pushNode.executeWrite(frame, tempNode.executeTemp(frame, tempIndex));
         }
 
         @Override

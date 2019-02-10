@@ -106,7 +106,7 @@ public final class ContextObject extends AbstractSqueakObject {
             closure = (BlockClosureObject) closureOrNil;
             code = closure.getCompiledBlock(method);
         }
-        final int endArguments = CONTEXT.RECEIVER + 1 + method.getNumArgsAndCopied();
+        final int endArguments = CONTEXT.TEMP_FRAME_START + code.getNumArgsAndCopied();
         final Object[] arguments = Arrays.copyOfRange(pointers, CONTEXT.RECEIVER, endArguments);
         final Object[] frameArguments = FrameAccess.newWith(method, sender, closure, arguments);
         CompilerDirectives.transferToInterpreterAndInvalidate();
@@ -115,8 +115,11 @@ public final class ContextObject extends AbstractSqueakObject {
         FrameAccess.setContext(truffleFrame, code, this);
         atput0(CONTEXT.INSTRUCTION_POINTER, pointers[CONTEXT.INSTRUCTION_POINTER]);
         atput0(CONTEXT.STACKPOINTER, pointers[CONTEXT.STACKPOINTER]);
-        for (int i = CONTEXT.TEMP_FRAME_START; i < pointers.length; i++) {
-            atput0(i, pointers[i]);
+        // Push rest to stack.
+        for (int i = endArguments; i < endArguments + getStackPointer() - code.getNumArgsAndCopied(); i++) {
+            final Object pointer = pointers[i];
+            final FrameSlot frameSlot = code.getStackSlot(i - endArguments);
+            FrameAccess.setStackSlot(truffleFrame, frameSlot, pointer);
         }
     }
 
@@ -348,12 +351,13 @@ public final class ContextObject extends AbstractSqueakObject {
     }
 
     public int getStackPointer() {
-        return FrameAccess.getStackPointer(truffleFrame);
+        return FrameAccess.getStackPointer(truffleFrame) + getBlockOrMethod().getNumArgsAndCopied();
     }
 
     public void setStackPointer(final int value) {
-        assert 0 <= value && value <= getBlockOrMethod().getSqueakContextSize();
-        FrameAccess.setStackPointer(getOrCreateTruffleFrame(), getBlockOrMethod(), value);
+        final CompiledCodeObject blockOrMethod = getBlockOrMethod();
+        assert 0 <= value && value <= blockOrMethod.getSqueakContextSize();
+        FrameAccess.setStackPointer(getOrCreateTruffleFrame(), blockOrMethod, value - blockOrMethod.getNumArgsAndCopied());
     }
 
     private boolean hasMethod() {
@@ -400,16 +404,28 @@ public final class ContextObject extends AbstractSqueakObject {
     public Object atTemp(final int index) {
         final CompiledCodeObject blockOrMethod = getBlockOrMethod();
         assert index < blockOrMethod.getNumStackSlots() : "Invalid context stack access at #" + index;
-        final Object value = truffleFrame.getValue(blockOrMethod.getStackSlot(index));
-        return value == null ? image.nil : value;
+        final int stackIndex = index - blockOrMethod.getNumArgsAndCopied();
+        if (stackIndex >= 0) {
+            final Object value = truffleFrame.getValue(blockOrMethod.getStackSlot(stackIndex));
+            return value == null ? image.nil : value;
+        } else {
+            final Object[] arguments = truffleFrame.getArguments();
+            return arguments[arguments.length + stackIndex];
+        }
     }
 
     public void atTempPut(final int index, final Object value) {
-        FrameAccess.setArgumentIfInRange(getOrCreateTruffleFrame(), index, value);
         final CompiledCodeObject blockOrMethod = FrameAccess.getBlockOrMethod(truffleFrame);
         assert index < blockOrMethod.getNumStackSlots() : "Invalid context stack access at #" + index;
-        final FrameSlot frameSlot = blockOrMethod.getStackSlot(index);
-        FrameAccess.setStackSlot(truffleFrame, frameSlot, value);
+        final int stackIndex = index - blockOrMethod.getNumArgsAndCopied();
+        if (stackIndex >= 0) {
+            final FrameSlot frameSlot = blockOrMethod.getStackSlot(stackIndex);
+            FrameAccess.setStackSlot(truffleFrame, frameSlot, value);
+        } else {
+            final Object[] arguments = truffleFrame.getArguments();
+            assert arguments.length + stackIndex >= FrameAccess.ArgumentIndicies.RECEIVER.ordinal() : "Overwriting value at non-argument index";
+            arguments[arguments.length + stackIndex] = value;
+        }
     }
 
     public void terminate() {

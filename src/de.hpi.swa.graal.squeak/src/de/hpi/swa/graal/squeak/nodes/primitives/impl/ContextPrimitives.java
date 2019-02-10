@@ -47,7 +47,7 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
              * Not need to "nil any newly accessible cells" as cells are always nil-initialized and
              * their values are cleared (overwritten with nil) on stack pop.
              */
-            receiver.setStackPointer((int) newStackPointer);
+            receiver.setStackPointer((int) newStackPointer); // TODO?
             return receiver;
         }
     }

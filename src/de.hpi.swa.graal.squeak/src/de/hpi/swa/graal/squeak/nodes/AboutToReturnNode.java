@@ -12,8 +12,8 @@ import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.SendBytecodes.SendSelectorNode;
-import de.hpi.swa.graal.squeak.nodes.context.TemporaryWriteNode;
-import de.hpi.swa.graal.squeak.nodes.context.frame.FrameSlotReadNode;
+import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackReadNode;
+import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackWriteNode;
 import de.hpi.swa.graal.squeak.nodes.context.stack.StackPushNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
@@ -36,14 +36,13 @@ public abstract class AboutToReturnNode extends AbstractNodeWithCode {
      * that this however does not check if the current context isDead nor does it terminate contexts
      * (this may be a problem).
      */
-    @Specialization(guards = {"code.isUnwindMarked()", "!hasModifiedSender(frame)", "isNil(frame, completeTempReadNode)"}, limit = "1")
+    @Specialization(guards = {"code.isUnwindMarked()", "!hasModifiedSender(frame)", "completeTempIsNil(frame, stackReadNode)"}, limit = "1")
     protected final void doAboutToReturnVirtualized(final VirtualFrame frame, @SuppressWarnings("unused") final NonLocalReturn nlr,
-                    @Cached("createTemporaryWriteNode(0)") final FrameSlotReadNode blockArgumentNode,
-                    @SuppressWarnings("unused") @Cached("createTemporaryWriteNode(1)") final FrameSlotReadNode completeTempReadNode,
-                    @Cached("create(code, 1)") final TemporaryWriteNode completeTempWriteNode,
+                    @Cached("create(code)") final FrameStackReadNode stackReadNode,
+                    @Cached("create(code)") final FrameStackWriteNode stackWriteNode,
                     @Cached("create()") final BlockActivationNode dispatchNode) {
-        completeTempWriteNode.executeWrite(frame, code.image.sqTrue);
-        final BlockClosureObject block = (BlockClosureObject) blockArgumentNode.executeRead(frame);
+        stackWriteNode.executeTemp(frame, 1, code.image.sqTrue);
+        final BlockClosureObject block = (BlockClosureObject) stackReadNode.executeTemp(frame, 0);
         try {
             dispatchNode.executeBlock(block, FrameAccess.newClosureArguments(block, getContextOrMarker(frame), ArrayUtils.EMPTY_ARRAY));
         } catch (final LocalReturn blockLR) { // ignore
@@ -51,9 +50,9 @@ public abstract class AboutToReturnNode extends AbstractNodeWithCode {
     }
 
     @SuppressWarnings("unused")
-    @Specialization(guards = {"code.isUnwindMarked()", "!hasModifiedSender(frame)", "!isNil(frame, completeTempReadNode)"}, limit = "1")
+    @Specialization(guards = {"code.isUnwindMarked()", "!hasModifiedSender(frame)", "!completeTempIsNil(frame, stackReadNode)"}, limit = "1")
     protected final void doAboutToReturnVirtualizedNothing(final VirtualFrame frame, final NonLocalReturn nlr,
-                    @Cached("createTemporaryWriteNode(1)") final FrameSlotReadNode completeTempReadNode) {
+                    @Cached("create(code)") final FrameStackReadNode stackReadNode) {
         // Nothing to do.
     }
 
@@ -79,12 +78,8 @@ public abstract class AboutToReturnNode extends AbstractNodeWithCode {
         throw SqueakException.create("Should never happend:", nlr);
     }
 
-    protected final boolean isNil(final VirtualFrame frame, final FrameSlotReadNode completeTempReadNode) {
-        return completeTempReadNode.executeRead(frame) == code.image.nil;
-    }
-
-    protected final FrameSlotReadNode createTemporaryWriteNode(final int tempIndex) {
-        return FrameSlotReadNode.create(code.getStackSlot(tempIndex));
+    protected final boolean completeTempIsNil(final VirtualFrame frame, final FrameStackReadNode stackReadNode) {
+        return stackReadNode.executeTemp(frame, 1) == code.image.nil;
     }
 
     protected final SendSelectorNode createAboutToReturnSend() {

@@ -17,7 +17,6 @@ import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodesFactory.Context
 import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodesFactory.ContextObjectWriteNodeGen;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackReadNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackWriteNode;
-import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public final class ContextObjectNodes {
 
@@ -69,13 +68,24 @@ public final class ContextObjectNodes {
             return context.getReceiver();
         }
 
-        @Specialization(guards = {"index >= TEMP_FRAME_START", "codeObject == context.getBlockOrMethod()"}, //
+        @Specialization(guards = {"index >= TEMP_FRAME_START", "codeObject == context.getBlockOrMethod()", "index < codeObject.getNumArgsAndCopied()"}, //
                         limit = "2" /** thisContext and sender */
         )
-        protected static final Object doTempCached(final ContextObject context, @SuppressWarnings("unused") final long index,
+        protected static final Object doTempFromFrameArgumentsCached(final ContextObject context,
+                        @SuppressWarnings("unused") final long index,
+                        @SuppressWarnings("unused") @Cached("context.getBlockOrMethod()") final CompiledCodeObject codeObject) {
+            final Object[] arguments = context.getTruffleFrame().getArguments();
+            return arguments[arguments.length + (int) index - codeObject.getNumArgsAndCopied()];
+        }
+
+        @Specialization(guards = {"index >= TEMP_FRAME_START", "codeObject == context.getBlockOrMethod()", "index >= codeObject.getNumArgsAndCopied()"}, //
+                        limit = "2" /** thisContext and sender */
+        )
+        protected static final Object doTempCached(final ContextObject context,
+                        @SuppressWarnings("unused") final long index,
                         @SuppressWarnings("unused") @Cached("context.getBlockOrMethod()") final CompiledCodeObject codeObject,
                         @Cached("create(codeObject)") final FrameStackReadNode readNode) {
-            final Object value = readNode.execute(context.getTruffleFrame(), (int) (index - CONTEXT.TEMP_FRAME_START));
+            final Object value = readNode.executeTemp(context.getTruffleFrame(), (int) index - CONTEXT.TEMP_FRAME_START);
             return value == null ? context.image.nil : value;
         }
 
@@ -147,15 +157,24 @@ public final class ContextObjectNodes {
             context.setReceiver(value);
         }
 
-        @Specialization(guards = {"index >= TEMP_FRAME_START", "context.getBlockOrMethod() == codeObject"}, //
-                        limit = "2"/** thisContext and sender */
+        @Specialization(guards = {"index >= TEMP_FRAME_START", "codeObject == context.getBlockOrMethod()", "index < codeObject.getNumArgsAndCopied()"}, //
+                        limit = "2" /** thisContext and sender */
         )
-        protected static final void doTempCached(final ContextObject context, final long index, final Object value,
+        protected static final void doTempFromFrameArgumentsCached(final ContextObject context,
+                        @SuppressWarnings("unused") final long index, final Object value,
+                        @SuppressWarnings("unused") @Cached("context.getBlockOrMethod()") final CompiledCodeObject codeObject) {
+            final Object[] arguments = context.getTruffleFrame().getArguments();
+            arguments[arguments.length + (int) index - codeObject.getNumArgsAndCopied()] = value;
+        }
+
+        @Specialization(guards = {"index >= TEMP_FRAME_START", "codeObject == context.getBlockOrMethod()", "index >= codeObject.getNumArgsAndCopied()"}, //
+                        limit = "2" /** thisContext and sender */
+        )
+        protected static final void doTempCached(final ContextObject context,
+                        @SuppressWarnings("unused") final long index, final Object value,
                         @SuppressWarnings("unused") @Cached("context.getBlockOrMethod()") final CompiledCodeObject codeObject,
                         @Cached("create(codeObject)") final FrameStackWriteNode writeNode) {
-            final int stackIndex = (int) (index - CONTEXT.TEMP_FRAME_START);
-            FrameAccess.setArgumentIfInRange(context.getTruffleFrame(), stackIndex, value);
-            writeNode.execute(context.getTruffleFrame(), stackIndex, value);
+            writeNode.executeTemp(context.getTruffleFrame(), (int) index - CONTEXT.TEMP_FRAME_START, value);
         }
 
         @Specialization(guards = "index >= TEMP_FRAME_START")

@@ -27,9 +27,18 @@ public abstract class FrameStackReadAndClearNode extends AbstractNodeWithCode {
 
     public abstract Object execute(Frame frame, int stackIndex);
 
+    @Specialization(guards = "index < 0")
+    protected final Object doReadAndClearFromFrameArgument(final Frame frame, final int index) {
+        final Object[] arguments = frame.getArguments();
+        final int argumentIndex = arguments.length + index;
+        final Object result = arguments[argumentIndex];
+        arguments[argumentIndex] = code.image.nil;
+        return result;
+    }
+
     @SuppressWarnings("unused")
-    @Specialization(guards = {"index == cachedIndex"}, limit = "MAX_STACK_SIZE")
-    protected static final Object doClear(final Frame frame, final int index,
+    @Specialization(guards = {"index >= 0 ", "index == cachedIndex"}, limit = "MAX_STACK_SIZE")
+    protected static final Object doReadAndClearFromFrameSlot(final Frame frame, final int index,
                     @Cached("index") final int cachedIndex,
                     @Cached("code.getStackSlot(index)") final FrameSlot slot,
                     @Cached("mustClear(index)") final boolean clear,
@@ -39,11 +48,11 @@ public abstract class FrameStackReadAndClearNode extends AbstractNodeWithCode {
 
     protected final boolean mustClear(final int index) {
         // Only clear stack values, not receiver, arguments, or temporary variables.
-        return index >= code.getNumArgsAndCopied() + code.getNumTemps();
+        return index >= code.getNumTemps();
     }
 
     @SuppressWarnings("unused")
-    @Specialization(replaces = "doClear")
+    @Specialization(replaces = "doReadAndClearFromFrameSlot")
     protected static final void doFail(final Frame frame, final int stackIndex) {
         throw SqueakException.create("Unexpected failure in FrameStackClearNode");
     }

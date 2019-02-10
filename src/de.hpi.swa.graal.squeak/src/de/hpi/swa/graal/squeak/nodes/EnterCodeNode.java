@@ -109,13 +109,9 @@ public abstract class EnterCodeNode extends AbstractNodeWithCode implements Inst
 
     @ExplodeLoop
     private void initializeArgumentsAndTemps(final VirtualFrame frame) {
-        // Push arguments and copied values onto the newContext.
-        final Object[] arguments = frame.getArguments();
-        assert arguments.length == FrameAccess.expectedArgumentSize(code.getNumArgsAndCopied());
-        for (int i = 0; i < code.getNumArgsAndCopied(); i++) {
-            pushStackNode.executeWrite(frame, arguments[FrameAccess.getArgumentStartIndex() + i]);
-        }
-        // Initialize remaining temporary variables with nil in newContext.
+        // Frame already contains receiver and arguments.
+        assert frame.getArguments().length == FrameAccess.expectedArgumentSize(code.getNumArgsAndCopied());
+        // Initialize remaining temporary variables with nil.
         final int remainingTemps = code.getNumTemps() - code.getNumArgs();
         for (int i = 0; i < remainingTemps; i++) {
             pushStackNode.executeWrite(frame, code.image.nil);

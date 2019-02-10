@@ -11,6 +11,7 @@ import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectToObjectArrayNode;
 import de.hpi.swa.graal.squeak.nodes.process.SignalSemaphoreNode;
 
 @ImportStatic(SqueakImageContext.class)
@@ -19,6 +20,7 @@ public abstract class InterruptHandlerNode extends Node {
     protected final InterruptHandlerState istate;
 
     @Child private SignalSemaphoreNode signalSemaporeNode;
+    @Child private ArrayObjectToObjectArrayNode arrayObjectNode = ArrayObjectToObjectArrayNode.create();
 
     protected InterruptHandlerNode(final CompiledCodeObject code) {
         image = code.image;
@@ -81,9 +83,9 @@ public abstract class InterruptHandlerNode extends Node {
     private void checkSemaphoresToSignal(final VirtualFrame frame) {
         if (istate.hasSemaphoresToSignal()) {
             assert !image.externalObjectsArray.isEmptyType();
-            final Object[] semaphores = image.externalObjectsArray.getObjectStorage();
             while (istate.hasSemaphoresToSignal()) {
                 final int semaIndex = istate.nextSemaphoreToSignal();
+                final Object[] semaphores = arrayObjectNode.execute(image.externalObjectsArray);
                 final Object semaphore = semaphores[semaIndex - 1];
                 signalSemaporeIfNotNil(frame, semaphore);
             }
