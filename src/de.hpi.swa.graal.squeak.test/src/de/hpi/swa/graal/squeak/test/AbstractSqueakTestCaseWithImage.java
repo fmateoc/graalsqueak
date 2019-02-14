@@ -29,7 +29,7 @@ import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectSizeNode;
 
 public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
-    private static final int TIMEOUT_SECONDS = 60;
+    private static final int TIMEOUT_SECONDS = 60 * 5;
     private static final int PRIORITY_10_LIST_INDEX = 9;
 
     private static PointersObject idleProcess;
