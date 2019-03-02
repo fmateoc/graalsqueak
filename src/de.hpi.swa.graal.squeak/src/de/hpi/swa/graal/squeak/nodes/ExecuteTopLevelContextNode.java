@@ -82,7 +82,7 @@ public final class ExecuteTopLevelContextNode extends RootNode {
                 LOG.log(Level.FINE, "Local Return on top-level: {0}", activeContext);
             } catch (final ProcessSwitch ps) {
                 activeContext = ps.getNewContext();
-                ExecuteContextNode.resetStackDepth();
+                assert ExecuteContextNode.getStackDepth() == 0 : "StackDepth should be zero between context switches";
                 LOG.log(Level.FINE, "Process Switch: {0}", activeContext);
             } catch (final NonLocalReturn nlr) {
                 final AbstractSqueakObject target = (AbstractSqueakObject) nlr.getTargetContextOrMarker();
