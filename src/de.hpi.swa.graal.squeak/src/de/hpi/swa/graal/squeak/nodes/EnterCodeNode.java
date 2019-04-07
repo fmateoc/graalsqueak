@@ -100,7 +100,7 @@ public abstract class EnterCodeNode extends AbstractNodeWithCode implements Inst
     }
 
     private static void initializeSlots(final CompiledCodeObject code, final VirtualFrame frame) {
-        FrameAccess.initializeMarker(frame, code);
+        FrameAccess.initializeMarker(frame);
         FrameAccess.setInstructionPointer(frame, code, 0);
         FrameAccess.setStackPointer(frame, code, 0);
     }

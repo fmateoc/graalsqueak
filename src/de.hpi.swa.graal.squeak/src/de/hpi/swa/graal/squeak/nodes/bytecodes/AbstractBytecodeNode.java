@@ -6,7 +6,6 @@ import com.oracle.truffle.api.source.SourceSection;
 
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
-import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
@@ -51,10 +50,6 @@ public abstract class AbstractBytecodeNode extends AbstractNode {
 
     protected final ContextObject getContext(final VirtualFrame frame) {
         return FrameAccess.getContext(frame, code);
-    }
-
-    protected final FrameMarker getMarker(final VirtualFrame frame) {
-        return FrameAccess.getMarker(frame, code);
     }
 
     @Override

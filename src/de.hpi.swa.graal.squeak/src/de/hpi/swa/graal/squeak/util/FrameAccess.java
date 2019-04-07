@@ -26,6 +26,8 @@ import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackWriteNode;
  *
  * <pre>
  *                            +-------------------------------+
+ * FRAME_MARKER            -> | FrameMarker                   |
+ *                            +-------------------------------+
  * METHOD                  -> | CompiledMethodObject          |
  *                            +-------------------------------+
  * SENDER_OR_SENDER_MARKER -> | FrameMarker: virtual sender   |
@@ -51,8 +53,6 @@ import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackWriteNode;
  *
  * <pre>
  *                       +-------------------------------+
- * thisMarker         -> | FrameMarker                   |
- *                       +-------------------------------+
  * thisContext        -> | ContextObject / null          |
  *                       +-------------------------------+
  * instructionPointer -> | int (-1 if terminated)        |
@@ -66,11 +66,12 @@ import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackWriteNode;
 public final class FrameAccess {
 
     private enum ArgumentIndicies {
-        METHOD, // 0
-        SENDER_OR_SENDER_MARKER, // 1
-        CLOSURE_OR_NULL, // 2
-        RECEIVER, // 3
-        ARGUMENTS_START, // 4
+        FRAME_MARKER, // 0
+        METHOD, // 1
+        SENDER_OR_SENDER_MARKER, // 2
+        CLOSURE_OR_NULL, // 3
+        RECEIVER, // 4
+        ARGUMENTS_START, // 5
     }
 
     private FrameAccess() {
@@ -140,23 +141,15 @@ public final class FrameAccess {
     }
 
     public static FrameMarker getMarker(final Frame frame) {
-        return getMarker(frame, getBlockOrMethod(frame));
-    }
-
-    public static FrameMarker getMarker(final Frame frame, final CompiledCodeObject blockOrMethod) {
-        return (FrameMarker) FrameUtil.getObjectSafe(frame, blockOrMethod.getThisMarkerSlot());
-    }
-
-    public static void setMarker(final Frame frame, final CompiledCodeObject code, final FrameMarker marker) {
-        frame.setObject(code.getThisMarkerSlot(), marker);
-    }
-
-    public static void initializeMarker(final Frame frame, final CompiledCodeObject code) {
-        setMarker(frame, code, new FrameMarker(frame));
+        return (FrameMarker) frame.getArguments()[ArgumentIndicies.FRAME_MARKER.ordinal()];
     }
 
     public static void setMarker(final Frame frame, final FrameMarker marker) {
-        setMarker(frame, getBlockOrMethod(frame), marker);
+        frame.getArguments()[ArgumentIndicies.FRAME_MARKER.ordinal()] = marker;
+    }
+
+    public static void initializeMarker(final Frame frame) {
+        setMarker(frame, new FrameMarker(frame));
     }
 
     public static ContextObject getContext(final Frame frame) {

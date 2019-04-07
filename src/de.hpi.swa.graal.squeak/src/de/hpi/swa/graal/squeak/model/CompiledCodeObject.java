@@ -33,7 +33,6 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
 
     // frame info
     private final FrameDescriptor frameDescriptor;
-    private final FrameSlot thisMarkerSlot;
     private final FrameSlot thisContextSlot;
     private final FrameSlot instructionPointerSlot;
     private final FrameSlot stackPointerSlot;
@@ -65,7 +64,6 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
         this.numCopiedValues = numCopiedValues;
 
         frameDescriptor = new FrameDescriptor();
-        thisMarkerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.THIS_MARKER, FrameSlotKind.Object);
         thisContextSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.THIS_CONTEXT, FrameSlotKind.Illegal);
         instructionPointerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.INSTRUCTION_POINTER, FrameSlotKind.Int);
         stackPointerSlot = frameDescriptor.addFrameSlot(SLOT_IDENTIFIER.STACK_POINTER, FrameSlotKind.Int);
@@ -75,7 +73,6 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
         super(original.image, original.image.compiledMethodClass);
         numCopiedValues = original.numCopiedValues;
         frameDescriptor = original.frameDescriptor;
-        thisMarkerSlot = original.thisMarkerSlot;
         thisContextSlot = original.thisContextSlot;
         instructionPointerSlot = original.instructionPointerSlot;
         stackPointerSlot = original.stackPointerSlot;
@@ -129,10 +126,6 @@ public abstract class CompiledCodeObject extends AbstractSqueakObject {
 
     public final FrameDescriptor getFrameDescriptor() {
         return frameDescriptor;
-    }
-
-    public final FrameSlot getThisMarkerSlot() {
-        return thisMarkerSlot;
     }
 
     public final FrameSlot getThisContextSlot() {

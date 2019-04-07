@@ -58,7 +58,7 @@ public final class ContextObject extends AbstractSqueakObject {
         // Create shallow copy of Truffle frame
         truffleFrame = Truffle.getRuntime().createMaterializedFrame(original.truffleFrame.getArguments(), code.getFrameDescriptor());
         // Copy frame slot values
-        FrameAccess.setMarker(truffleFrame, code, FrameAccess.getMarker(original.truffleFrame, code));
+        FrameAccess.setMarker(truffleFrame, FrameAccess.getMarker(original.truffleFrame));
         FrameAccess.setContext(truffleFrame, code, this);
         FrameAccess.setInstructionPointer(truffleFrame, code, FrameAccess.getInstructionPointer(original.truffleFrame, code));
         FrameAccess.setStackPointer(truffleFrame, code, FrameAccess.getStackPointer(original.truffleFrame, code));
@@ -111,7 +111,7 @@ public final class ContextObject extends AbstractSqueakObject {
         final Object[] frameArguments = FrameAccess.newWith(method, sender, closure, arguments);
         CompilerDirectives.transferToInterpreterAndInvalidate();
         truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, code.getFrameDescriptor());
-        FrameAccess.initializeMarker(truffleFrame, code);
+        FrameAccess.initializeMarker(truffleFrame);
         FrameAccess.setContext(truffleFrame, code, this);
         atput0(CONTEXT.INSTRUCTION_POINTER, pointers[CONTEXT.INSTRUCTION_POINTER]);
         atput0(CONTEXT.STACKPOINTER, pointers[CONTEXT.STACKPOINTER]);
@@ -233,7 +233,7 @@ public final class ContextObject extends AbstractSqueakObject {
             }
             CompilerDirectives.transferToInterpreterAndInvalidate();
             truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, method.getFrameDescriptor());
-            FrameAccess.initializeMarker(truffleFrame, method);
+            FrameAccess.initializeMarker(truffleFrame);
             FrameAccess.setContext(truffleFrame, method, this);
             FrameAccess.setInstructionPointer(truffleFrame, method, instructionPointer);
             FrameAccess.setStackPointer(truffleFrame, method, stackPointer);
@@ -278,7 +278,7 @@ public final class ContextObject extends AbstractSqueakObject {
             truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, compiledBlock.getFrameDescriptor());
             FrameAccess.assertSenderNotNull(truffleFrame);
             FrameAccess.assertReceiverNotNull(truffleFrame);
-            FrameAccess.initializeMarker(truffleFrame, compiledBlock);
+            FrameAccess.initializeMarker(truffleFrame);
             FrameAccess.setContext(truffleFrame, compiledBlock, this);
             FrameAccess.setInstructionPointer(truffleFrame, compiledBlock, instructionPointer);
             FrameAccess.setStackPointer(truffleFrame, compiledBlock, stackPointer);

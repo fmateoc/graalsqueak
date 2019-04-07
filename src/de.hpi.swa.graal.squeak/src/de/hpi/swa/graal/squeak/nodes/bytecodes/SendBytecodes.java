@@ -18,6 +18,7 @@ import de.hpi.swa.graal.squeak.nodes.accessing.CompiledCodeNodes.GetCompiledMeth
 import de.hpi.swa.graal.squeak.nodes.context.LookupClassNode;
 import de.hpi.swa.graal.squeak.nodes.context.stack.StackPopNReversedNode;
 import de.hpi.swa.graal.squeak.nodes.context.stack.StackPushNode;
+import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public final class SendBytecodes {
 
@@ -64,7 +65,7 @@ public final class SendBytecodes {
                 return; // ignoring result
             } catch (final NonLocalReturn nlr) {
                 nlrProfile.enter();
-                if (nlr.getTargetContextOrMarker() == getMarker(frame) || nlr.getTargetContextOrMarker() == getContext(frame)) {
+                if (nlr.getTargetContextOrMarker() == FrameAccess.getMarker(frame) || nlr.getTargetContextOrMarker() == getContext(frame)) {
                     getPushNode().executeWrite(frame, nlr.getReturnValue());
                 } else {
                     throw nlr;
@@ -88,7 +89,7 @@ public final class SendBytecodes {
 
         private Object getContextOrMarker(final VirtualFrame frame) {
             final ContextObject context = getContext(frame);
-            return context != null ? context : getMarker(frame);
+            return context != null ? context : FrameAccess.getMarker(frame);
         }
 
         private StackPushNode getPushNode() {

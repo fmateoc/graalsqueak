@@ -37,6 +37,7 @@ import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
@@ -534,7 +535,7 @@ public final class SqueakImageContext {
             }
             final CompiledMethodObject method = FrameAccess.getMethod(current);
             lastSender[0] = FrameAccess.getSender(current);
-            final Object marker = FrameAccess.getMarker(current, method);
+            final FrameMarker marker = FrameAccess.getMarker(current);
             final Object context = FrameAccess.getContext(current, method);
             final String prefix = FrameAccess.getClosure(current) == null ? "" : "[] in ";
             final String argumentsString = ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(current));

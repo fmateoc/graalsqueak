@@ -37,7 +37,7 @@ public abstract class AbstractPrimitiveNode extends AbstractNode implements Abst
 
     protected final Object getContextOrMarker(final VirtualFrame frame) {
         final ContextObject context = FrameAccess.getContext(frame, method);
-        return context != null ? context : FrameAccess.getMarker(frame, method);
+        return context != null ? context : FrameAccess.getMarker(frame);
     }
 
     /**
