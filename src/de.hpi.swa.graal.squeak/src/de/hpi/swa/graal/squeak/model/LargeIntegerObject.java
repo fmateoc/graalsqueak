@@ -1,6 +1,5 @@
 package de.hpi.swa.graal.squeak.model;
 
-import java.math.BigInteger;
 import java.util.Arrays;
 
 import com.oracle.truffle.api.CompilerAsserts;
@@ -11,6 +10,7 @@ import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
+import de.hpi.swa.graal.squeak.math.BigInteger;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
 @ExportLibrary(InteropLibrary.class)
@@ -25,7 +25,7 @@ public final class LargeIntegerObject extends AbstractSqueakObject {
     private static final BigInteger ONE_HUNDRED_TWENTY_EIGHT = BigInteger.valueOf(128);
     private static final BigInteger LONG_MIN_OVERFLOW_RESULT = BigInteger.valueOf(Long.MIN_VALUE).abs();
 
-    private BigInteger integer;
+    public BigInteger integer;
     private final int exposedSize;
 
     public LargeIntegerObject(final SqueakImageContext image, final BigInteger integer) {
@@ -343,6 +343,11 @@ public final class LargeIntegerObject extends AbstractSqueakObject {
     @TruffleBoundary(transferToInterpreterOnException = false)
     public LargeIntegerObject multiplyNoReduce(final LargeIntegerObject b) {
         return new LargeIntegerObject(image, integer.multiply(b.integer));
+    }
+
+    @TruffleBoundary(transferToInterpreterOnException = false)
+    public LargeIntegerObject multiplyNoReduce(final long b) {
+        return new LargeIntegerObject(image, integer.multiply(BigInteger.valueOf(b)));
     }
 
     @TruffleBoundary(transferToInterpreterOnException = false)

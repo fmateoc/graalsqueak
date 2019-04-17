@@ -1,12 +1,11 @@
 package de.hpi.swa.graal.squeak.nodes;
 
-import java.math.BigInteger;
-
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.interop.TruffleObject;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.io.DisplayPoint;
+import de.hpi.swa.graal.squeak.math.BigInteger;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;

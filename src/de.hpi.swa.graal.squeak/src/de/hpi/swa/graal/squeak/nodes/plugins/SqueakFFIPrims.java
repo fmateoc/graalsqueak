@@ -1,6 +1,5 @@
 package de.hpi.swa.graal.squeak.nodes.plugins;
 
-import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 
@@ -10,6 +9,7 @@ import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 
+import de.hpi.swa.graal.squeak.math.BigInteger;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;

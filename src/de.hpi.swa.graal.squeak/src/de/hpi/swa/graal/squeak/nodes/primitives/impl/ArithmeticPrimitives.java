@@ -2,6 +2,7 @@ package de.hpi.swa.graal.squeak.nodes.primitives.impl;
 
 import java.util.List;
 
+import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
@@ -9,6 +10,7 @@ import com.oracle.truffle.api.dsl.TypeSystemReference;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
+import de.hpi.swa.graal.squeak.math.nodes.BigIntegerMultiplyNode;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
@@ -434,7 +436,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
 
         @Specialization(guards = {"a!=0", "b!=0"})
         protected final Object doLongWithOverflow(final long a, final long b) {
-            return doLargeInteger(asLargeInteger(a), asLargeInteger(b));
+            return asLargeInteger(a).multiplyNoReduce(b);
         }
 
         @SuppressWarnings("unused")
@@ -456,7 +458,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
 
         @Specialization(guards = {"a!=0", "b.fitsIntoLong()"})
         protected final Object doLongLargeIntegerOverflow(final long a, final LargeIntegerObject b) {
-            return doLongLargeInteger(a, b);
+            return b.multiply(asLargeInteger(a));
         }
 
         @Specialization(guards = {"isPowerOfTwo(a)", "!b.fitsIntoLong()"})
@@ -467,8 +469,8 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"a!=0", "!isPowerOfTwo(a)", "!b.fitsIntoLong()"})
-        protected final LargeIntegerObject doLongLargeInteger(final long a, final LargeIntegerObject b) {
-            return doLargeIntegerNoReduce(asLargeInteger(a), b);
+        protected static final LargeIntegerObject doLongLargeInteger(final long a, final LargeIntegerObject b) {
+            return b.multiplyNoReduce(a);
         }
 
         @SuppressWarnings("unused")
@@ -482,31 +484,15 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
             return doLong(a.longValue(), b);
         }
 
-        @Specialization(guards = {"b!=0", "a.fitsIntoLong()"})
-        protected final Object doLargeIntegerAsLongLongOverflow(final LargeIntegerObject a, final long b) {
-            return doLargeIntegerLong(a, b);
-        }
-
-        @Specialization(guards = {"isPowerOfTwo(b)", "!a.fitsIntoLong()"})
-        protected static final LargeIntegerObject doLargeIntegerLongShift(final LargeIntegerObject a, @SuppressWarnings("unused") final long b) {
-            final long shiftBy = Long.numberOfTrailingZeros(b);
-            assert 0 < shiftBy && shiftBy <= Integer.MAX_VALUE && b == Long.highestOneBit(b);
-            return a.shiftLeftNoReduce((int) shiftBy);
-        }
-
-        @Specialization(guards = {"b!=0", "!isPowerOfTwo(b)", "!a.fitsIntoLong()"})
+        @Specialization
         protected final LargeIntegerObject doLargeIntegerLong(final LargeIntegerObject a, final long b) {
-            return doLargeIntegerNoReduce(a, asLargeInteger(b));
+            return new LargeIntegerObject(method.image, a.integer.multiply(b));
         }
 
-        @Specialization(guards = {"!a.fitsIntoLong() || !b.fitsIntoLong()", "!a.isZero()", "!b.isZero()"})
-        protected static final LargeIntegerObject doLargeIntegerNoReduce(final LargeIntegerObject a, final LargeIntegerObject b) {
-            return a.multiplyNoReduce(b);
-        }
-
-        @Specialization(guards = {"a.fitsIntoLong()", "b.fitsIntoLong()"})
-        protected static final Object doLargeInteger(final LargeIntegerObject a, final LargeIntegerObject b) {
-            return a.multiply(b);
+        @Specialization
+        protected final LargeIntegerObject doLargeInteger(final LargeIntegerObject a, final LargeIntegerObject b,
+                        @Cached final BigIntegerMultiplyNode multiplyNode) {
+            return new LargeIntegerObject(method.image, multiplyNode.executeMultiply(a.integer, b.integer));
         }
 
         @Specialization(guards = "is64bit(a)")
