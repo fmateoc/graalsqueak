@@ -37,14 +37,14 @@ public abstract class AbstractSqueakObject implements TruffleObject {
 
     protected AbstractSqueakObject(final SqueakImageContext image, final ClassObject klass) {
         this.image = image;
-        squeakHash = hashCode() & IDENTITY_HASH_MASK;
+        squeakHash = -1;
         squeakClass = klass;
     }
 
     protected AbstractSqueakObject(final SqueakImageContext image, final int hash) {
         this.image = image;
         // Generate new hash if hash is `0`. This might have something to do with compact classes?
-        squeakHash = hash != 0 ? hash : hashCode() & IDENTITY_HASH_MASK;
+        squeakHash = hash != 0 ? hash : -1;
         squeakClass = null;
     }
 
@@ -81,6 +81,9 @@ public abstract class AbstractSqueakObject implements TruffleObject {
     public abstract int size();
 
     public final long getSqueakHash() {
+        if (!hasSqueakHash()) {
+            squeakHash = hashCode() & IDENTITY_HASH_MASK;
+        }
         return squeakHash;
     }
 
