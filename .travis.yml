@@ -85,8 +85,8 @@ jobs:
         - *download-eclipse
         - *download-ecj
       <<: *configure-python-for-pylint
-    - env: JDK="jdk8" GATE="build,test" ARCH="32bit"
-      <<: *jdk8-test-setup
+    # - env: JDK="jdk8" GATE="build,test" ARCH="32bit"
+    #   <<: *jdk8-test-setup
     - env: JDK="jdk8" GATE="build,test" ARCH="64bit"
       <<: *jdk8-test-setup
     - env: JDK="jdk11" GATE="style,fullbuild"
@@ -95,18 +95,18 @@ jobs:
         - *install-pylint
         - *download-eclipse
       <<: *configure-python-for-pylint
-    - env: JDK="jdk11" GATE="build,test" ARCH="32bit"
-      <<: *jdk11-test-setup
+    # - env: JDK="jdk11" GATE="build,test" ARCH="32bit"
+    #   <<: *jdk11-test-setup
     - env: JDK="jdk11" GATE="build,test" ARCH="64bit"
       <<: *jdk11-test-setup
-    - env: SUBSTRATE_VM=true
-      script:
-        - mx squeak-svm
-        - bin/graalsqueak-svm --version:graalvm
-      language: c
-      addons:
-        apt:
-          packages:
-            - libsdl2-dev
-      install: *use-jvmci
-  fast_finish: true
+  #   - env: SUBSTRATE_VM=true
+  #     script:
+  #       - mx squeak-svm
+  #       - bin/graalsqueak-svm --version:graalvm
+  #     language: c
+  #     addons:
+  #       apt:
+  #         packages:
+  #           - libsdl2-dev
+  #     install: *use-jvmci
+  # fast_finish: true
