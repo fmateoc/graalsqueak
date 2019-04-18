@@ -163,6 +163,10 @@ public final class NativeObject extends AbstractSqueakObject {
         return storage.getClass() == other.storage.getClass();
     }
 
+    public boolean haveSameStorageType(final ClassObject other) {
+        return getSqueakClass().getFormat() == other.getFormat();
+    }
+
     public boolean isByteType() {
         return storage.getClass() == byte[].class;
     }
