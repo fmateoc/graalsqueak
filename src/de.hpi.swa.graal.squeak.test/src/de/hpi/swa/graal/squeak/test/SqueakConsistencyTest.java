@@ -3,6 +3,7 @@ package de.hpi.swa.graal.squeak.test;
 import static java.util.Collections.emptySet;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,14 +26,14 @@ public class SqueakConsistencyTest extends AbstractSqueakTestCaseWithImage {
         final List<String> tests = SqueakTests.rawTestNames();
         final List<String> orderedTests = SqueakTests.rawTestNames();
         orderedTests.sort(Comparator.comparing(String::toLowerCase));
+        final String[] o = orderedTests.toArray(new String[0]);
+        final String[] x = tests.toArray(new String[0]);
 
-        if (!orderedTests.equals(tests)) {
-            assertEquals("Test memory must be sorted", join(orderedTests), join(tests));
+        for (int i = 0; i < x.length; i++) {
+            if (!x[i].equals(o[i])) {
+                fail("Test memory must be sorted. Expected:" + o[i] + " but got: " + x[i]);
+            }
         }
-    }
-
-    private static String join(final List<String> list) {
-        return String.join("\n", list);
     }
 
     @Test
