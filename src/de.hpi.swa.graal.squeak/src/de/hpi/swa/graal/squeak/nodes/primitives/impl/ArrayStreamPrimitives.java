@@ -445,7 +445,7 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
 
         @Specialization(guards = "classNode.executeClass(receiver).isVariable()", limit = "1")
         protected static final long doAbstractPointers(final AbstractPointersObject receiver, @SuppressWarnings("unused") final NotProvided notProvided,
-                        @SuppressWarnings("unused") @Shared("classNode") @Cached final SqueakObjectClassNode classNode) {
+                        @Shared("classNode") @Cached final SqueakObjectClassNode classNode) {
             return receiver.size() - classNode.executeClass(receiver).getBasicInstanceSize();
         }
 
@@ -497,7 +497,7 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
 
         @Specialization(guards = "classNode.executeClass(target).isVariable()", limit = "1")
         protected static final long doAbstractPointers(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final AbstractPointersObject target,
-                        @SuppressWarnings("unused") @Shared("classNode") @Cached final SqueakObjectClassNode classNode) {
+                        @Shared("classNode") @Cached final SqueakObjectClassNode classNode) {
             return target.size() - classNode.executeClass(target).getBasicInstanceSize();
         }
 
