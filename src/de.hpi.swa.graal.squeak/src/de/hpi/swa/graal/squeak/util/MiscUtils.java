@@ -32,6 +32,11 @@ public final class MiscUtils {
     }
 
     @TruffleBoundary
+    public static long currentTimeMillis() {
+        return System.currentTimeMillis();
+    }
+
+    @TruffleBoundary
     public static String format(final String format, final Object... args) {
         return String.format(format, args);
     }

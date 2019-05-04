@@ -90,18 +90,13 @@ public final class SqueakImageReaderNode extends RootNode {
         if (stream == null && image.isTesting()) {
             return null;
         }
-        final long start = currentTimeMillis();
+        final long start = MiscUtils.currentTimeMillis();
         readHeader();
         readBody(frame);
         initObjects();
         clearChunktable();
-        image.printToStdOut("Image loaded in", currentTimeMillis() - start + "ms.");
+        image.printToStdOut("Image loaded in", MiscUtils.currentTimeMillis() - start + "ms.");
         return image.getSqueakImage();
-    }
-
-    @TruffleBoundary
-    private static long currentTimeMillis() {
-        return System.currentTimeMillis();
     }
 
     @TruffleBoundary

@@ -13,6 +13,7 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
+import de.hpi.swa.graal.squeak.image.writing.SqueakImageWriterNode;
 import de.hpi.swa.graal.squeak.io.DisplayPoint;
 import de.hpi.swa.graal.squeak.io.SqueakIOConstants;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
@@ -163,16 +164,18 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 97)
     protected abstract static class PrimSnapshotNode extends AbstractPrimitiveNode implements UnaryPrimitive {
+        @Child private SqueakImageWriterNode writerNode;
 
         public PrimSnapshotNode(final CompiledMethodObject method) {
             super(method);
+            writerNode = SqueakImageWriterNode.create(method.image);
         }
 
         @SuppressWarnings("unused")
         @Specialization
-        public static final Object doSnapshot(final VirtualFrame frame, final PointersObject receiver) {
-            // TODO: implement primitiveSnapshot
-            throw new PrimitiveFailed();
+        public final Object doSnapshot(final VirtualFrame frame, final PointersObject receiver) {
+            writerNode.execute(frame);
+            return receiver;
         }
     }
 
