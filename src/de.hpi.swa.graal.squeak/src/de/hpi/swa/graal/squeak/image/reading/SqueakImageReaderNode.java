@@ -7,13 +7,9 @@ import java.util.HashMap;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
-import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.TruffleFile;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
-import com.oracle.truffle.api.nodes.LoopNode;
-import com.oracle.truffle.api.nodes.Node;
-import com.oracle.truffle.api.nodes.RepeatingNode;
 import com.oracle.truffle.api.nodes.RootNode;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakAbortException;
@@ -57,8 +53,6 @@ public final class SqueakImageReaderNode extends RootNode {
     private long segmentEnd;
     private long currentAddressSwizzle;
 
-    @Child private LoopNode readObjectLoopNode;
-
     public SqueakImageReaderNode(final SqueakImageContext image) {
         super(image.getLanguage());
         final TruffleFile truffleFile = image.env.getTruffleFile(image.getImagePath());
@@ -79,7 +73,6 @@ public final class SqueakImageReaderNode extends RootNode {
         }
         stream = inputStream;
         this.image = image;
-        readObjectLoopNode = Truffle.getRuntime().createLoopNode(new ReadObjectLoopNode(this));
     }
 
     @Override
@@ -89,7 +82,7 @@ public final class SqueakImageReaderNode extends RootNode {
         }
         final long start = currentTimeMillis();
         readHeader();
-        readBody(frame);
+        readBody();
         initObjects();
         clearChunktable();
         image.printToStdOut("Image loaded in", currentTimeMillis() - start + "ms.");
@@ -219,34 +212,17 @@ public final class SqueakImageReaderNode extends RootNode {
         skipBytes(headerSize - position);
     }
 
-    private static final class ReadObjectLoopNode extends Node implements RepeatingNode {
-        private final SqueakImageReaderNode reader;
-
-        private ReadObjectLoopNode(final SqueakImageReaderNode reader) {
-            this.reader = reader;
-        }
-
-        @Override
-        public boolean executeRepeating(final VirtualFrame frame) {
-            if (reader.position < reader.segmentEnd - 16) {
-                final SqueakImageChunk chunk = reader.readObject();
-                if (chunk.classid == FREE_OBJECT_CLASS_INDEX_PUN) {
-                    return true;
-                } else {
-                    reader.putChunk(chunk);
-                    return true;
-                }
-            }
-            return false;
-        }
-    }
-
-    private void readBody(final VirtualFrame frame) {
+    private void readBody() {
         position = 0;
         segmentEnd = firstSegmentSize;
         currentAddressSwizzle = oldBaseAddress;
         while (position < segmentEnd) {
-            readObjectLoopNode.executeLoop(frame);
+            while (position < segmentEnd - 16) {
+                final SqueakImageChunk chunk = readObject();
+                if (chunk.classid != FREE_OBJECT_CLASS_INDEX_PUN) {
+                    putChunk(chunk);
+                }
+            }
             final long bridge = nextLong();
             long bridgeSpan = 0;
             if ((bridge & SLOTS_MASK) != 0) {
