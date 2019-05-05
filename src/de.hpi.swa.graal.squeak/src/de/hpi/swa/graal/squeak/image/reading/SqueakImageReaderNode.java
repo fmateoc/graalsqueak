@@ -464,7 +464,7 @@ public final class SqueakImageReaderNode extends RootNode {
             final Object chunkObject = chunk.asObject();
             if (chunkObject.getClass() == ContextObject.class) {
                 final ContextObject contextObject = (ContextObject) chunkObject;
-                assert contextObject.hasTruffleFrame();
+                assert !contextObject.hasTruffleFrame();
                 contextObject.fillinContext(chunk);
             }
         }
