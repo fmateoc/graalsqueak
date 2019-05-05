@@ -174,7 +174,7 @@ public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSquea
     protected final Object readArrayElement(final long index, @Cached final SqueakObjectAt0Node at0Node) {
         return at0Node.execute(this, index);
     }
-
+    
     @ExportMessage
     protected final void writeArrayElement(final long index, final Object value,
                     @Shared("wrapNode") @Cached final WrapToSqueakNode wrapNode,

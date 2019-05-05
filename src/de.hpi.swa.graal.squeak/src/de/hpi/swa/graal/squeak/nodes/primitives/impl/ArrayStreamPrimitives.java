@@ -28,7 +28,6 @@ import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectWriteNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.NativeImmutableObjectNodes.NativeImmutableObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeAcceptsValueNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectSizeNode;
@@ -350,8 +349,8 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         protected static final long doNativeImmutableBytesObject(final NativeImmutableBytesObject receiver,
                                                                  final NotProvided notProvided,
                                                                  @Cached
-                                                                 final NativeImmutableObjectSizeNode nativeObjectSizeNode) {
-            return nativeObjectSizeNode.execute(receiver);
+                                                                 final SqueakObjectSizeNode objectSizeNode) {
+            return objectSizeNode.execute(receiver);
         }
 
         /*
