@@ -18,8 +18,10 @@ import com.oracle.truffle.api.nodes.RootNode;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakAbortException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
+import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithClassAndHash;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
+import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT_TAG;
@@ -56,10 +58,6 @@ public final class SqueakImageReaderNode extends RootNode {
     private long currentAddressSwizzle;
 
     @Child private LoopNode readObjectLoopNode;
-    @Child private FillInClassAndHashNode fillInClassNode = FillInClassAndHashNode.create();
-    @Child private FillInContextNode fillInContextNode = FillInContextNode.create();
-    @Child private FillInNode fillInNode;
-    @Child private ArrayObjectReadNode arrayReadNode = ArrayObjectReadNode.create();
 
     public SqueakImageReaderNode(final SqueakImageContext image) {
         super(image.getLanguage());
@@ -82,7 +80,6 @@ public final class SqueakImageReaderNode extends RootNode {
         stream = inputStream;
         this.image = image;
         readObjectLoopNode = Truffle.getRuntime().createLoopNode(new ReadObjectLoopNode(this));
-        fillInNode = FillInNode.create(image);
     }
 
     @Override
@@ -418,15 +415,42 @@ public final class SqueakImageReaderNode extends RootNode {
          * TODO: use LoopNode for filling in objects. The following is another candidate for an
          * OSR-able loop. The first attempt resulted in a memory leak though.
          */
+        fillInClassObjects();
         for (final SqueakImageChunk chunk : chunktable.values()) {
             final Object chunkObject = chunk.asObject();
-            fillInClassNode.execute(chunkObject, chunk);
-            fillInNode.execute(chunkObject, chunk);
+            if (chunkObject instanceof AbstractSqueakObjectWithClassAndHash) {
+                final AbstractSqueakObjectWithClassAndHash obj = (AbstractSqueakObjectWithClassAndHash) chunkObject;
+                if (obj.needsSqueakClass()) {
+                    obj.setSqueakClass(chunk.getSqClass());
+                }
+                if (obj.needsSqueakHash()) {
+                    obj.setSqueakHash(chunk.getHash());
+                }
+                obj.fillin(chunk);
+            }
         }
-        for (final SqueakImageChunk chunk : chunktable.values()) {
-            fillInContextNode.execute(chunk.asObject(), chunk);
-        }
+        fillInContextObjects();
         fillInSmallFloatClass();
+    }
+
+    private void fillInClassObjects() {
+        for (final SqueakImageChunk chunk : chunktable.values()) {
+            final Object chunkObject = chunk.asObject();
+            if (chunkObject.getClass() == ClassObject.class) {
+                ((ClassObject) chunkObject).fillinClass(chunk);
+            }
+        }
+    }
+
+    private void fillInContextObjects() {
+        for (final SqueakImageChunk chunk : chunktable.values()) {
+            final Object chunkObject = chunk.asObject();
+            if (chunkObject.getClass() == ContextObject.class) {
+                final ContextObject contextObject = (ContextObject) chunkObject;
+                assert contextObject.hasTruffleFrame();
+                contextObject.fillinContext(chunk);
+            }
+        }
     }
 
     private void instantiateClasses() {
@@ -452,6 +476,7 @@ public final class SqueakImageReaderNode extends RootNode {
 
     private void fillInSmallFloatClass() {
         final ArrayObject classTableFirstPage = (ArrayObject) getChunk(hiddenRootsChunk.getWords()[0]).asObject();
+        final ArrayObjectReadNode arrayReadNode = ArrayObjectReadNode.getUncached();
         assert arrayReadNode.execute(classTableFirstPage, SPECIAL_OBJECT_TAG.SMALL_INTEGER) == image.smallIntegerClass;
         assert arrayReadNode.execute(classTableFirstPage, SPECIAL_OBJECT_TAG.CHARACTER) == image.characterClass;
         if (image.flags.is64bit()) {
