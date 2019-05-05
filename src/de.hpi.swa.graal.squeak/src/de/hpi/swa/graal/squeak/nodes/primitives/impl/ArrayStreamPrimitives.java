@@ -29,6 +29,7 @@ import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.NativeImmutableObjectNodes.NativeImmutableObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeAcceptsValueNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectSizeNode;
@@ -524,6 +525,15 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
             return nativeObjectSizeNode.execute(receiver);
         }
 
+
+        @Specialization
+        protected static final long doNativeImmutableBytesObject(final NativeImmutableBytesObject receiver,
+                                                                 final NotProvided notProvided,
+                                                                 @Cached
+                                                                 final NativeImmutableObjectSizeNode nativeObjectSizeNode) {
+            return nativeObjectSizeNode.execute(receiver);
+        }
+
         /*
          * Context>>#objectSize:
          */
@@ -579,6 +589,7 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
                         @Shared("nativeObjectSizeNode") @Cached final NativeObjectSizeNode nativeObjectSizeNode) {
             return nativeObjectSizeNode.execute(target);
         }
+
     }
 
     @GenerateNodeFactory
