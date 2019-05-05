@@ -410,50 +410,13 @@ public final class SqueakImageReaderNode extends RootNode {
     private void initObjects() {
         initPrebuiltConstant();
         initPrebuiltSelectors();
-        instantiateClasses();
-        /*
-         * TODO: use LoopNode for filling in objects. The following is another candidate for an
-         * OSR-able loop. The first attempt resulted in a memory leak though.
-         */
         fillInClassObjects();
-        for (final SqueakImageChunk chunk : chunktable.values()) {
-            final Object chunkObject = chunk.asObject();
-            if (chunkObject instanceof AbstractSqueakObjectWithClassAndHash) {
-                final AbstractSqueakObjectWithClassAndHash obj = (AbstractSqueakObjectWithClassAndHash) chunkObject;
-                if (obj.needsSqueakClass()) {
-                    obj.setSqueakClass(chunk.getSqClass());
-                }
-                if (obj.needsSqueakHash()) {
-                    obj.setSqueakHash(chunk.getHash());
-                }
-                obj.fillin(chunk);
-            }
-        }
+        fillInObjects();
         fillInContextObjects();
         fillInSmallFloatClass();
     }
 
     private void fillInClassObjects() {
-        for (final SqueakImageChunk chunk : chunktable.values()) {
-            final Object chunkObject = chunk.asObject();
-            if (chunkObject.getClass() == ClassObject.class) {
-                ((ClassObject) chunkObject).fillinClass(chunk);
-            }
-        }
-    }
-
-    private void fillInContextObjects() {
-        for (final SqueakImageChunk chunk : chunktable.values()) {
-            final Object chunkObject = chunk.asObject();
-            if (chunkObject.getClass() == ContextObject.class) {
-                final ContextObject contextObject = (ContextObject) chunkObject;
-                assert contextObject.hasTruffleFrame();
-                contextObject.fillinContext(chunk);
-            }
-        }
-    }
-
-    private void instantiateClasses() {
         // find all metaclasses and instantiate their singleton instances as class objects
         for (final long classtablePtr : hiddenRootsChunk.getWords()) {
             if (getChunk(classtablePtr) != null) {
@@ -470,6 +433,39 @@ public final class SqueakImageReaderNode extends RootNode {
                         classInstance.asClassObject();
                     }
                 }
+            }
+        }
+        for (final SqueakImageChunk chunk : chunktable.values()) {
+            final Object chunkObject = chunk.asObject();
+            if (chunkObject.getClass() == ClassObject.class) {
+                ((ClassObject) chunkObject).fillinClass(chunk);
+            }
+        }
+    }
+
+    private void fillInObjects() {
+        for (final SqueakImageChunk chunk : chunktable.values()) {
+            final Object chunkObject = chunk.asObject();
+            if (chunkObject instanceof AbstractSqueakObjectWithClassAndHash) {
+                final AbstractSqueakObjectWithClassAndHash obj = (AbstractSqueakObjectWithClassAndHash) chunkObject;
+                if (obj.needsSqueakClass()) {
+                    obj.setSqueakClass(chunk.getSqClass());
+                }
+                if (obj.needsSqueakHash()) {
+                    obj.setSqueakHash(chunk.getHash());
+                }
+                obj.fillin(chunk);
+            }
+        }
+    }
+
+    private void fillInContextObjects() {
+        for (final SqueakImageChunk chunk : chunktable.values()) {
+            final Object chunkObject = chunk.asObject();
+            if (chunkObject.getClass() == ContextObject.class) {
+                final ContextObject contextObject = (ContextObject) chunkObject;
+                assert contextObject.hasTruffleFrame();
+                contextObject.fillinContext(chunk);
             }
         }
     }
