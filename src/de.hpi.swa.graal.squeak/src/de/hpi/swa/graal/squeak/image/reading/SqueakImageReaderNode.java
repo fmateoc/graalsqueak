@@ -38,7 +38,7 @@ public final class SqueakImageReaderNode extends RootNode {
     private static final int HIDDEN_ROOTS_CHUNK_INDEX = 4;
 
     @CompilationFinal protected boolean is64bit = false;
-    @CompilationFinal protected int wordSize = 4;
+    @CompilationFinal private int wordSize = 4;
     @CompilationFinal protected SqueakImageChunk hiddenRootsChunk;
 
     private final BufferedInputStream stream;
@@ -363,7 +363,6 @@ public final class SqueakImageReaderNode extends RootNode {
 
         // also cache nil, true, and false classes
         specialObjectChunk(SPECIAL_OBJECT.NIL_OBJECT).getClassChunk().object = image.nilClass;
-        image.nil.setSqueakClass(image.nilClass);
         specialObjectChunk(SPECIAL_OBJECT.FALSE_OBJECT).getClassChunk().object = image.falseClass;
         specialObjectChunk(SPECIAL_OBJECT.TRUE_OBJECT).getClassChunk().object = image.trueClass;
 
@@ -427,7 +426,6 @@ public final class SqueakImageReaderNode extends RootNode {
         for (final SqueakImageChunk chunk : chunktable.values()) {
             fillInContextNode.execute(chunk.asObject(), chunk);
         }
-
         fillInSmallFloatClass();
     }
 
@@ -456,11 +454,11 @@ public final class SqueakImageReaderNode extends RootNode {
         final ArrayObject classTableFirstPage = (ArrayObject) getChunk(hiddenRootsChunk.getWords()[0]).asObject();
         assert arrayReadNode.execute(classTableFirstPage, SPECIAL_OBJECT_TAG.SMALL_INTEGER) == image.smallIntegerClass;
         assert arrayReadNode.execute(classTableFirstPage, SPECIAL_OBJECT_TAG.CHARACTER) == image.characterClass;
-        final Object smallFloatClassOrNil = arrayReadNode.execute(classTableFirstPage, SPECIAL_OBJECT_TAG.SMALL_FLOAT);
         if (image.flags.is64bit()) {
+            final Object smallFloatClassOrNil = arrayReadNode.execute(classTableFirstPage, SPECIAL_OBJECT_TAG.SMALL_FLOAT);
             image.setSmallFloat((ClassObject) smallFloatClassOrNil);
         } else {
-            assert smallFloatClassOrNil == image.nil : "smallFloatClass is not nil on 32-bit";
+            assert image.smallFloatClass != null : "smallFloatClass was not found when filling in objects of a 32bit image.";
         }
     }
 

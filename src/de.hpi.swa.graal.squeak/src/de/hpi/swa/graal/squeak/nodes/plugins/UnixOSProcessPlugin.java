@@ -51,13 +51,13 @@ public final class UnixOSProcessPlugin extends AbstractOSProcessPlugin {
 
         @Specialization(guards = "inBounds1(index, method.image.getImageArguments().length)")
         protected final Object doAt(@SuppressWarnings("unused") final Object receiver, final long index) {
-            return method.image.wrap(method.image.getImageArguments()[(int) index - 1]);
+            return method.image.asByteString(method.image.getImageArguments()[(int) index - 1]);
         }
 
         @SuppressWarnings("unused")
         @Fallback
-        protected final NilObject doNil(final Object receiver, final Object index) {
-            return method.image.nil;
+        protected static final NilObject doNil(final Object receiver, final Object index) {
+            return NilObject.SINGLETON;
         }
     }
 
@@ -76,7 +76,7 @@ public final class UnixOSProcessPlugin extends AbstractOSProcessPlugin {
             assert key != null : "key should not be null";
             final String value = systemGetEnv(key);
             assert value != null : "value should not be null";
-            return method.image.wrap(key + "=" + value);
+            return method.image.asByteString(key + "=" + value);
         }
 
         protected static final Object[] getEnvironmentKeys() {
@@ -102,12 +102,12 @@ public final class UnixOSProcessPlugin extends AbstractOSProcessPlugin {
 
         @Specialization(guards = "aSymbol.isByteType()")
         protected final Object doAt(@SuppressWarnings("unused") final Object receiver, final NativeObject aSymbol) {
-            final String key = aSymbol.asString();
+            final String key = aSymbol.asStringUnsafe();
             final String value = systemGetEnv(key);
             if (value == null) {
                 throw new PrimitiveFailed();
             } else {
-                return method.image.wrap(value);
+                return method.image.asByteString(value);
             }
         }
     }
@@ -121,8 +121,8 @@ public final class UnixOSProcessPlugin extends AbstractOSProcessPlugin {
         }
 
         @Specialization
-        protected final Object doAt(@SuppressWarnings("unused") final AbstractSqueakObject receiver) {
-            return method.image.nil; // TODO: implement parent pid
+        protected static final Object doAt(@SuppressWarnings("unused") final AbstractSqueakObject receiver) {
+            return NilObject.SINGLETON; // TODO: implement parent pid
         }
     }
 
@@ -177,8 +177,8 @@ public final class UnixOSProcessPlugin extends AbstractOSProcessPlugin {
         }
 
         @Specialization
-        protected final long doNumber(@SuppressWarnings("unused") final AbstractSqueakObject receiver) {
-            return method.image.wrap(20);
+        protected static final long doNumber(@SuppressWarnings("unused") final AbstractSqueakObject receiver) {
+            return 20L;
         }
     }
 

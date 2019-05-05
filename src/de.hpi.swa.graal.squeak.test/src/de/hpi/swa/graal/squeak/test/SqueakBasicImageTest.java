@@ -8,8 +8,6 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
-import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
-
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class SqueakBasicImageTest extends AbstractSqueakTestCaseWithImage {
 
@@ -25,13 +23,8 @@ public class SqueakBasicImageTest extends AbstractSqueakTestCaseWithImage {
             assertEquals(i + 1, evaluate(i + " + 1"));
         }
         assertEquals(4L, evaluate("-1 \\\\ 5"));
-        if (image.flags.is64bit()) {
-            assertEquals(LargeIntegerObject.SMALLINTEGER64_MIN, evaluate("SmallInteger minVal"));
-            assertEquals(LargeIntegerObject.SMALLINTEGER64_MAX, evaluate("SmallInteger maxVal"));
-        } else {
-            assertEquals(LargeIntegerObject.SMALLINTEGER32_MIN, evaluate("SmallInteger minVal"));
-            assertEquals(LargeIntegerObject.SMALLINTEGER32_MAX, evaluate("SmallInteger maxVal"));
-        }
+        assertEquals(Long.MIN_VALUE, evaluate("SmallInteger minVal"));
+        assertEquals(Long.MAX_VALUE, evaluate("SmallInteger maxVal"));
         // Long.MIN_VALUE / -1
         assertEquals("9223372036854775808", evaluate("-9223372036854775808 / -1").toString());
     }

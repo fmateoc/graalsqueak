@@ -61,11 +61,11 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "receiver.hasMaterializedSender()")
-        protected final AbstractSqueakObject doFindNext(final ContextObject receiver, final AbstractSqueakObject previousContextOrNil) {
+        protected static final AbstractSqueakObject doFindNext(final ContextObject receiver, final AbstractSqueakObject previousContextOrNil) {
             ContextObject current = receiver;
             while (current != previousContextOrNil) {
                 final Object sender = current.getSender();
-                if (sender == method.image.nil || sender == previousContextOrNil) {
+                if (sender == NilObject.SINGLETON || sender == previousContextOrNil) {
                     break;
                 } else {
                     current = (ContextObject) sender;
@@ -74,11 +74,11 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
                     }
                 }
             }
-            return method.image.nil;
+            return NilObject.SINGLETON;
         }
 
         @Specialization(guards = "!receiver.hasMaterializedSender()")
-        protected final AbstractSqueakObject doFindNextAvoidingMaterialization(final ContextObject receiver, final ContextObject previousContext) {
+        protected static final AbstractSqueakObject doFindNextAvoidingMaterialization(final ContextObject receiver, final ContextObject previousContext) {
             // Sender is not materialized, so avoid materialization by walking Truffle frames.
             final boolean[] foundMyself = {false};
             final AbstractSqueakObject result = Truffle.getRuntime().iterateFrames((frameInstance) -> {
@@ -93,7 +93,7 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
                     }
                 } else {
                     if (previousContext == context) {
-                        return method.image.nil;
+                        return NilObject.SINGLETON;
                     }
                     if (FrameAccess.getClosure(current) == null && FrameAccess.getMethod(current).isUnwindMarked()) {
                         if (context != null) {
@@ -106,11 +106,11 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
                 return null;
             });
             assert foundMyself[0] : "Did not find receiver with virtual sender on Truffle stack";
-            return result != null ? result : method.image.nil;
+            return NilObject.nullToNil(result);
         }
 
         @Specialization(guards = "!receiver.hasMaterializedSender()")
-        protected final Object doFindNextAvoidingMaterializationNil(final ContextObject receiver, @SuppressWarnings("unused") final NilObject nil) {
+        protected static final AbstractSqueakObject doFindNextAvoidingMaterializationNil(final ContextObject receiver, @SuppressWarnings("unused") final NilObject nil) {
             return doFindNext(receiver, nil);
         }
     }
@@ -144,7 +144,7 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
             while (current.hasMaterializedSender()) {
                 final AbstractSqueakObject sender = start.getSender();
                 current.terminate();
-                if (sender == method.image.nil || sender == end) {
+                if (sender == NilObject.SINGLETON || sender == end) {
                     return;
                 } else {
                     current = (ContextObject) sender;
@@ -179,7 +179,7 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
                         final Frame currentWritable = frameInstance.getFrame(FrameInstance.FrameAccess.READ_WRITE);
                         // Terminate frame
                         FrameAccess.setInstructionPointer(currentWritable, currentCode, -1);
-                        FrameAccess.setSender(currentWritable, method.image.nil);
+                        FrameAccess.setSender(currentWritable, NilObject.SINGLETON);
                     }
                     return null;
                 }
@@ -203,7 +203,7 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"receiver.hasMaterializedSender()"})
-        protected final AbstractSqueakObject findNext(final ContextObject receiver) {
+        protected static final AbstractSqueakObject findNext(final ContextObject receiver) {
             ContextObject context = receiver;
             while (true) {
                 if (context.getMethod().isExceptionHandlerMarked()) {
@@ -214,14 +214,14 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
                 if (sender instanceof ContextObject) {
                     context = (ContextObject) sender;
                 } else {
-                    assert sender == method.image.nil;
-                    return method.image.nil;
+                    assert sender == NilObject.SINGLETON;
+                    return NilObject.SINGLETON;
                 }
             }
         }
 
         @Specialization(guards = {"!receiver.hasMaterializedSender()"})
-        protected final AbstractSqueakObject findNextAvoidingMaterialization(final ContextObject receiver) {
+        protected static final AbstractSqueakObject findNextAvoidingMaterialization(final ContextObject receiver) {
             final boolean[] foundMyself = new boolean[1];
             final Object[] lastSender = new Object[1];
             final ContextObject result = Truffle.getRuntime().iterateFrames(frameInstance -> {
@@ -254,7 +254,7 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
                 if (lastSender[0] instanceof ContextObject) {
                     return findNext((ContextObject) lastSender[0]);
                 } else {
-                    return method.image.nil;
+                    return NilObject.SINGLETON;
                 }
             } else {
                 return result;

@@ -8,7 +8,6 @@ import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 
-import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithCode;
@@ -32,18 +31,16 @@ public abstract class FrameStackReadAndClearNode extends AbstractNodeWithCode {
     protected static final Object doClear(final Frame frame, final int index,
                     @Cached("index") final int cachedIndex,
                     @Cached("code.getStackSlot(index)") final FrameSlot slot,
-                    @Cached("create(slot, mustClear(index))") final FrameSlotReadAndClearNode clearNode) {
-        return clearNode.executeReadAndClear(frame);
+                    @Cached("createReadNode(slot, index)") final AbstractFrameSlotReadNode clearNode) {
+        return clearNode.executeRead(frame);
     }
 
-    protected final boolean mustClear(final int index) {
+    protected final AbstractFrameSlotReadNode createReadNode(final FrameSlot frameSlot, final int index) {
         // Only clear stack values, not receiver, arguments, or temporary variables.
-        return index >= code.getNumArgsAndCopied() + code.getNumTemps();
-    }
-
-    @SuppressWarnings("unused")
-    @Specialization(replaces = "doClear")
-    protected static final void doFail(final Frame frame, final int stackIndex) {
-        throw SqueakException.create("Unexpected failure in FrameStackClearNode");
+        if (index >= code.getNumArgsAndCopied() + code.getNumTemps()) {
+            return FrameSlotReadAndClearNode.create(frameSlot);
+        } else {
+            return FrameSlotReadNode.create(frameSlot);
+        }
     }
 }

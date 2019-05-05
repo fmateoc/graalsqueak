@@ -9,6 +9,7 @@ import org.junit.Test;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.AbstractBytecodeNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.JumpBytecodes.ConditionalJumpNode;
@@ -117,13 +118,13 @@ public class SqueakMiscellaneousTest extends AbstractSqueakTestCaseWithDummyImag
         assertSame(DupNode.class, bytecodeNodes[1].getClass());
         assertSame(PushConstantNode.class, bytecodeNodes[2].getClass());
 
-        assertEquals("send: " + image.equivalent.asString(), bytecodeNodes[3].toString());
+        assertEquals("send: " + image.equivalent.asStringUnsafe(), bytecodeNodes[3].toString());
 
         assertSame(ConditionalJumpNode.class, bytecodeNodes[4].getClass());
         assertSame(PopNode.class, bytecodeNodes[5].getClass());
         assertSame(PushConstantNode.class, bytecodeNodes[6].getClass());
 
-        assertEquals("send: " + image.klass.asString(), bytecodeNodes[7].toString());
+        assertEquals("send: " + image.klass.asStringUnsafe(), bytecodeNodes[7].toString());
 
         assertSame(PopNode.class, bytecodeNodes[8].getClass());
         assertTrue(ReturnReceiverNode.class.isAssignableFrom(bytecodeNodes[9].getClass()));
@@ -131,8 +132,9 @@ public class SqueakMiscellaneousTest extends AbstractSqueakTestCaseWithDummyImag
 
     @Test
     public void testSource() {
-        final Object[] literals = new Object[]{14548994L, image.nil, image.nil}; // header with
-                                                                                 // numTemp=55
+        final Object[] literals = new Object[]{14548994L, NilObject.SINGLETON, NilObject.SINGLETON}; // header
+                                                                                                     // with
+        // numTemp=55
         final CompiledCodeObject code = makeMethod(literals, 0x70, 0x68, 0x10, 0x8F, 0x10, 0x00, 0x02, 0x10, 0x7D, 0xC9, 0x7C);
         final CharSequence source = CompiledCodeObjectPrinter.getString(code);
         assertEquals(String.join("\n",
@@ -148,7 +150,7 @@ public class SqueakMiscellaneousTest extends AbstractSqueakTestCaseWithDummyImag
 
     @Test
     public void testSourceAllBytecodes() {
-        final Object[] literals = new Object[]{17235971L, image.wrap("someSelector"), image.wrap("someOtherSelector"), 63};
+        final Object[] literals = new Object[]{17235971L, image.asByteString("someSelector"), image.asByteString("someOtherSelector"), 63};
         final CompiledCodeObject code = makeMethod(literals,
                         15, 31, 32, 95, 96, 97, 98, 99, 103, 111, 112, 113, 114, 115, 116,
                         117, 118, 119, 120, 121, 122, 123, 124, 126, 127,
@@ -184,17 +186,17 @@ public class SqueakMiscellaneousTest extends AbstractSqueakTestCaseWithDummyImag
     @Test
     public void testFloatDecoding() {
         SqueakImageChunk chunk = newFloatChunk(ArrayConversionUtils.bytesFromIntsReversed(new int[]{0, 1072693248}));
-        assertEquals(1.0, getDouble(chunk), 0);
+        assertEquals(1.0, (double) chunk.asObject(), 0);
 
         chunk = newFloatChunk(ArrayConversionUtils.bytesFromIntsReversed(new int[]{(int) 2482401462L, 1065322751}));
-        assertEquals(0.007699011184197404, getDouble(chunk), 0);
+        assertEquals(0.007699011184197404, (double) chunk.asObject(), 0);
 
         chunk = newFloatChunk(ArrayConversionUtils.bytesFromIntsReversed(new int[]{876402988, 1075010976}));
-        assertEquals(4.841431442464721, getDouble(chunk), 0);
-    }
+        assertEquals(4.841431442464721, (double) chunk.asObject(), 0);
 
-    private static double getDouble(final SqueakImageChunk chunk) {
-        return ((FloatObject) chunk.asObject()).getValue();
+        chunk = newFloatChunk(ArrayConversionUtils.bytesFromIntsReversed(new int[]{0, (int) 4294443008L}));
+        final Object nan = chunk.asObject();
+        assertTrue(nan instanceof FloatObject && ((FloatObject) nan).isNaN());
     }
 
     private static SqueakImageChunk newFloatChunk(final byte[] data) {

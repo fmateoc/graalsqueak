@@ -5,6 +5,7 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.UnsupportedMessageException;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
@@ -16,7 +17,7 @@ import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
 import java.util.Arrays;
 
 @ExportLibrary(InteropLibrary.class)
-public final class NativeImmutableBytesObject extends AbstractSqueakObject {
+public final class NativeImmutableBytesObject extends AbstractSqueakObjectWithClassAndHash {
     public static final short BYTE_MAX = (short) (Math.pow(2, Byte.SIZE) - 1);
 
     @CompilationFinal private final byte[] storage;
@@ -77,8 +78,7 @@ public final class NativeImmutableBytesObject extends AbstractSqueakObject {
     @Override
     public String toString() {
         CompilerAsserts.neverPartOfCompilation();
-        return "manual test";
-        //return asString();
+        return asStringUnsafe();
     }
 
     public boolean isDebugErrorSelector() {
@@ -97,14 +97,21 @@ public final class NativeImmutableBytesObject extends AbstractSqueakObject {
      * INTEROPERABILITY
      */
 
-    @ExportMessage
-    public boolean isString() {
-        return isStringOrSymbol();
+    public String asStringUnsafe() {
+        return ArrayConversionUtils.bytesToString(getByteStorage());
     }
 
     @ExportMessage
-    public String asString() {
-        throw SqueakException.create("asString");
-        //return ArrayConversionUtils.bytesToString(getByteStorage());
+    public boolean isString() {
+        return getSqueakClass().isStringOrSymbolClass();
+    }
+
+    @ExportMessage
+    public String asString() throws UnsupportedMessageException {
+        if (isString()) {
+            return asStringUnsafe();
+        } else {
+            throw UnsupportedMessageException.create();
+        }
     }
 }

@@ -5,10 +5,12 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
+import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithClassAndHash;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
+import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.ERROR_TABLE;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
@@ -3489,11 +3491,11 @@ public final class B2D {
         final long cmSize;
         final long ppw;
 
-        if (cmOop.isNil()) {
+        if (cmOop == NilObject.SINGLETON) {
             cmSize = 0;
             cmBits = null;
         } else {
-            if (!cmOop.isBitmap()) {
+            if (!((AbstractSqueakObjectWithClassAndHash) cmOop).getSqueakClass().isBitmapClass()) {
                 PrimitiveFailed.andTransferToInterpreter();
             }
             cmBits = ((NativeObject) cmOop).getIntStorage();
@@ -3506,16 +3508,14 @@ public final class B2D {
             PrimitiveFailed.andTransferToInterpreter();
         }
         bmBits = fetchNativeofObject(0, formOop);
-        if (!bmBits.isBitmap()) {
+        if (!bmBits.getSqueakClass().isBitmapClass()) {
             PrimitiveFailed.andTransferToInterpreter();
         }
         bmBitsSize = slotSizeOf(bmBits);
         bmWidth = fetchIntegerofObject(1, formOop);
         bmHeight = fetchIntegerofObject(2, formOop);
         bmDepth = fetchIntegerofObject(3, formOop);
-        if (failed()) {
-            throw SqueakException.create("return null");
-        }
+        assert !failed();
         if (!(bmWidth >= 0 && bmHeight >= 0)) {
             PrimitiveFailed.andTransferToInterpreter();
         }
@@ -3531,9 +3531,7 @@ public final class B2D {
             PrimitiveFailed.andTransferToInterpreter();
         }
         bmFill = allocateBitmapFillcolormap(cmSize, cmBits);
-        if (engineStopped) {
-            throw SqueakException.create("return null");
-        }
+        assert !engineStopped;
         bitmapWidthOfput(bmFill, bmWidth);
         bitmapHeightOfput(bmFill, bmHeight);
         bitmapDepthOfput(bmFill, bmDepth);
@@ -3757,9 +3755,7 @@ public final class B2D {
 
         hasEdgeTransformPut(0);
         okay = loadTransformFromintolength(transformOop, GW_EDGE_TRANSFORM, 6);
-        if (failed()) {
-            throw SqueakException.create("return null");
-        }
+        assert !failed();
         if (!okay) {
             return false;
         }
@@ -3843,7 +3839,7 @@ public final class B2D {
                 return false;
             }
             bmBits = fetchNativeofObject(0, formOop);
-            if (!bmBits.isBitmap()) {
+            if (!bmBits.getSqueakClass().isBitmapClass()) {
                 return false;
             }
             bmBitsSize = slotSizeOf(bmBits);
@@ -3872,12 +3868,10 @@ public final class B2D {
         final long fill;
         final long rampWidth;
 
-        assert rampOop.isBitmap();
+        assert rampOop.getSqueakClass().isBitmapClass();
         rampWidth = slotSizeOf(rampOop);
         fill = allocateGradientFillrampWidthisRadial(rampOop.getIntStorage(), rampWidth, isRadial);
-        if (engineStopped) {
-            throw SqueakException.create("return null");
-        }
+        assert !engineStopped;
         loadFillOrientationfromalongnormalwidthheight(fill, rampWidth, rampWidth);
         return fill;
     }
@@ -4111,7 +4105,7 @@ public final class B2D {
 
     /* BalloonEngineBase>>#loadSpanBufferFrom: */
     private static long loadSpanBufferFrom(final NativeObject spanOop) {
-        if (!spanOop.isBitmap()) {
+        if (!spanOop.getSqueakClass().isBitmapClass()) {
             return GEF_CLASS_MISMATCH;
         }
         /* Leave last entry unused to avoid complications */
@@ -4128,7 +4122,7 @@ public final class B2D {
 
     /* BalloonEngineBase>>#loadTransformFrom:into:length: */
     private static boolean loadTransformFromintolength(final AbstractSqueakObject transformOop, final int destPtr, final long n) {
-        if (transformOop.isNil()) {
+        if (transformOop == NilObject.SINGLETON) {
             return false;
         }
 
@@ -5032,7 +5026,7 @@ public final class B2D {
     public static boolean primitiveDoProfileStats(final PointersObject receiver, final boolean newValue) {
         final boolean oldValue = doProfileStats;
         doProfileStats = newValue;
-        return receiver.image.wrap(oldValue);
+        return receiver.image.asBoolean(oldValue);
     }
 
     /* BalloonEngineBase>>#primitiveFinishedProcessing */
@@ -5050,7 +5044,7 @@ public final class B2D {
             incrementStatby(GW_COUNT_FINISH_TEST, 1);
             incrementStatby(GW_TIME_FINISH_TEST, ioMicroMSecs() - geProfileTime);
         }
-        return receiver.image.wrap(finished);
+        return receiver.image.asBoolean(finished);
     }
 
     /* BalloonEngineBase>>#primitiveGetAALevel */
@@ -5082,9 +5076,9 @@ public final class B2D {
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
         }
-        PointersObject pointOop = receiver.image.newPoint(clipMinXGet(), clipMinYGet());
+        PointersObject pointOop = receiver.image.asPoint(clipMinXGet(), clipMinYGet());
         storeValue(0, rectOop, pointOop);
-        pointOop = receiver.image.newPoint(clipMaxXGet(), clipMaxYGet());
+        pointOop = receiver.image.asPoint(clipMaxXGet(), clipMaxYGet());
         storeValue(1, rectOop, pointOop);
         return rectOop;
     }
@@ -5142,7 +5136,7 @@ public final class B2D {
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
         }
-        return receiver.image.newPoint(destOffsetXGet(), destOffsetYGet());
+        return receiver.image.asPoint(destOffsetXGet(), destOffsetYGet());
     }
 
     /* BalloonEngineBase>>#primitiveGetTimes */
@@ -5285,7 +5279,7 @@ public final class B2D {
         }
         needFlush = needsFlush();
         storeEngineStateInto(engine);
-        return receiver.image.wrap(needFlush);
+        return receiver.image.asBoolean(needFlush);
     }
 
     /* BalloonEngineBase>>#primitiveNeedsFlushPut */
@@ -5328,15 +5322,13 @@ public final class B2D {
                 statePut(GE_STATE_ADDING_FROM_GET);
             }
         }
-        if (failed()) {
-            throw SqueakException.create("return null");
-        }
+        assert !failed();
         storeEngineStateInto(engine);
         if (doProfileStats) {
             incrementStatby(GW_COUNT_NEXT_AET_ENTRY, 1);
             incrementStatby(GW_TIME_NEXT_AET_ENTRY, ioMicroMSecs() - geProfileTime);
         }
-        return receiver.image.wrap(!hasEdge);
+        return receiver.image.asBoolean(!hasEdge);
     }
 
     /* Note: No need to load bitBlt but must load spanBuffer */
@@ -5387,7 +5379,7 @@ public final class B2D {
             incrementStatby(GW_COUNT_NEXT_FILL_ENTRY, 1);
             incrementStatby(GW_TIME_NEXT_FILL_ENTRY, ioMicroMSecs() - geProfileTime);
         }
-        return receiver.image.wrap(!hasFill);
+        return receiver.image.asBoolean(!hasFill);
     }
 
     /* Note: No need to load either bitBlt or spanBuffer */
@@ -5427,7 +5419,7 @@ public final class B2D {
             incrementStatby(GW_COUNT_NEXT_GET_ENTRY, 1);
             incrementStatby(GW_TIME_NEXT_GET_ENTRY, ioMicroMSecs() - geProfileTime);
         }
-        return receiver.image.wrap(!hasEdge);
+        return receiver.image.asBoolean(!hasEdge);
     }
 
     /* BalloonEngineBase>>#primitiveRegisterExternalEdge */
@@ -6759,9 +6751,7 @@ public final class B2D {
 
     /* BalloonEngineBase>>#storeRenderingState */
     private static long storeRenderingState(final PointersObject edgeOop, final PointersObject fillOop) {
-        if (failed()) {
-            throw SqueakException.create("return null");
-        }
+        assert !failed();
         if (engineStopped) {
             /* Check the stop reason and store the required information */
             storeStopStateIntoEdgefill(edgeOop, fillOop);
@@ -7468,19 +7458,13 @@ public final class B2D {
 
     private static PointersObject fetchPointerofObject(final int index, final ArrayObject object) {
         // TODO: Use node for ArrayObject here instead.
-        if (object.isAbstractSqueakObjectType()) {
-            return (PointersObject) object.getAbstractSqueakObjectStorage()[index];
-        } else {
-            return (PointersObject) object.getObjectStorage()[index];
-        }
+        return (PointersObject) object.getObjectStorage()[index];
     }
 
     private static int slotSizeOf(final ArrayObject object) {
         // TODO: Use node for ArrayObject here instead.
         if (object.isEmptyType()) {
             return object.getEmptyLength();
-        } else if (object.isAbstractSqueakObjectType()) {
-            return object.getAbstractSqueakObjectLength();
         } else {
             return object.getObjectLength();
         }

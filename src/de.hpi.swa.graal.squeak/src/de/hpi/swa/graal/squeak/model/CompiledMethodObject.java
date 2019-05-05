@@ -2,15 +2,17 @@ package de.hpi.swa.graal.squeak.model;
 
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.interop.ArityException;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
+import de.hpi.swa.graal.squeak.interop.WrapToSqueakNode;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.ADDITIONAL_METHOD_STATE;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CLASS_BINDING;
-import de.hpi.swa.graal.squeak.nodes.DispatchNode;
+import de.hpi.swa.graal.squeak.nodes.DispatchUneagerlyNode;
 
 @ExportLibrary(InteropLibrary.class)
 public final class CompiledMethodObject extends CompiledCodeObject {
@@ -26,17 +28,13 @@ public final class CompiledMethodObject extends CompiledCodeObject {
         bytes = bc;
     }
 
-    public CompiledMethodObject(final int size, final SqueakImageContext image) {
+    private CompiledMethodObject(final int size, final SqueakImageContext image) {
         super(image, 0, 0);
         bytes = new byte[size];
     }
 
     private CompiledMethodObject(final CompiledMethodObject original) {
         super(original);
-    }
-
-    public static CompiledMethodObject newWithHash(final SqueakImageContext image, final int hash) {
-        return new CompiledMethodObject(image, hash);
     }
 
     public static CompiledMethodObject newOfSize(final SqueakImageContext image, final int size) {
@@ -60,7 +58,7 @@ public final class CompiledMethodObject extends CompiledCodeObject {
         if (index > 0) {
             return (AbstractSqueakObject) literals[index];
         } else {
-            return image.nil;
+            return NilObject.SINGLETON;
         }
     }
 
@@ -75,7 +73,7 @@ public final class CompiledMethodObject extends CompiledCodeObject {
         }
         final NativeObject selectorObj = getCompiledInSelector();
         if (selectorObj != null) {
-            selector = selectorObj.asString();
+            selector = selectorObj.asStringUnsafe();
         }
         return className + ">>" + selector;
     }
@@ -121,7 +119,7 @@ public final class CompiledMethodObject extends CompiledCodeObject {
     }
 
     public boolean hasMethodClass() {
-        return getMethodClassAssociation().at0(CLASS_BINDING.VALUE) != image.nil;
+        return getMethodClassAssociation().at0(CLASS_BINDING.VALUE) != NilObject.SINGLETON;
     }
 
     /** CompiledMethod>>#methodClass. */
@@ -140,11 +138,11 @@ public final class CompiledMethodObject extends CompiledCodeObject {
         literals = new Object[1 + numLiterals];
         literals[0] = header;
         for (int i = 1; i < literals.length; i++) {
-            literals[i] = image.nil;
+            literals[i] = NilObject.SINGLETON;
         }
     }
 
-    public AbstractSqueakObject shallowCopy() {
+    public CompiledMethodObject shallowCopy() {
         return new CompiledMethodObject(this);
     }
 
@@ -178,11 +176,12 @@ public final class CompiledMethodObject extends CompiledCodeObject {
 
     @ExportMessage
     public Object execute(final Object[] receiverAndArguments,
-                    @Cached(allowUncached = true) final DispatchNode dispatchNode) throws ArityException {
+                    @Shared("wrapNode") @Cached final WrapToSqueakNode wrapNode,
+                    @Shared("dispatchNode") @Cached final DispatchUneagerlyNode dispatchNode) throws ArityException {
         final int actualArity = receiverAndArguments.length;
         final int expectedArity = 1 + getNumArgs(); // receiver + arguments
         if (actualArity == expectedArity) {
-            return dispatchNode.executeDispatch(null, this, receiverAndArguments, null);
+            return dispatchNode.executeDispatch(this, wrapNode.executeObjects(receiverAndArguments), NilObject.SINGLETON);
         } else {
             throw ArityException.create(expectedArity, actualArity);
         }

@@ -3,13 +3,11 @@ package de.hpi.swa.graal.squeak.model;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Predicate;
 
 import com.oracle.truffle.api.Assumption;
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.interop.ArityException;
 import com.oracle.truffle.api.interop.InteropLibrary;
@@ -34,7 +32,7 @@ import de.hpi.swa.graal.squeak.util.ArrayUtils;
  * Represents all subclasses of ClassDescription (Class, Metaclass, TraitBehavior, ...).
  */
 @ExportLibrary(InteropLibrary.class)
-public final class ClassObject extends AbstractSqueakObject {
+public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     private final CyclicAssumption classHierarchyStable = new CyclicAssumption("Class hierarchy stability");
     private final CyclicAssumption methodDictStable = new CyclicAssumption("Method dictionary stability");
     private final CyclicAssumption classFormatStable = new CyclicAssumption("Class format stability");
@@ -74,30 +72,24 @@ public final class ClassObject extends AbstractSqueakObject {
     }
 
     public ClassObject(final SqueakImageContext image, final ClassObject classObject, final int size) {
-        this(image, classObject, ArrayUtils.withAll(Math.max(size - CLASS_DESCRIPTION.SIZE, 0), image.nil));
+        this(image, classObject, ArrayUtils.withAll(Math.max(size - CLASS_DESCRIPTION.SIZE, 0), NilObject.SINGLETON));
         // `size - CLASS_DESCRIPTION.SIZE` is negative when instantiating "Behavior".
     }
 
     @Override
     public String nameAsClass() {
+        CompilerAsserts.neverPartOfCompilation();
         assert isClass();
         if (isAMetaClass()) {
-            final Object classInstance = getThisClass();
-            if (classInstance instanceof ClassObject) {
-                final NativeObject name = (NativeObject) ((ClassObject) classInstance).getClassName();
-                return "Metaclass (" + name.asString() + ")";
-            }
+            final ClassObject classInstance = getThisClass();
+            return "Metaclass (" + classInstance.getClassName() + ")";
         } else {
-            final Object nameObj = getClassName();
-            if (nameObj instanceof NativeObject) {
-                return ((NativeObject) nameObj).asString();
-            }
+            return getClassName();
         }
-        return "UnknownClass";
     }
 
-    private Object getThisClass() {
-        return pointers[METACLASS.THIS_CLASS];
+    private ClassObject getThisClass() {
+        return (ClassObject) pointers[METACLASS.THIS_CLASS];
     }
 
     private boolean isAMetaClass() {
@@ -180,13 +172,34 @@ public final class ClassObject extends AbstractSqueakObject {
         return instancesAreClasses;
     }
 
+    public boolean isBitmapClass() {
+        return this == image.bitmapClass;
+    }
+
+    public boolean isLargeIntegerClass() {
+        return this == image.largePositiveIntegerClass || this == image.largeNegativeIntegerClass;
+    }
+
+    public boolean isMessageClass() {
+        return this == image.messageClass;
+    }
+
+    public boolean isSemaphoreClass() {
+        return this == image.semaphoreClass;
+    }
+
+    public boolean isStringOrSymbolClass() {
+        /** ByteString or ByteSymbol. */
+        return this == image.stringClass || this == image.aboutToReturnSelector.getSqueakClass();
+    }
+
     public void fillin(final SqueakImageChunk chunk) {
         final Object[] chunkPointers = chunk.getPointers();
-        superclass = chunkPointers[CLASS_DESCRIPTION.SUPERCLASS] == image.nil ? null : (ClassObject) chunkPointers[CLASS_DESCRIPTION.SUPERCLASS];
+        superclass = chunkPointers[CLASS_DESCRIPTION.SUPERCLASS] == NilObject.SINGLETON ? null : (ClassObject) chunkPointers[CLASS_DESCRIPTION.SUPERCLASS];
         methodDict = (PointersObject) chunkPointers[CLASS_DESCRIPTION.METHOD_DICT];
         format = (long) chunkPointers[CLASS_DESCRIPTION.FORMAT];
-        instanceVariables = chunkPointers[CLASS_DESCRIPTION.INSTANCE_VARIABLES] == image.nil ? null : (ArrayObject) chunkPointers[CLASS_DESCRIPTION.INSTANCE_VARIABLES];
-        organization = chunkPointers[CLASS_DESCRIPTION.ORGANIZATION] == image.nil ? null : (PointersObject) chunkPointers[CLASS_DESCRIPTION.ORGANIZATION];
+        instanceVariables = chunkPointers[CLASS_DESCRIPTION.INSTANCE_VARIABLES] == NilObject.SINGLETON ? null : (ArrayObject) chunkPointers[CLASS_DESCRIPTION.INSTANCE_VARIABLES];
+        organization = chunkPointers[CLASS_DESCRIPTION.ORGANIZATION] == NilObject.SINGLETON ? null : (PointersObject) chunkPointers[CLASS_DESCRIPTION.ORGANIZATION];
         pointers = Arrays.copyOfRange(chunkPointers, CLASS_DESCRIPTION.SIZE, chunkPointers.length);
     }
 
@@ -230,7 +243,7 @@ public final class ClassObject extends AbstractSqueakObject {
     }
 
     public AbstractSqueakObject getSuperclass() {
-        return superclass == null ? image.nil : superclass;
+        return NilObject.nullToNil(superclass);
     }
 
     public ClassObject getSuperclassOrNull() {
@@ -241,8 +254,8 @@ public final class ClassObject extends AbstractSqueakObject {
         return methodDict;
     }
 
-    public Object getClassName() {
-        return pointers[CLASS.NAME];
+    public String getClassName() {
+        return ((NativeObject) pointers[CLASS.NAME]).asStringUnsafe();
     }
 
     public boolean hasInstanceVariables() {
@@ -250,7 +263,7 @@ public final class ClassObject extends AbstractSqueakObject {
     }
 
     public AbstractSqueakObject getInstanceVariables() {
-        return hasInstanceVariables() ? instanceVariables : image.nil;
+        return hasInstanceVariables() ? instanceVariables : NilObject.SINGLETON;
     }
 
     public ArrayObject getInstanceVariablesOrNull() {
@@ -262,7 +275,7 @@ public final class ClassObject extends AbstractSqueakObject {
     }
 
     public AbstractSqueakObject getOrganization() {
-        return organization == null ? image.nil : organization;
+        return NilObject.nullToNil(organization);
     }
 
     public PointersObject getOrganizationOrNull() {
@@ -303,30 +316,6 @@ public final class ClassObject extends AbstractSqueakObject {
         this.methodDict = methodDict;
     }
 
-    @TruffleBoundary
-    public Object lookup(final String selector) {
-        return lookup(methodSelector -> methodSelector != null && methodSelector.toString().equals(selector));
-    }
-
-    // TODO: cache the methoddict in a better structure than what Squeak provides
-    // ... or use the Squeak hash to decide where to put stuff
-    private Object lookup(final Predicate<Object> predicate) {
-        CompilerAsserts.neverPartOfCompilation("This is only for finding the active context on startup, use LookupNode instead.");
-        ClassObject lookupClass = this;
-        while (lookupClass != null) {
-            final PointersObject methodDictObject = lookupClass.getMethodDict();
-            for (int i = METHOD_DICT.NAMES; i < methodDictObject.size(); i++) {
-                final Object methodSelector = methodDictObject.at0(i);
-                if (predicate.test(methodSelector)) {
-                    final ArrayObject values = (ArrayObject) methodDictObject.at0(METHOD_DICT.VALUES);
-                    return values.at0(i - METHOD_DICT.NAMES);
-                }
-            }
-            lookupClass = lookupClass.getSuperclassOrNull();
-        }
-        return lookup(methodSelector -> methodSelector == image.doesNotUnderstand);
-    }
-
     public Object[] listMethods() {
         CompilerAsserts.neverPartOfCompilation("This is only for the interop API.");
         final List<String> methodNames = new ArrayList<>();
@@ -335,7 +324,7 @@ public final class ClassObject extends AbstractSqueakObject {
             final PointersObject methodDictObject = lookupClass.getMethodDict();
             for (int i = METHOD_DICT.NAMES; i < methodDictObject.size(); i++) {
                 final Object methodSelector = methodDictObject.at0(i);
-                if (methodSelector != image.nil) {
+                if (methodSelector != NilObject.SINGLETON) {
                     methodNames.add(methodSelector.toString());
                 }
             }
@@ -352,7 +341,7 @@ public final class ClassObject extends AbstractSqueakObject {
         return (int) (format >> 16 & 0x1f);
     }
 
-    public AbstractSqueakObject shallowCopy(final ArrayObject copiedInstanceVariablesOrNull) {
+    public ClassObject shallowCopy(final ArrayObject copiedInstanceVariablesOrNull) {
         return new ClassObject(this, copiedInstanceVariablesOrNull);
     }
 

@@ -21,6 +21,7 @@ import com.oracle.truffle.api.profiles.BranchProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
+import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithClassAndHash;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.CharacterObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
@@ -169,7 +170,7 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
 
         @Specialization
         protected final PointersObject doObject(final Object xPos, final Object yPos) {
-            return method.image.newPoint(xPos, yPos);
+            return method.image.asPoint(xPos, yPos);
         }
     }
 
@@ -214,7 +215,7 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
 
         @SuppressWarnings("unused")
         @Specialization(limit = "NEW_CACHE_SIZE", guards = {"receiver == cachedReceiver"}, assumptions = {"classFormatStable"})
-        protected Object newDirect(final ClassObject receiver,
+        protected AbstractSqueakObjectWithClassAndHash newDirect(final ClassObject receiver,
                         @Cached("receiver") final ClassObject cachedReceiver,
                         @Cached("cachedReceiver.getClassFormatStable()") final Assumption classFormatStable,
                         @Cached final BranchProfile outOfMemProfile) {
@@ -227,7 +228,7 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(replaces = "newDirect")
-        protected final Object newIndirect(final ClassObject receiver,
+        protected final AbstractSqueakObjectWithClassAndHash newIndirect(final ClassObject receiver,
                         @Cached final BranchProfile outOfMemProfile) {
             try {
                 return newNode.execute(receiver);
@@ -251,7 +252,7 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
 
         @SuppressWarnings("unused")
         @Specialization(limit = "NEW_CACHE_SIZE", guards = {"receiver == cachedReceiver", "isInstantiable(receiver, size)"}, assumptions = {"classFormatStable"})
-        protected final Object newWithArgDirect(final ClassObject receiver, final long size,
+        protected final AbstractSqueakObjectWithClassAndHash newWithArgDirect(final ClassObject receiver, final long size,
                         @Cached("receiver") final ClassObject cachedReceiver,
                         @Cached("cachedReceiver.getClassFormatStable()") final Assumption classFormatStable,
                         @Cached final BranchProfile outOfMemProfile) {
@@ -264,7 +265,7 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(replaces = "newWithArgDirect", guards = "isInstantiable(receiver, size)")
-        protected final Object newWithArg(final ClassObject receiver, final long size,
+        protected final AbstractSqueakObjectWithClassAndHash newWithArg(final ClassObject receiver, final long size,
                         @Cached final BranchProfile outOfMemProfile) {
             try {
                 return newNode.execute(receiver, (int) size);
@@ -371,6 +372,11 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
+        @Specialization
+        protected static final long doNil(@SuppressWarnings("unused") final NilObject receiver) {
+            return NilObject.getSqueakHash();
+        }
+
         @Specialization(guards = "obj == method.image.sqFalse")
         protected static final long doBooleanFalse(@SuppressWarnings("unused") final boolean obj) {
             return 2L;
@@ -407,7 +413,7 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"!isCharacterObject(receiver)", "!isFloatObject(receiver)"})
-        protected static final long doSqueakObject(final AbstractSqueakObject receiver) {
+        protected static final long doSqueakObject(final AbstractSqueakObjectWithClassAndHash receiver) {
             return receiver.getSqueakHash();
         }
     }
@@ -423,13 +429,19 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = "sqObject.getSqueakClass().isNilClass() || sqObject.getSqueakClass().isImmediateClassType()")
-        protected final NilObject doNil(final AbstractSqueakObject sqObject) {
-            return method.image.nil;
+        @Specialization
+        protected static final NilObject doNil(final NilObject nil) {
+            return nil;
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = "sqObject.getSqueakClass().isImmediateClassType()")
+        protected static final NilObject doImmediateObjects(final AbstractSqueakObjectWithClassAndHash sqObject) {
+            return NilObject.SINGLETON;
         }
 
         @Specialization(guards = {"!sqObject.getSqueakClass().isNilClass()", "!sqObject.getSqueakClass().isImmediateClassType()"})
-        protected final AbstractSqueakObject doNext(final AbstractSqueakObject sqObject) {
+        protected final AbstractSqueakObject doNext(final AbstractSqueakObjectWithClassAndHash sqObject) {
             final AbstractCollection<AbstractSqueakObject> instances = objectGraphNode.executeAllInstancesOf(sqObject.getSqueakClass());
             boolean foundMyself = false;
             for (final AbstractSqueakObject instance : instances) {
@@ -439,7 +451,7 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
                     return instance;
                 }
             }
-            return method.image.nil;
+            return NilObject.SINGLETON;
         }
     }
 
@@ -556,12 +568,12 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected final AbstractSqueakObject doNext(final AbstractSqueakObject receiver) {
+        protected final AbstractSqueakObject doNext(final AbstractSqueakObjectWithClassAndHash receiver) {
             return getNext(receiver, objectGraphNode.executeAllInstances());
         }
 
         @TruffleBoundary
-        private static AbstractSqueakObject getNext(final AbstractSqueakObject receiver, final AbstractCollection<AbstractSqueakObject> allInstances) {
+        private static AbstractSqueakObject getNext(final AbstractSqueakObjectWithClassAndHash receiver, final AbstractCollection<AbstractSqueakObject> allInstances) {
             boolean foundMyself = false;
             for (final AbstractSqueakObject instance : allInstances) {
                 if (instance == receiver) {
@@ -646,7 +658,7 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
 
         @Specialization
         protected final ArrayObject doAll(@SuppressWarnings("unused") final AbstractSqueakObject receiver) {
-            return method.image.newArrayOfAbstractSqueakObjects(ArrayUtils.toArray(objectGraphNode.executeAllInstances()));
+            return method.image.asArrayOfObjects(ArrayUtils.toArray(objectGraphNode.executeAllInstances()));
         }
     }
 
@@ -658,6 +670,7 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
+        @Specialization
         protected static final long doBasicSize(final ClassObject receiver, @SuppressWarnings("unused") final NotProvided value) {
             return postProcessSize(receiver.getBasicInstanceSize());
         }

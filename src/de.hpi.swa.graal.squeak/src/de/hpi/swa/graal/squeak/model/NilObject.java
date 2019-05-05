@@ -1,17 +1,26 @@
 package de.hpi.swa.graal.squeak.model;
 
-import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
-import de.hpi.swa.graal.squeak.image.SqueakImageContext;
-
 @ExportLibrary(InteropLibrary.class)
 public final class NilObject extends AbstractSqueakObject {
+    public static final NilObject SINGLETON = new NilObject();
 
-    public NilObject(final SqueakImageContext img) {
-        super(img, 1L, img.nilClass);
+    private NilObject() {
+    }
+
+    public static AbstractSqueakObject nullToNil(final AbstractSqueakObject object) {
+        return object == null ? SINGLETON : object;
+    }
+
+    public static Object nullToNil(final Object object) {
+        return object == null ? SINGLETON : object;
+    }
+
+    public static long getSqueakHash() {
+        return 1L;
     }
 
     @Override
@@ -26,12 +35,7 @@ public final class NilObject extends AbstractSqueakObject {
 
     @Override
     public String toString() {
-        CompilerAsserts.neverPartOfCompilation();
         return "nil";
-    }
-
-    public AbstractSqueakObject shallowCopy() {
-        return this;
     }
 
     @SuppressWarnings("static-method")

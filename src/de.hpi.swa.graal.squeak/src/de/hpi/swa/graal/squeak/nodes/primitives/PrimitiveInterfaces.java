@@ -18,7 +18,7 @@ public final class PrimitiveInterfaces {
 
     public interface UnaryPrimitive extends UnaryPrimitiveWithoutFallback {
         @Fallback
-        default Object doFail(@SuppressWarnings("unused") final Object arg1) {
+        default Object doPrimitiveFail(@SuppressWarnings("unused") final Object arg1) {
             throw new PrimitiveFailed();
         }
     }
@@ -33,20 +33,22 @@ public final class PrimitiveInterfaces {
     public interface BinaryPrimitive extends BinaryPrimitiveWithoutFallback {
         @SuppressWarnings("unused")
         @Fallback
-        default Object doFail(final Object arg1, final Object arg2) {
+        default Object doPrimitiveFail(final Object arg1, final Object arg2) {
             throw new PrimitiveFailed();
         }
     }
 
-    public interface TernaryPrimitive extends AbstractPrimitive {
+    public interface TernaryPrimitiveWithoutFallback extends AbstractPrimitive {
         @Override
         default int getNumArguments() {
             return 3;
         }
+    }
 
+    public interface TernaryPrimitive extends TernaryPrimitiveWithoutFallback {
         @SuppressWarnings("unused")
         @Fallback
-        default Object doFail(final Object arg1, final Object arg2, final Object arg3) {
+        default Object doPrimitiveFail(final Object arg1, final Object arg2, final Object arg3) {
             throw new PrimitiveFailed();
         }
     }
@@ -61,7 +63,7 @@ public final class PrimitiveInterfaces {
     public interface QuaternaryPrimitive extends QuaternaryPrimitiveWithoutFallback {
         @SuppressWarnings("unused")
         @Fallback
-        default Object doFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4) {
+        default Object doPrimitiveFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4) {
             throw new PrimitiveFailed();
         }
     }
@@ -74,7 +76,7 @@ public final class PrimitiveInterfaces {
 
         @SuppressWarnings("unused")
         @Fallback
-        default Object doFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5) {
+        default Object doPrimitiveFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5) {
             throw new PrimitiveFailed();
         }
     }
@@ -87,7 +89,7 @@ public final class PrimitiveInterfaces {
 
         @SuppressWarnings("unused")
         @Fallback
-        default Object doFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final Object arg6) {
+        default Object doPrimitiveFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final Object arg6) {
             throw new PrimitiveFailed();
         }
     }
@@ -100,7 +102,7 @@ public final class PrimitiveInterfaces {
 
         @SuppressWarnings("unused")
         @Fallback
-        default Object doFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final Object arg6, final Object arg7) {
+        default Object doPrimitiveFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final Object arg6, final Object arg7) {
             throw new PrimitiveFailed();
         }
     }
@@ -113,7 +115,7 @@ public final class PrimitiveInterfaces {
 
         @SuppressWarnings("unused")
         @Fallback
-        default Object doFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final Object arg6, final Object arg7, final Object arg8) {
+        default Object doPrimitiveFail(final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final Object arg6, final Object arg7, final Object arg8) {
             throw new PrimitiveFailed();
         }
     }

@@ -17,7 +17,7 @@ import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectWriteNode;
-import de.hpi.swa.graal.squeak.nodes.primitives.impl.SimulationPrimitiveNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.WeakPointersObjectNodes.WeakPointersObjectWriteNode;
 
 public abstract class FillInNode extends Node {
     private final SqueakImageContext image;
@@ -38,15 +38,17 @@ public abstract class FillInNode extends Node {
     }
 
     @Specialization
-    protected static final void doClassObj(final ClassObject obj, final SqueakImageChunk chunk) {
+    protected final void doClassObj(final ClassObject obj, final SqueakImageChunk chunk) {
         obj.fillin(chunk);
         if (obj.size() > 6) {
-            final String className = ((NativeObject) obj.getClassName()).asString();
+            final String className = obj.getClassName();
             obj.setInstancesAreClasses(className);
             if ("Compiler".equals(className)) {
                 obj.image.setCompilerClass(obj);
             } else if ("Parser".equals(className)) {
                 obj.image.setParserClass(obj);
+            } else if (!image.flags.is64bit() && "SmallFloat64".equals(className)) {
+                obj.image.setSmallFloat(obj);
             }
         }
     }
@@ -85,8 +87,6 @@ public abstract class FillInNode extends Node {
             image.setDebugErrorSelector(obj);
         } else if (image.getDebugSyntaxErrorSelector() == null && Arrays.equals(SqueakImageContext.DEBUG_SYNTAX_ERROR_SELECTOR_NAME, stringBytes)) {
             image.setDebugSyntaxErrorSelector(obj);
-        } else if (image.getSimulatePrimitiveArgsSelector() == null && Arrays.equals(SimulationPrimitiveNode.SIMULATE_PRIMITIVE_SELECTOR, stringBytes)) {
-            image.setSimulatePrimitiveArgsSelector(obj);
         }
     }
 
@@ -102,8 +102,14 @@ public abstract class FillInNode extends Node {
     }
 
     @Specialization
-    protected static final void doWeakPointers(final WeakPointersObject obj, final SqueakImageChunk chunk) {
-        obj.setWeakPointers(chunk.getPointers());
+    protected static final void doWeakPointers(final WeakPointersObject obj, final SqueakImageChunk chunk,
+                    @Cached final WeakPointersObjectWriteNode writeNode) {
+        final Object[] pointers = chunk.getPointers();
+        final int length = pointers.length;
+        obj.setPointers(new Object[length]);
+        for (int i = 0; i < length; i++) {
+            writeNode.execute(obj, i, pointers[i]);
+        }
     }
 
     @SuppressWarnings("unused")

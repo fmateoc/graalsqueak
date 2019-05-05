@@ -13,10 +13,10 @@ import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
-import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
 import de.hpi.swa.graal.squeak.nodes.LookupClassNodes.AbstractLookupClassNode;
 import de.hpi.swa.graal.squeak.nodes.LookupClassNodes.LookupClassNode;
 import de.hpi.swa.graal.squeak.nodes.LookupClassNodes.LookupSuperClassNode;
+import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
 import de.hpi.swa.graal.squeak.nodes.context.stack.StackPopNReversedNode;
 import de.hpi.swa.graal.squeak.nodes.context.stack.StackPushNode;
 
@@ -26,7 +26,7 @@ public final class SendBytecodes {
         protected final NativeObject selector;
         private final int argumentCount;
 
-        @Child protected AbstractLookupClassNode lookupClassNode;
+        @Child private AbstractLookupClassNode lookupClassNode;
         @Child private LookupMethodNode lookupMethodNode = LookupMethodNode.create();
         @Child private DispatchSendNode dispatchSendNode;
         @Child private StackPopNReversedNode popNReversedNode;
@@ -36,7 +36,7 @@ public final class SendBytecodes {
         private final BranchProfile nvrProfile = BranchProfile.create();
 
         private AbstractSendNode(final CompiledCodeObject code, final int index, final int numBytecodes, final Object sel, final int argcount) {
-            this(code, index, numBytecodes, sel, argcount, LookupClassNode.create(code.image));
+            this(code, index, numBytecodes, sel, argcount, LookupClassNode.create());
         }
 
         private AbstractSendNode(final CompiledCodeObject code, final int index, final int numBytecodes, final Object sel, final int argcount, final AbstractLookupClassNode lookupClassNode) {
@@ -111,7 +111,7 @@ public final class SendBytecodes {
         @Override
         public String toString() {
             CompilerAsserts.neverPartOfCompilation();
-            return "send: " + selector.asString();
+            return "send: " + selector.asStringUnsafe();
         }
     }
 
@@ -169,7 +169,7 @@ public final class SendBytecodes {
         @Override
         public String toString() {
             CompilerAsserts.neverPartOfCompilation();
-            return "sendSuper: " + selector.asString();
+            return "sendSuper: " + selector.asStringUnsafe();
         }
     }
 }

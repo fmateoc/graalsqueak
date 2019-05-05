@@ -11,6 +11,7 @@ import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
+import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.FORM;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
@@ -1503,8 +1504,9 @@ public final class BitBlt {
     private static int fetchIntOrFloatofObject(final int fieldIndex, final PointersObject objectPointer) {
         final Object fieldOop = fetchPointerofObject(fieldIndex, objectPointer);
         if (fieldOop instanceof Long) {
-            if (SqueakGuards.isSmallInteger(objectPointer.image, (long) fieldOop)) {
-                return (int) (long) fieldOop;
+            final long longValue = (long) fieldOop;
+            if (Integer.MIN_VALUE <= longValue && longValue <= Integer.MAX_VALUE) {
+                return (int) longValue;
             }
             PrimitiveFailed.andTransferToInterpreter(); // Fail because value is too big.
         } else if (fieldOop instanceof FloatObject) {
@@ -1513,7 +1515,7 @@ public final class BitBlt {
             return floatToLong((double) fieldOop);
         } else if (fieldOop instanceof LargeIntegerObject) {
             final LargeIntegerObject fieldLarge = (LargeIntegerObject) fieldOop;
-            if (fieldLarge.fitsIntoInt() && SqueakGuards.isSmallInteger(objectPointer.image, fieldLarge.intValueExact())) {
+            if (fieldLarge.fitsIntoInt()) {
                 return fieldLarge.intValueExact();
             }
             PrimitiveFailed.andTransferToInterpreter(); // Fail because value is too big.
@@ -1538,12 +1540,13 @@ public final class BitBlt {
     private static int fetchIntOrFloatofObjectifNil(final int fieldIndex, final PointersObject objectPointer, final long defaultValue) {
         final Object fieldOop = fetchPointerofObject(fieldIndex, objectPointer);
         if (fieldOop instanceof Long) {
-            if (SqueakGuards.isSmallInteger(objectPointer.image, (long) fieldOop)) {
+            final long longValue = (long) fieldOop;
+            if (Integer.MIN_VALUE <= longValue && longValue <= Integer.MAX_VALUE) {
                 return (int) (long) fieldOop;
             }
             PrimitiveFailed.andTransferToInterpreter(); // Fail because value is too big.
         }
-        if (fieldOop == objectPointer.image.nil) {
+        if (fieldOop == NilObject.SINGLETON) {
             return (int) defaultValue;
         } else if (fieldOop instanceof Double) {
             return floatToLong((double) fieldOop);
@@ -1551,7 +1554,7 @@ public final class BitBlt {
             return floatToLong(((FloatObject) fieldOop).getValue());
         } else if (fieldOop instanceof LargeIntegerObject) {
             final LargeIntegerObject fieldLarge = (LargeIntegerObject) fieldOop;
-            if (fieldLarge.fitsIntoInt() && SqueakGuards.isSmallInteger(objectPointer.image, fieldLarge.intValueExact())) {
+            if (fieldLarge.fitsIntoInt()) {
                 return fieldLarge.intValueExact();
             }
             PrimitiveFailed.andTransferToInterpreter(); // Fail because value is too big.
@@ -1744,7 +1747,7 @@ public final class BitBlt {
         sourceForm = fetchPointerofObjectOrNull(BB_SOURCE_FORM_INDEX, bitBltOop);
         noSource = ignoreSourceOrHalftone(sourceForm);
         halftoneForm = (AbstractSqueakObject) fetchPointerofObject(BB_HALFTONE_FORM_INDEX, bitBltOop);
-        noHalftone = ignoreSourceOrHalftone(halftoneForm.isNil() ? null : halftoneForm);
+        noHalftone = ignoreSourceOrHalftone(halftoneForm == NilObject.SINGLETON ? null : halftoneForm);
         destForm = fetchPointerofObjectOrNull(BB_DEST_FORM_INDEX, bbObj);
         ok = loadBitBltDestForm();
         if (!ok) {
@@ -1857,7 +1860,7 @@ public final class BitBlt {
         cmMaskTable = null;
         cmLookupTable = null;
         cmOop = fetchPointerofObject(BB_COLOR_MAP_INDEX, bitBltOop);
-        if (cmOop == nilObject()) {
+        if (cmOop == NilObject.SINGLETON) {
             return true;
         }
 
@@ -2523,13 +2526,9 @@ public final class BitBlt {
             PrimitiveFailed.andTransferToInterpreter();
         }
         copyBits(factor);
-        if (failed()) {
-            throw SqueakException.create("Should not happen");
-        }
+        assert !failed();
         showDisplayBits();
-        if (failed()) {
-            throw SqueakException.create("return null");
-        }
+        assert !failed();
         if (combinationRule == 22 || combinationRule == 32) {
             return bitCount;
         } else {
@@ -2578,9 +2577,7 @@ public final class BitBlt {
             }
             sourceX = (int) xTableLongs[glyphIndex];
             width = (int) (xTableLongs[glyphIndex + 1] - sourceX);
-            if (failed()) {
-                throw SqueakException.create("return null");
-            }
+            assert !failed();
             clipRange();
             if (bbW > 0 && bbH > 0) {
                 if (quickBlt) {
@@ -2594,9 +2591,7 @@ public final class BitBlt {
                     copyBitsLockedAndClipped();
                 }
             }
-            if (failed()) {
-                throw SqueakException.create("return null");
-            }
+            assert !failed();
             destX = destX + width + kernDelta;
         }
         affectedL = left;
@@ -2654,9 +2649,7 @@ public final class BitBlt {
         height = fetchIntegerofObject(FORM.HEIGHT, rcvr);
         /* if width/height/depth are not integer, fail */
         depth = fetchIntegerofObject(FORM.DEPTH, rcvr);
-        if (failed()) {
-            throw SqueakException.create("return null");
-        }
+        assert !failed();
         if (xVal >= width || yVal >= height) {
             return 0L;
         }
@@ -2702,13 +2695,9 @@ public final class BitBlt {
             PrimitiveFailed.andTransferToInterpreter();
         }
         warpBits(n, sourceMap);
-        if (failed()) {
-            throw SqueakException.create("return null");
-        }
+        assert !failed();
         showDisplayBits();
-        if (failed()) {
-            throw SqueakException.create("return null");
-        }
+        assert !failed();
         return rcvr;
     }
 
@@ -3708,7 +3697,7 @@ public final class BitBlt {
         }
         if (sourceMapOopValue != null) {
             smoothingCount = smoothingCountValue;
-            if (sourceMapOopValue.isNil()) {
+            if (sourceMapOopValue == NilObject.SINGLETON) {
                 if (sourceDepth < 16) {
                     /* color map is required to smooth non-RGB dest */
                     PrimitiveFailed.andTransferToInterpreter();
@@ -4053,7 +4042,7 @@ public final class BitBlt {
 
     private static PointersObject fetchPointerofObjectOrNull(final int index, final PointersObject object) {
         final Object value = fetchPointerofObject(index, object);
-        if (value == object.image.nil) {
+        if (value == NilObject.SINGLETON) {
             return null;
         } else {
             return (PointersObject) value;
@@ -4062,7 +4051,7 @@ public final class BitBlt {
 
     private static NativeObject fetchNativeofObjectOrNull(final int index, final PointersObject object) {
         final Object value = fetchPointerofObject(index, object);
-        if (value == object.image.nil) {
+        if (value == NilObject.SINGLETON) {
             return null;
         } else {
             return (NativeObject) value;
@@ -4103,10 +4092,6 @@ public final class BitBlt {
 
     private static boolean isPointers(final Object object) {
         return object != null && object instanceof PointersObject;
-    }
-
-    private static Object nilObject() {
-        return bitBltOop.image.nil;
     }
 
     private static boolean failed() {

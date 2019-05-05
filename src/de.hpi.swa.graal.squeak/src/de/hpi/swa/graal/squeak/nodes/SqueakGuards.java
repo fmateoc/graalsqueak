@@ -1,6 +1,5 @@
 package de.hpi.swa.graal.squeak.nodes;
 
-import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
@@ -106,22 +105,6 @@ public final class SqueakGuards {
         return object instanceof LargeIntegerObject;
     }
 
-    public static boolean isLargeNegativeInteger(final SqueakImageContext image, final long value) {
-        if (image.flags.is64bit()) {
-            return value < LargeIntegerObject.SMALLINTEGER64_MIN;
-        } else {
-            return value < LargeIntegerObject.SMALLINTEGER32_MIN;
-        }
-    }
-
-    public static boolean isLargePositiveInteger(final SqueakImageContext image, final long value) {
-        if (image.flags.is64bit()) {
-            return value > LargeIntegerObject.SMALLINTEGER64_MAX;
-        } else {
-            return value > LargeIntegerObject.SMALLINTEGER32_MAX;
-        }
-    }
-
     public static boolean isLong(final Object value) {
         return value instanceof Long;
     }
@@ -134,12 +117,12 @@ public final class SqueakGuards {
         return object instanceof NativeObject;
     }
 
-    public static boolean isNilObject(final Object object) {
-        return object instanceof NilObject;
+    public static boolean isNil(final Object object) {
+        return object == NilObject.SINGLETON;
     }
 
     public static boolean isNotProvided(final Object obj) {
-        return NotProvided.isInstance(obj);
+        return obj == NotProvided.SINGLETON;
     }
 
     public static boolean isOverflowDivision(final long a, final long b) {
@@ -150,40 +133,13 @@ public final class SqueakGuards {
         return obj instanceof PointersObject;
     }
 
-    public static boolean isPrimitive(final Object obj) {
-        return obj instanceof Boolean || obj instanceof Character || obj instanceof Long || obj instanceof Double;
+    public static boolean isPowerOfTwo(final long value) {
+        return value != 1 && (value & value - 1) == 0;
     }
 
-    public static boolean isSmallInteger(final SqueakImageContext image, final long value) {
-        if (image.flags.is64bit()) {
-            return isSmallInteger64bit(value);
-        } else {
-            return isSmallInteger32bit(value);
-        }
-    }
-
-    public static boolean isSmallInteger32bit(final long value) {
-        return LargeIntegerObject.SMALLINTEGER32_MIN <= value && value <= LargeIntegerObject.SMALLINTEGER32_MAX;
-    }
-
-    public static boolean isSmallInteger32bitPositive(final long value) {
-        return 0 <= value && value <= LargeIntegerObject.SMALLINTEGER32_MAX;
-    }
-
-    public static boolean isSmallInteger64bit(final long value) {
-        return LargeIntegerObject.SMALLINTEGER64_MIN <= value && value <= LargeIntegerObject.SMALLINTEGER64_MAX;
-    }
-
-    public static boolean isSmallInteger64bitPositive(final long value) {
-        return 0 <= value && value <= LargeIntegerObject.SMALLINTEGER64_MAX;
-    }
-
-    public static boolean isSmallIntegerPositive(final SqueakImageContext image, final long value) {
-        if (image.flags.is64bit()) {
-            return isSmallInteger64bitPositive(value);
-        } else {
-            return isSmallInteger32bitPositive(value);
-        }
+    public static boolean isUsedJavaPrimitive(final Object value) {
+        final Class<? extends Object> clazz = value.getClass();
+        return clazz == Boolean.class || clazz == Long.class || clazz == Double.class || clazz == Character.class;
     }
 
     public static boolean isZero(final double value) {

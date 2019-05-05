@@ -19,6 +19,7 @@ import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FrameMarker;
+import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackWriteNode;
 
 /**
@@ -155,10 +156,6 @@ public final class FrameAccess {
         setMarker(frame, code, new FrameMarker(frame));
     }
 
-    public static void setMarker(final Frame frame, final FrameMarker marker) {
-        setMarker(frame, getBlockOrMethod(frame), marker);
-    }
-
     public static ContextObject getContext(final Frame frame) {
         return getContext(frame, getBlockOrMethod(frame));
     }
@@ -222,16 +219,12 @@ public final class FrameAccess {
 
     public static void terminate(final Frame frame, final CompiledCodeObject blockOrMethod) {
         FrameAccess.setInstructionPointer(frame, blockOrMethod, -1);
-        FrameAccess.setSender(frame, blockOrMethod.image.nil);
+        FrameAccess.setSender(frame, NilObject.SINGLETON);
     }
 
     public static boolean isGraalSqueakFrame(final Frame frame) {
         final Object[] arguments = frame.getArguments();
         return arguments.length >= ArgumentIndicies.RECEIVER.ordinal() && arguments[ArgumentIndicies.METHOD.ordinal()] instanceof CompiledMethodObject;
-    }
-
-    public static boolean matchesContextOrMarker(final FrameMarker frameMarker, final Object contextOrMarker) {
-        return contextOrMarker == frameMarker || contextOrMarker instanceof ContextObject && ((ContextObject) contextOrMarker).getFrameMarker() == frameMarker;
     }
 
     public static Object[] newWith(final CompiledMethodObject method, final Object sender, final BlockClosureObject closure, final Object[] receiverAndArguments) {

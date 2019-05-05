@@ -1,10 +1,20 @@
 package de.hpi.swa.graal.squeak.nodes.accessing;
 
-import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
-import de.hpi.swa.graal.squeak.model.*;
+import de.hpi.swa.graal.squeak.model.AbstractPointersObject;
+import de.hpi.swa.graal.squeak.model.ArrayObject;
+import de.hpi.swa.graal.squeak.model.BlockClosureObject;
+import de.hpi.swa.graal.squeak.model.ClassObject;
+import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
+import de.hpi.swa.graal.squeak.model.ContextObject;
+import de.hpi.swa.graal.squeak.model.EmptyObject;
+import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
+import de.hpi.swa.graal.squeak.model.NativeImmutableBytesObject;
+import de.hpi.swa.graal.squeak.model.NativeObject;
+import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 
 public abstract class SqueakObjectInstSizeNode extends AbstractNode {
@@ -13,7 +23,12 @@ public abstract class SqueakObjectInstSizeNode extends AbstractNode {
         return SqueakObjectInstSizeNodeGen.create();
     }
 
-    public abstract int execute(AbstractSqueakObject obj);
+    public abstract int execute(Object obj);
+
+    @Specialization
+    protected static final int doNil(final NilObject obj) {
+        return obj.instsize();
+    }
 
     @Specialization
     protected static final int doArray(final ArrayObject obj) {
@@ -64,19 +79,8 @@ public abstract class SqueakObjectInstSizeNode extends AbstractNode {
     protected static final int doLarge(final LargeIntegerObject obj) {
         return obj.instsize();
     }
-
-    @Specialization
-    protected static final int doNil(final NilObject obj) {
-        return obj.instsize();
-    }
-
     @Specialization
     protected static final int doNativeImmutableBytesObject(final NativeImmutableBytesObject obj) {
         return obj.instsize();
-    }
-
-    @Fallback
-    protected static final int doFail(final AbstractSqueakObject object) {
-        throw SqueakException.create("Unexpected value:", object);
     }
 }

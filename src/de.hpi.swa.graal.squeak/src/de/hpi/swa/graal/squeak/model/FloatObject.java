@@ -8,7 +8,7 @@ import com.oracle.truffle.api.library.ExportMessage;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 
 @ExportLibrary(InteropLibrary.class)
-public final class FloatObject extends AbstractSqueakObject {
+public final class FloatObject extends AbstractSqueakObjectWithClassAndHash {
     public static final int PRECISION = 53;
     public static final int EMIN = -1022;
     public static final int EMAX = 1023;
@@ -20,27 +20,28 @@ public final class FloatObject extends AbstractSqueakObject {
         super(image, image.floatClass);
     }
 
-    public FloatObject(final FloatObject original) {
+    private FloatObject(final FloatObject original) {
         super(original.image, original.getSqueakClass());
         doubleValue = original.doubleValue;
     }
 
-    public FloatObject(final SqueakImageContext image, final double doubleValue) {
+    private FloatObject(final SqueakImageContext image, final double doubleValue) {
         this(image);
         this.doubleValue = doubleValue;
     }
 
-    private FloatObject(final SqueakImageContext image, final long hash, final int high, final int low) {
-        super(image, hash, image.floatClass);
-        setWords(high, low);
-    }
-
-    public static FloatObject newFromChunkWords(final SqueakImageContext image, final long hash, final int[] ints) {
-        return new FloatObject(image, hash, ints[1], ints[0]);
-    }
-
     public static FloatObject valueOf(final SqueakImageContext image, final double value) {
         return new FloatObject(image, value);
+    }
+
+    public static Object newFromChunkWords(final SqueakImageContext image, final int[] ints) {
+        assert ints.length == 2 : "Unexpected number of int values for double conversion";
+        final double value = Double.longBitsToDouble(Integer.toUnsignedLong(ints[1]) << 32 | Integer.toUnsignedLong(ints[0]));
+        if (Double.isNaN(value)) {
+            return new FloatObject(image, value);
+        } else {
+            return value;
+        }
     }
 
     public long getHigh() {
@@ -86,6 +87,10 @@ public final class FloatObject extends AbstractSqueakObject {
                         (byte) (bits >> 24), (byte) (bits >> 16), (byte) (bits >> 8), (byte) bits};
     }
 
+    public boolean isNaN() {
+        return Double.isNaN(doubleValue);
+    }
+
     @Override
     public int instsize() {
         return 0;
@@ -106,7 +111,7 @@ public final class FloatObject extends AbstractSqueakObject {
         return "" + doubleValue;
     }
 
-    public AbstractSqueakObject shallowCopy() {
+    public FloatObject shallowCopy() {
         return new FloatObject(this);
     }
 

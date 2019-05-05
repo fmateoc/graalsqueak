@@ -19,6 +19,7 @@ import de.hpi.swa.graal.squeak.model.EmptyObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
+import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
@@ -35,7 +36,7 @@ public final class SqueakImageChunk {
 
     public final SqueakImageContext image;
     private final SqueakImageReaderNode reader;
-    protected final int format;
+    private final int format;
     private final int hash;
     @CompilationFinal(dimensions = 1) private final byte[] data;
     private long[] words;
@@ -100,7 +101,7 @@ public final class SqueakImageChunk {
                 object = NativeObject.newNativeLongs(this);
             } else if (format <= 11) { // 32-bit integers
                 if (getSqClass() == image.floatClass) {
-                    object = FloatObject.newFromChunkWords(image, hash, getInts());
+                    object = FloatObject.newFromChunkWords(image, getInts());
                 } else {
                     object = NativeObject.newNativeInts(this);
                 }
@@ -108,7 +109,7 @@ public final class SqueakImageChunk {
                 object = NativeObject.newNativeShorts(this);
             } else if (format <= 23) { // bytes
                 if (getSqClass() == image.largePositiveIntegerClass || getSqClass() == image.largeNegativeIntegerClass) {
-                    object = new LargeIntegerObject(image, hash, getSqClass(), getBytes());
+                    object = new LargeIntegerObject(image, hash, getSqClass(), getBytes()).reduceIfPossible();
                 } else {
                     object = NativeObject.newNativeBytes(this);
                 }
@@ -117,7 +118,7 @@ public final class SqueakImageChunk {
             }
         }
         if (object == SqueakImageReaderNode.NIL_OBJECT_PLACEHOLDER) {
-            return image.nil;
+            return NilObject.SINGLETON;
         } else {
             return object;
         }
@@ -190,7 +191,7 @@ public final class SqueakImageChunk {
                     final SqueakImageChunk chunk = reader.getChunk(ptr);
                     if (chunk == null) {
                         logBogusPointer(ptr);
-                        return image.wrap(ptr >>> 3);
+                        return ptr >>> 3;
                     } else {
                         return chunk.asObject();
                     }
@@ -212,7 +213,7 @@ public final class SqueakImageChunk {
                 final SqueakImageChunk chunk = reader.getChunk(ptr);
                 if (chunk == null) {
                     logBogusPointer(ptr);
-                    return image.wrap(ptr >> 1);
+                    return ptr >> 1;
                 } else {
                     return chunk.asObject();
                 }

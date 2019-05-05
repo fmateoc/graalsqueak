@@ -5,7 +5,6 @@ import com.oracle.truffle.api.dsl.GenerateUncached;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 
-import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
@@ -36,8 +35,8 @@ public final class ContextObjectNodes {
         }
 
         @Specialization(guards = {"index == INSTRUCTION_POINTER", "context.getInstructionPointer() < 0"})
-        protected static final Object doInstructionPointerTerminated(final ContextObject context, @SuppressWarnings("unused") final long index) {
-            return context.image.nil;
+        protected static final NilObject doInstructionPointerTerminated(@SuppressWarnings("unused") final ContextObject context, @SuppressWarnings("unused") final long index) {
+            return NilObject.SINGLETON;
         }
 
         @Specialization(guards = "index == STACKPOINTER")
@@ -56,8 +55,8 @@ public final class ContextObjectNodes {
         }
 
         @Specialization(guards = {"index == CLOSURE_OR_NIL", "context.getClosure() == null"})
-        protected static final Object doClosureNil(final ContextObject context, @SuppressWarnings("unused") final long index) {
-            return context.image.nil;
+        protected static final NilObject doClosureNil(@SuppressWarnings("unused") final ContextObject context, @SuppressWarnings("unused") final long index) {
+            return NilObject.SINGLETON;
         }
 
         @Specialization(guards = "index == RECEIVER")
@@ -72,17 +71,12 @@ public final class ContextObjectNodes {
                         @SuppressWarnings("unused") @Cached(value = "context.getBlockOrMethod()", allowUncached = true) final CompiledCodeObject codeObject,
                         @Cached(value = "create(codeObject)", allowUncached = true) final FrameStackReadNode readNode) {
             final Object value = readNode.execute(context.getTruffleFrame(), (int) (index - CONTEXT.TEMP_FRAME_START));
-            return value == null ? context.image.nil : value;
+            return NilObject.nullToNil(value);
         }
 
         @Specialization(guards = "index >= TEMP_FRAME_START")
         protected static final Object doTemp(final ContextObject context, final long index) {
             return context.atTemp((int) (index - CONTEXT.TEMP_FRAME_START));
-        }
-
-        @Specialization(guards = "index < 0")
-        protected static final Object doFail(final ContextObject obj, final long index) {
-            throw SqueakException.create("Negative index:", obj, index);
         }
     }
 
@@ -154,11 +148,6 @@ public final class ContextObjectNodes {
         @Specialization(guards = "index >= TEMP_FRAME_START")
         protected static final void doTemp(final ContextObject context, final long index, final Object value) {
             context.atTempPut((int) (index - CONTEXT.TEMP_FRAME_START), value);
-        }
-
-        @Specialization(guards = "index < 0")
-        protected static final void doFail(final ContextObject obj, final long index, final Object value) {
-            throw SqueakException.create("Unexpected values:", obj, index, value);
         }
     }
 }

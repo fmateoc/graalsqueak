@@ -9,6 +9,7 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.interop.ArityException;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.library.ExportLibrary;
@@ -17,14 +18,14 @@ import com.oracle.truffle.api.utilities.CyclicAssumption;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
+import de.hpi.swa.graal.squeak.interop.WrapToSqueakNode;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.BLOCK_CLOSURE;
 import de.hpi.swa.graal.squeak.nodes.EnterCodeNode;
-import de.hpi.swa.graal.squeak.nodes.WrapToSqueakNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 @ExportLibrary(InteropLibrary.class)
-public final class BlockClosureObject extends AbstractSqueakObject {
+public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHash {
     @CompilationFinal private Object receiver;
     @CompilationFinal private ContextObject outerContext;
     @CompilationFinal private CompiledBlockObject block;
@@ -34,11 +35,6 @@ public final class BlockClosureObject extends AbstractSqueakObject {
     @CompilationFinal private RootCallTarget callTarget;
 
     private final CyclicAssumption callTargetStable = new CyclicAssumption("BlockClosureObject assumption");
-
-    public BlockClosureObject(final SqueakImageContext image, final long hash) {
-        super(image, hash, image.blockClosureClass);
-        copied = ArrayUtils.EMPTY_ARRAY; // ensure copied is set
-    }
 
     public BlockClosureObject(final SqueakImageContext image) {
         super(image, image.blockClosureClass);
@@ -82,41 +78,8 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         copied = Arrays.copyOfRange(pointers, BLOCK_CLOSURE.FIRST_COPIED_VALUE, pointers.length);
     }
 
-    public Object at0(final long longIndex) {
-        final int index = (int) longIndex;
-        switch (index) {
-            case BLOCK_CLOSURE.OUTER_CONTEXT:
-                return getOuterContext();
-            case BLOCK_CLOSURE.START_PC:
-                return getStartPC();
-            case BLOCK_CLOSURE.ARGUMENT_COUNT:
-                return getNumArgs();
-            default:
-                return getCopiedAt0(index);
-        }
-    }
-
-    public void atput0(final long longIndex, final Object obj) {
-        final int index = (int) longIndex;
-        switch (index) {
-            case BLOCK_CLOSURE.OUTER_CONTEXT:
-                CompilerDirectives.transferToInterpreterAndInvalidate();
-                outerContext = (ContextObject) obj;
-                break;
-            case BLOCK_CLOSURE.START_PC:
-                setStartPC((int) (long) obj);
-                break;
-            case BLOCK_CLOSURE.ARGUMENT_COUNT:
-                setNumArgs((int) (long) obj);
-                break;
-            default:
-                setCopiedAt0(index, obj);
-                break;
-        }
-    }
-
     public AbstractSqueakObject getOuterContext() {
-        return outerContext == null ? image.nil : outerContext;
+        return NilObject.nullToNil(outerContext);
     }
 
     public ContextObject getOuterContextOrNull() {
@@ -258,7 +221,7 @@ public final class BlockClosureObject extends AbstractSqueakObject {
         }
     }
 
-    public AbstractSqueakObject shallowCopy() {
+    public BlockClosureObject shallowCopy() {
         return new BlockClosureObject(this);
     }
 
@@ -274,9 +237,9 @@ public final class BlockClosureObject extends AbstractSqueakObject {
 
     @ExportMessage
     public Object execute(final Object[] arguments,
-                    @Cached(value = "create(this.image)", allowUncached = true) final WrapToSqueakNode wrapNode) throws ArityException {
+                    @Shared("wrapNode") @Cached final WrapToSqueakNode wrapNode) throws ArityException {
         if (getNumArgs() == arguments.length) {
-            final Object[] frameArguments = FrameAccess.newClosureArguments(this, image.nil, wrapNode.executeObjects(arguments));
+            final Object[] frameArguments = FrameAccess.newClosureArguments(this, NilObject.SINGLETON, wrapNode.executeObjects(arguments));
             return getCallTarget().call(frameArguments);
         } else {
             throw ArityException.create((int) getNumArgs(), arguments.length);

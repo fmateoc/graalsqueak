@@ -5,6 +5,7 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.interop.UnsupportedMessageException;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
@@ -14,7 +15,7 @@ import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
 
 @ExportLibrary(InteropLibrary.class)
-public final class NativeObject extends AbstractSqueakObject {
+public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
     public static final short BYTE_MAX = (short) (Math.pow(2, Byte.SIZE) - 1);
     public static final int SHORT_MAX = (int) (Math.pow(2, Short.SIZE) - 1);
     public static final long INTEGER_MAX = (long) (Math.pow(2, Integer.SIZE) - 1);
@@ -26,13 +27,13 @@ public final class NativeObject extends AbstractSqueakObject {
         storage = new byte[0];
     }
 
-    protected NativeObject(final SqueakImageContext image, final ClassObject classObject, final Object storage) {
+    private NativeObject(final SqueakImageContext image, final ClassObject classObject, final Object storage) {
         super(image, classObject);
         assert storage != null;
         this.storage = storage;
     }
 
-    protected NativeObject(final SqueakImageContext image, final long hash, final ClassObject classObject, final Object storage) {
+    private NativeObject(final SqueakImageContext image, final long hash, final ClassObject classObject, final Object storage) {
         super(image, hash, classObject);
         assert storage != null;
         this.storage = storage;
@@ -159,7 +160,11 @@ public final class NativeObject extends AbstractSqueakObject {
         return (short[]) storage;
     }
 
-    public boolean haveSameStorageType(final NativeObject other) {
+    public boolean hasSameFormat(final ClassObject other) {
+        return getSqueakClass().getFormat() == other.getFormat();
+    }
+
+    public boolean hasSameStorageType(final NativeObject other) {
         return storage.getClass() == other.storage.getClass();
     }
 
@@ -179,14 +184,13 @@ public final class NativeObject extends AbstractSqueakObject {
         return storage.getClass() == short[].class;
     }
 
-    public LargeIntegerObject normalize() {
-        // FIXME: getSqueakClass()?
-        return new LargeIntegerObject(image, getSqueakClass(), getByteStorage());
-    }
-
     public void setStorage(final Object storage) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
         this.storage = storage;
+    }
+
+    public String asStringUnsafe() {
+        return ArrayConversionUtils.bytesToString(getByteStorage());
     }
 
     @TruffleBoundary
@@ -194,7 +198,7 @@ public final class NativeObject extends AbstractSqueakObject {
     public String toString() {
         CompilerAsserts.neverPartOfCompilation();
         if (isByteType()) {
-            return asString();
+            return asStringUnsafe();
         } else if (isShortType()) {
             return "ShortArray(size=" + getShortLength() + ")";
         } else if (isIntType()) {
@@ -224,11 +228,15 @@ public final class NativeObject extends AbstractSqueakObject {
 
     @ExportMessage
     public boolean isString() {
-        return isStringOrSymbol();
+        return getSqueakClass().isStringOrSymbolClass();
     }
 
     @ExportMessage
-    public String asString() {
-        return ArrayConversionUtils.bytesToString(getByteStorage());
+    public String asString() throws UnsupportedMessageException {
+        if (isString()) {
+            return asStringUnsafe();
+        } else {
+            throw UnsupportedMessageException.create();
+        }
     }
 }

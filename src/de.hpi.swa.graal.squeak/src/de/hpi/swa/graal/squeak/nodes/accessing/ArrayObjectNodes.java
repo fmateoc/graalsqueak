@@ -4,7 +4,6 @@ import com.oracle.truffle.api.dsl.GenerateUncached;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 
-import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
@@ -26,22 +25,16 @@ public final class ArrayObjectNodes {
             return ArrayObjectReadNodeGen.create();
         }
 
+        public static ArrayObjectReadNode getUncached() {
+            return ArrayObjectReadNodeGen.getUncached();
+        }
+
         public abstract Object execute(ArrayObject obj, long index);
 
-        @Specialization(guards = {"obj.isEmptyType()", "index >= 0", "index < obj.getEmptyStorage()"})
-        protected static final NilObject doEmptyArray(final ArrayObject obj, @SuppressWarnings("unused") final long index) {
-            return obj.getNil();
-        }
-
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isEmptyType()", "index < 0 || index >= obj.getEmptyStorage()"})
-        protected static final long doEmptyArrayOutOfBounds(final ArrayObject obj, final long index) {
-            throw SqueakException.create("IndexOutOfBounds:", index, "(validate index before using this node)");
-        }
-
-        @Specialization(guards = "obj.isAbstractSqueakObjectType()")
-        protected static final AbstractSqueakObject doArrayOfSqueakObjects(final ArrayObject obj, final long index) {
-            return obj.at0AbstractSqueakObject(index);
+        @Specialization(guards = {"obj.isEmptyType()", "index >= 0", "index < obj.getEmptyStorage()"})
+        protected static final NilObject doEmptyArray(final ArrayObject obj, final long index) {
+            return NilObject.SINGLETON;
         }
 
         @Specialization(guards = "obj.isBooleanType()")
@@ -83,11 +76,6 @@ public final class ArrayObjectNodes {
         @Specialization(guards = "obj.isEmptyType()")
         protected static final ArrayObject doEmptyArray(final ArrayObject obj) {
             return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getEmptyStorage());
-        }
-
-        @Specialization(guards = "obj.isAbstractSqueakObjectType()")
-        protected static final ArrayObject doArrayOfSqueakObjects(final ArrayObject obj) {
-            return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getAbstractSqueakObjectStorage().clone());
         }
 
         @Specialization(guards = "obj.isBooleanType()")
@@ -135,11 +123,6 @@ public final class ArrayObjectNodes {
             return obj.getEmptyStorage();
         }
 
-        @Specialization(guards = "obj.isAbstractSqueakObjectType()")
-        protected static final int doArrayObjectOfSqueakObjects(final ArrayObject obj) {
-            return obj.getAbstractSqueakObjectLength();
-        }
-
         @Specialization(guards = "obj.isBooleanType()")
         protected static final int doArrayObjectOfBooleans(final ArrayObject obj) {
             return obj.getBooleanLength();
@@ -178,16 +161,15 @@ public final class ArrayObjectNodes {
             return ArrayObjectToObjectArrayNodeGen.create();
         }
 
+        public static ArrayObjectToObjectArrayNode getUncached() {
+            return ArrayObjectToObjectArrayNodeGen.getUncached();
+        }
+
         public abstract Object[] execute(ArrayObject obj);
 
         @Specialization(guards = "obj.isEmptyType()")
         protected static final Object[] doEmptyArray(final ArrayObject obj) {
-            return ArrayUtils.withAll(obj.getEmptyStorage(), obj.getNil());
-        }
-
-        @Specialization(guards = "obj.isAbstractSqueakObjectType()")
-        protected static final Object[] doArrayOfSqueakObjects(final ArrayObject obj) {
-            return obj.getAbstractSqueakObjectStorage();
+            return ArrayUtils.withAll(obj.getEmptyStorage(), NilObject.SINGLETON);
         }
 
         @Specialization(guards = "obj.isBooleanType()")
@@ -203,7 +185,7 @@ public final class ArrayObjectNodes {
                     objects[i] = obj.image.sqTrue;
                 } else {
                     assert value == ArrayObject.BOOLEAN_NIL_TAG;
-                    objects[i] = obj.image.nil;
+                    objects[i] = NilObject.SINGLETON;
                 }
             }
             return objects;
@@ -216,11 +198,7 @@ public final class ArrayObjectNodes {
             final Object[] objects = new Object[length];
             for (int i = 0; i < length; i++) {
                 final long value = chars[i];
-                if (value == ArrayObject.CHAR_NIL_TAG) {
-                    objects[i] = obj.image.nil;
-                } else {
-                    objects[i] = value;
-                }
+                objects[i] = value == ArrayObject.CHAR_NIL_TAG ? NilObject.SINGLETON : value;
             }
             return objects;
         }
@@ -232,11 +210,7 @@ public final class ArrayObjectNodes {
             final Object[] objects = new Object[length];
             for (int i = 0; i < length; i++) {
                 final long value = longs[i];
-                if (value == ArrayObject.LONG_NIL_TAG) {
-                    objects[i] = obj.image.nil;
-                } else {
-                    objects[i] = value;
-                }
+                objects[i] = value == ArrayObject.LONG_NIL_TAG ? NilObject.SINGLETON : value;
             }
             return objects;
         }
@@ -248,11 +222,7 @@ public final class ArrayObjectNodes {
             final Object[] objects = new Object[length];
             for (int i = 0; i < length; i++) {
                 final double value = doubles[i];
-                if (value == ArrayObject.DOUBLE_NIL_TAG) {
-                    objects[i] = obj.image.nil;
-                } else {
-                    objects[i] = value;
-                }
+                objects[i] = value == ArrayObject.DOUBLE_NIL_TAG ? NilObject.SINGLETON : value;
             }
             return objects;
         }
@@ -263,8 +233,7 @@ public final class ArrayObjectNodes {
             final int length = nativeObjects.length;
             final Object[] objects = new Object[length];
             for (int i = 0; i < length; i++) {
-                final NativeObject value = nativeObjects[i];
-                objects[i] = value == null ? obj.image.nil : value;
+                objects[i] = NilObject.nullToNil(nativeObjects[i]);
             }
             return objects;
         }
@@ -290,13 +259,8 @@ public final class ArrayObjectNodes {
 
         @Specialization(guards = "obj.isEmptyType()")
         protected static final Object[] doEmptyArray(final ArrayObject obj) {
-            obj.transitionFromEmptyToAbstractSqueakObjects();
-            return doArrayOfSqueakObjects(obj);
-        }
-
-        @Specialization(guards = "obj.isAbstractSqueakObjectType()")
-        protected static final Object[] doArrayOfSqueakObjects(final ArrayObject obj) {
-            return obj.getAbstractSqueakObjectStorage();
+            obj.transitionFromEmptyToObjects();
+            return doArrayOfObjects(obj);
         }
 
         @Specialization(guards = "obj.isBooleanType()")
@@ -359,13 +323,6 @@ public final class ArrayObjectNodes {
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isEmptyType()", "index < obj.getEmptyStorage()", "!isNativeObject(value)"})
-        protected static final void doEmptyArray(final ArrayObject obj, final long index, final AbstractSqueakObject value) {
-            obj.transitionFromEmptyToAbstractSqueakObjects();
-            doArrayOfSqueakObjects(obj, index, value);
-        }
-
-        @SuppressWarnings("unused")
         @Specialization(guards = {"obj.isEmptyType()", "index < obj.getEmptyStorage()"})
         protected static final void doEmptyArrayToBoolean(final ArrayObject obj, final long index, final boolean value) {
             obj.transitionFromEmptyToBooleans();
@@ -394,27 +351,9 @@ public final class ArrayObjectNodes {
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isEmptyType()", "index < obj.getEmptyStorage()", "!isAbstractSqueakObject(value)", "!isBoolean(value)", "!isCharacter(value)", "!isLong(value)",
-                        "!isDouble(value)"})
+        @Specialization(guards = {"obj.isEmptyType()", "index < obj.getEmptyStorage()", "!isBoolean(value)", "!isCharacter(value)", "!isLong(value)", "!isDouble(value)", "!isNativeObject(value)"})
         protected static final void doEmptyArrayToObject(final ArrayObject obj, final long index, final Object value) {
             obj.transitionFromEmptyToObjects();
-            doArrayOfObjects(obj, index, value);
-        }
-
-        @SuppressWarnings("unused")
-        @Specialization(guards = {"obj.isEmptyType()", "index >= obj.getEmptyStorage()"})
-        protected static final void doEmptyArrayOutOfBounds(final ArrayObject obj, final long index, final Object value) {
-            throw SqueakException.create("IndexOutOfBounds:", index, "(validate index before using this node)");
-        }
-
-        @Specialization(guards = "obj.isAbstractSqueakObjectType()")
-        protected static final void doArrayOfSqueakObjects(final ArrayObject obj, final long index, final AbstractSqueakObject value) {
-            obj.atput0SqueakObject(index, value);
-        }
-
-        @Specialization(guards = {"obj.isAbstractSqueakObjectType()", "!isAbstractSqueakObject(value)"})
-        protected static final void doArrayOfSqueakObjects(final ArrayObject obj, final long index, final Object value) {
-            obj.transitionFromAbstractSqueakObjectsToObjects();
             doArrayOfObjects(obj, index, value);
         }
 
@@ -428,7 +367,7 @@ public final class ArrayObjectNodes {
             obj.atputNil0Boolean(index);
         }
 
-        @Specialization(guards = {"obj.isBooleanType()", "!isBoolean(value)", "!isNilObject(value)"})
+        @Specialization(guards = {"obj.isBooleanType()", "!isBoolean(value)", "!isNil(value)"})
         protected static final void doArrayOfBooleans(final ArrayObject obj, final long index, final Object value) {
             obj.transitionFromBooleansToObjects();
             doArrayOfObjects(obj, index, value);
@@ -444,7 +383,7 @@ public final class ArrayObjectNodes {
             obj.atputNil0Char(index);
         }
 
-        @Specialization(guards = {"obj.isCharType()", "!isCharacter(value)", "!isNilObject(value)"})
+        @Specialization(guards = {"obj.isCharType()", "!isCharacter(value)", "!isNil(value)"})
         protected static final void doArrayOfChars(final ArrayObject obj, final long index, final Object value) {
             obj.transitionFromCharsToObjects();
             doArrayOfObjects(obj, index, value);
@@ -467,7 +406,7 @@ public final class ArrayObjectNodes {
             obj.atputNil0Long(index);
         }
 
-        @Specialization(guards = {"obj.isLongType()", "!isLong(value)", "!isNilObject(value)"})
+        @Specialization(guards = {"obj.isLongType()", "!isLong(value)", "!isNil(value)"})
         protected static final void doArrayOfLongs(final ArrayObject obj, final long index, final Object value) {
             obj.transitionFromLongsToObjects();
             doArrayOfObjects(obj, index, value);
@@ -481,7 +420,7 @@ public final class ArrayObjectNodes {
         @Specialization(guards = {"obj.isDoubleType()", "isDoubleNilTag(value)"})
         protected static final void doArrayOfDoublesNilTagClash(final ArrayObject obj, final long index, final double value) {
             // `value` happens to be double nil tag, need to despecialize to be able store it.
-            obj.transitionFromLongsToObjects();
+            obj.transitionFromDoublesToObjects();
             obj.atput0Object(index, value);
         }
 
@@ -490,7 +429,7 @@ public final class ArrayObjectNodes {
             obj.atputNil0Double(index);
         }
 
-        @Specialization(guards = {"obj.isDoubleType()", "!isDouble(value)", "!isNilObject(value)"})
+        @Specialization(guards = {"obj.isDoubleType()", "!isDouble(value)", "!isNil(value)"})
         protected static final void doArrayOfDoubles(final ArrayObject obj, final long index, final Object value) {
             obj.transitionFromDoublesToObjects();
             doArrayOfObjects(obj, index, value);
@@ -506,7 +445,7 @@ public final class ArrayObjectNodes {
             obj.atputNil0NativeObject(index);
         }
 
-        @Specialization(guards = {"obj.isNativeObjectType()", "!isNativeObject(value)", "!isNilObject(value)"})
+        @Specialization(guards = {"obj.isNativeObjectType()", "!isNativeObject(value)", "!isNil(value)"})
         protected static final void doArrayOfNativeObjects(final ArrayObject obj, final long index, final Object value) {
             obj.transitionFromNativesToObjects();
             obj.atput0Object(index, value);

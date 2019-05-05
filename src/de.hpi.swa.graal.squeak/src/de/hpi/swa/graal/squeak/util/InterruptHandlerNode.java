@@ -1,14 +1,11 @@
 package de.hpi.swa.graal.squeak.util;
 
-import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.Node;
 
-import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
-import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.model.PointersObject;
@@ -17,7 +14,7 @@ import de.hpi.swa.graal.squeak.nodes.process.SignalSemaphoreNode;
 @ImportStatic(SqueakImageContext.class)
 public abstract class InterruptHandlerNode extends Node {
     protected final SqueakImageContext image;
-    protected final InterruptHandlerState istate;
+    private final InterruptHandlerState istate;
 
     @Child private SignalSemaphoreNode signalSemaporeNode;
 
@@ -57,11 +54,6 @@ public abstract class InterruptHandlerNode extends Node {
         performChecks(frame);
     }
 
-    @Fallback
-    protected static final void doFail() {
-        throw SqueakException.create("Should never happen");
-    }
-
     private void performChecks(final VirtualFrame frame) {
         if (istate.interruptPending()) {
             istate.interruptPending = false; // reset interrupt flag
@@ -82,10 +74,10 @@ public abstract class InterruptHandlerNode extends Node {
     private void checkSemaphoresToSignal(final VirtualFrame frame) {
         if (istate.hasSemaphoresToSignal()) {
             assert !image.externalObjectsArray.isEmptyType();
-            final AbstractSqueakObject[] semaphores = image.externalObjectsArray.getAbstractSqueakObjectStorage();
+            final Object[] semaphores = image.externalObjectsArray.getObjectStorage();
             while (istate.hasSemaphoresToSignal()) {
                 final int semaIndex = istate.nextSemaphoreToSignal();
-                final AbstractSqueakObject semaphore = semaphores[semaIndex - 1];
+                final Object semaphore = semaphores[semaIndex - 1];
                 signalSemaporeIfNotNil(frame, semaphore);
             }
         }

@@ -2,7 +2,7 @@ package de.hpi.swa.graal.squeak.nodes.plugins;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.FileSystems;
@@ -28,6 +28,7 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
+import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
@@ -177,13 +178,13 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
                 path = new File(pathName + File.separator + fileName);
             }
             if (path.exists()) {
-                final NativeObject pathNameNative = method.image.wrap(path.getName());
-                final long pathLastModified = method.image.wrap(path.lastModified());
-                final boolean pathIsDirectory = method.image.wrap(path.isDirectory());
-                final long pathLength = method.image.wrap(path.length());
-                return method.image.newArrayOfObjects(pathNameNative, pathLastModified, pathLastModified, pathIsDirectory, pathLength);
+                final NativeObject pathNameNative = method.image.asByteString(path.getName());
+                final long pathLastModified = path.lastModified();
+                final boolean pathIsDirectory = method.image.asBoolean(path.isDirectory());
+                final long pathLength = path.length();
+                return method.image.asArrayOfObjects(pathNameNative, pathLastModified, pathLastModified, pathIsDirectory, pathLength);
             }
-            return method.image.nil;
+            return NilObject.SINGLETON;
         }
     }
 
@@ -209,13 +210,13 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
                 final File file = files[index];
                 // Use getPath here, getName returns empty string on root path.
                 // Squeak strips the trailing backslash from C:\ on Windows.
-                final NativeObject pathNameNative = method.image.wrap(file.getPath().replace("\\", ""));
-                final long pathLastModified = method.image.wrap(file.lastModified());
-                final boolean pathIsDirectory = method.image.wrap(file.isDirectory());
-                final long pathLength = method.image.wrap(file.length());
-                return method.image.newArrayOfObjects(pathNameNative, pathLastModified, pathLastModified, pathIsDirectory, pathLength);
+                final NativeObject pathNameNative = method.image.asByteString(file.getPath().replace("\\", ""));
+                final long pathLastModified = file.lastModified();
+                final boolean pathIsDirectory = method.image.asBoolean(file.isDirectory());
+                final long pathLength = file.length();
+                return method.image.asArrayOfObjects(pathNameNative, pathLastModified, pathLastModified, pathIsDirectory, pathLength);
             } else {
-                return method.image.nil;
+                return NilObject.SINGLETON;
             }
         }
 
@@ -234,20 +235,20 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
             final int index = (int) longIndex - 1;
             if (files != null && index < files.length) {
                 final File file = files[index];
-                final NativeObject pathNameNative = method.image.wrap(file.getName());
-                final long pathLastModified = method.image.wrap(file.lastModified());
-                final boolean pathIsDirectory = method.image.wrap(file.isDirectory());
-                final long pathLength = method.image.wrap(file.length());
-                return method.image.newArrayOfObjects(pathNameNative, pathLastModified, pathLastModified, pathIsDirectory, pathLength);
+                final NativeObject pathNameNative = method.image.asByteString(file.getName());
+                final long pathLastModified = file.lastModified();
+                final boolean pathIsDirectory = method.image.asBoolean(file.isDirectory());
+                final long pathLength = file.length();
+                return method.image.asArrayOfObjects(pathNameNative, pathLastModified, pathLastModified, pathIsDirectory, pathLength);
             } else {
-                return method.image.nil;
+                return NilObject.SINGLETON;
             }
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"longIndex <= 0"})
-        protected final Object doNil(final PointersObject receiver, final NativeObject nativePathName, final long longIndex) {
-            return method.image.nil;
+        protected static final Object doNil(final PointersObject receiver, final NativeObject nativePathName, final long longIndex) {
+            return NilObject.SINGLETON;
         }
     }
 
@@ -303,7 +304,7 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
         protected final Object doAtEnd(@SuppressWarnings("unused") final PointersObject receiver, final long fileDescriptor) {
             try {
                 final SeekableByteChannel file = getFileOrPrimFail(fileDescriptor);
-                return method.image.wrap(file.position() >= file.size() - 1);
+                return method.image.asBoolean(file.position() >= file.size());
             } catch (final IOException e) {
                 throw new PrimitiveFailed();
             }
@@ -375,9 +376,9 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
 
         @Specialization
         @TruffleBoundary(transferToInterpreterOnException = false)
-        protected final Object doGet(@SuppressWarnings("unused") final PointersObject receiver, final long fileDescriptor) {
+        protected final long doGet(@SuppressWarnings("unused") final PointersObject receiver, final long fileDescriptor) {
             try {
-                return method.image.wrap(getFileOrPrimFail(fileDescriptor).position());
+                return getFileOrPrimFail(fileDescriptor).position();
             } catch (final IOException e) {
                 throw new PrimitiveFailed();
             }
@@ -514,9 +515,9 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
 
         @Specialization
         @TruffleBoundary(transferToInterpreterOnException = false)
-        protected final Object doSize(@SuppressWarnings("unused") final PointersObject receiver, final long fileDescriptor) {
+        protected final long doSize(@SuppressWarnings("unused") final PointersObject receiver, final long fileDescriptor) {
             try {
-                return method.image.wrap(getFileOrPrimFail(fileDescriptor).size());
+                return getFileOrPrimFail(fileDescriptor).size();
             } catch (final IOException e) {
                 throw new PrimitiveFailed();
             }
@@ -532,7 +533,7 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
 
         @Specialization
         protected final Object getHandles(@SuppressWarnings("unused") final ClassObject receiver) {
-            return method.image.newArrayOfLongs(STDIO_HANDLES.ALL);
+            return method.image.asArrayOfLongs(STDIO_HANDLES.ALL);
         }
     }
 
@@ -573,16 +574,14 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"fileDescriptor == OUT", "content.isByteType()", "inBounds(startIndex, count, content.getByteLength())"})
-        @TruffleBoundary(transferToInterpreterOnException = false)
         protected long doWriteByteToStdout(final PointersObject receiver, final long fileDescriptor, final NativeObject content, final long startIndex, final long count) {
-            return fileWriteToPrintWriter(method.image.getOutput(), content, startIndex, count);
+            return fileWriteToOutputStream(method.image.env.out(), content.getByteStorage(), startIndex, count);
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"fileDescriptor == ERROR", "content.isByteType()", "inBounds(startIndex, count, content.getByteLength())"})
-        @TruffleBoundary(transferToInterpreterOnException = false)
         protected long doWriteByteToStderr(final PointersObject receiver, final long fileDescriptor, final NativeObject content, final long startIndex, final long count) {
-            return fileWriteToPrintWriter(method.image.getError(), content, startIndex, count);
+            return fileWriteToOutputStream(method.image.env.err(), content.getByteStorage(), startIndex, count);
         }
 
         @Specialization(guards = {"!isStdioFileDescriptor(fileDescriptor)", "content.isIntType()", "inBounds(startIndex, count, content.getIntLength())"})
@@ -631,12 +630,16 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
             return written / elementSize;
         }
 
-        private static long fileWriteToPrintWriter(final PrintWriter printWriter, final NativeObject content, final long startIndex, final long count) {
-            final String string = asString(content);
+        @TruffleBoundary(transferToInterpreterOnException = false)
+        private static long fileWriteToOutputStream(final OutputStream outputStream, final byte[] content, final long startIndex, final long count) {
             final int byteStart = (int) (startIndex - 1);
-            final int byteEnd = Math.min(byteStart + (int) count, string.length());
-            printWriter.write(string, byteStart, Math.max(byteEnd - byteStart, 0));
-            printWriter.flush();
+            final int byteEnd = Math.min(byteStart + (int) count, content.length);
+            try {
+                outputStream.write(content, byteStart, Math.max(byteEnd - byteStart, 0));
+                outputStream.flush();
+            } catch (final IOException e) {
+                throw new PrimitiveFailed();
+            }
             return byteEnd - byteStart;
         }
     }

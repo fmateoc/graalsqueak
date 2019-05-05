@@ -19,6 +19,8 @@ import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
+import de.hpi.swa.graal.squeak.model.NilObject;
+import de.hpi.swa.graal.squeak.nodes.context.UnwindContextChainNode;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
@@ -30,14 +32,13 @@ public final class ExecuteTopLevelContextNode extends RootNode {
     private final boolean needsShutdown;
 
     @Child private ExecuteContextNode executeContextNode;
-    @Child private UnwindContextChainNode unwindContextChainNode;
+    @Child private UnwindContextChainNode unwindContextChainNode = UnwindContextChainNode.create();
 
     private ExecuteTopLevelContextNode(final SqueakLanguage language, final ContextObject context, final CompiledCodeObject code, final boolean needsShutdown) {
         super(language, code.getFrameDescriptor());
         image = code.image;
         initialContext = context;
         this.needsShutdown = needsShutdown;
-        unwindContextChainNode = UnwindContextChainNode.create(image);
     }
 
     public static ExecuteTopLevelContextNode create(final SqueakLanguage language, final ContextObject context, final boolean needsShutdown) {
@@ -69,7 +70,7 @@ public final class ExecuteTopLevelContextNode extends RootNode {
             CompilerDirectives.transferToInterpreter();
             assert activeContext.hasMaterializedSender() : "Context must have materialized sender: " + activeContext;
             final AbstractSqueakObject sender = activeContext.getSender();
-            assert sender == image.nil || ((ContextObject) sender).hasTruffleFrame();
+            assert sender == NilObject.SINGLETON || ((ContextObject) sender).hasTruffleFrame();
             try {
                 MaterializeContextOnMethodExitNode.reset();
                 final CompiledCodeObject code = activeContext.getBlockOrMethod();

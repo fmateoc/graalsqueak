@@ -22,10 +22,10 @@ public final class PointersObject extends AbstractPointersObject {
     }
 
     public PointersObject(final SqueakImageContext image, final ClassObject classObject, final int size) {
-        this(image, classObject, ArrayUtils.withAll(size, image.nil));
+        this(image, classObject, ArrayUtils.withAll(size, NilObject.SINGLETON));
     }
 
-    public PointersObject(final PointersObject original) {
+    private PointersObject(final PointersObject original) {
         super(original.image, original.getSqueakClass());
         setPointersUnsafe(original.getPointers().clone());
     }
@@ -37,6 +37,10 @@ public final class PointersObject extends AbstractPointersObject {
     public void atput0(final long i, final Object obj) {
         assert obj != null; // null indicates a problem
         setPointer((int) i, obj);
+    }
+
+    public void atputNil0(final long i) {
+        setPointer((int) i, NilObject.SINGLETON);
     }
 
     public void become(final PointersObject other) {
@@ -51,7 +55,7 @@ public final class PointersObject extends AbstractPointersObject {
     }
 
     public boolean isEmptyList() {
-        return at0(LINKED_LIST.FIRST_LINK) == image.nil;
+        return at0(LINKED_LIST.FIRST_LINK) == NilObject.SINGLETON;
     }
 
     public boolean isDisplay() {
@@ -67,25 +71,16 @@ public final class PointersObject extends AbstractPointersObject {
         final PointersObject first = (PointersObject) at0(LINKED_LIST.FIRST_LINK);
         final Object last = at0(LINKED_LIST.LAST_LINK);
         if (first == last) {
-            atput0(LINKED_LIST.FIRST_LINK, image.nil);
-            atput0(LINKED_LIST.LAST_LINK, image.nil);
+            atput0(LINKED_LIST.FIRST_LINK, NilObject.SINGLETON);
+            atput0(LINKED_LIST.LAST_LINK, NilObject.SINGLETON);
         } else {
             atput0(LINKED_LIST.FIRST_LINK, first.at0(PROCESS.NEXT_LINK));
         }
-        first.atput0(PROCESS.NEXT_LINK, image.nil);
+        first.atput0(PROCESS.NEXT_LINK, NilObject.SINGLETON);
         return first;
     }
 
     public PointersObject shallowCopy() {
         return new PointersObject(this);
-    }
-
-    public Object[] unwrappedWithFirst(final Object firstValue) {
-        final Object[] result = new Object[1 + size()];
-        result[0] = firstValue;
-        for (int i = 1; i < result.length; i++) {
-            result[i] = at0(i - 1);
-        }
-        return result;
     }
 }

@@ -17,6 +17,7 @@ import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
+import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
@@ -86,7 +87,7 @@ public final class SocketPlugin extends AbstractPrimitiveFactoryHolder {
         protected static Object doWork(final Object receiver, final NativeObject hostName) {
             try {
                 LOG.finer(() -> "Starting lookup for host name " + hostName);
-                Resolver.startHostNameLookUp(hostName.asString());
+                Resolver.startHostNameLookUp(hostName.asStringUnsafe());
             } catch (final UnknownHostException e) {
                 LOG.log(Level.FINE, "Host name lookup failed", e);
             }
@@ -134,11 +135,10 @@ public final class SocketPlugin extends AbstractPrimitiveFactoryHolder {
          */
         @Specialization
         @TruffleBoundary
-        protected final AbstractSqueakObject doWork(
-                        @SuppressWarnings("unused") final AbstractSqueakObject receiver) {
+        protected final AbstractSqueakObject doWork(@SuppressWarnings("unused") final AbstractSqueakObject receiver) {
             final byte[] lastNameLookup = Resolver.lastHostNameLookupResult();
             LOG.finer(() -> "Name Lookup Result: " + Resolver.addressBytesToString(lastNameLookup));
-            return lastNameLookup == null ? method.image.nil : method.image.wrap(lastNameLookup);
+            return lastNameLookup == null ? NilObject.SINGLETON : method.image.asByteArray(lastNameLookup);
         }
     }
 
@@ -157,7 +157,7 @@ public final class SocketPlugin extends AbstractPrimitiveFactoryHolder {
         protected final AbstractSqueakObject doWork(@SuppressWarnings("unused") final AbstractSqueakObject receiver) {
             final String lastAddressLookup = Resolver.lastAddressLookUpResult();
             LOG.finer(() -> ">> Address Lookup Result: " + lastAddressLookup);
-            return lastAddressLookup == null ? method.image.nil : method.image.wrap(lastAddressLookup);
+            return lastAddressLookup == null ? NilObject.SINGLETON : method.image.asByteString(lastAddressLookup);
         }
     }
 
@@ -173,7 +173,7 @@ public final class SocketPlugin extends AbstractPrimitiveFactoryHolder {
         protected final AbstractSqueakObject doWork(@SuppressWarnings("unused") final AbstractSqueakObject receiver) {
             final byte[] address = Resolver.getLoopbackAddress();
             LOG.finer(() -> "Local Address: " + Resolver.addressBytesToString(address));
-            return method.image.wrap(address);
+            return method.image.asByteArray(address);
         }
     }
 
@@ -296,7 +296,7 @@ public final class SocketPlugin extends AbstractPrimitiveFactoryHolder {
         protected final ArrayObject doSet(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final long socketID, final NativeObject option, final NativeObject value) {
             try {
                 final SqueakSocket socket = getSocketOrPrimFail(method, socketID);
-                return setSocketOption(socket, option.asString(), value.asString());
+                return setSocketOption(socket, option.asStringUnsafe(), value.asStringUnsafe());
             } catch (final IOException e) {
                 LOG.log(Level.FINE, "Set socket option failed", e);
                 throw PrimitiveFailed.andTransferToInterpreter();
@@ -306,9 +306,9 @@ public final class SocketPlugin extends AbstractPrimitiveFactoryHolder {
         private ArrayObject setSocketOption(final SqueakSocket socket, final String option, final String value) throws IOException {
             if (socket.supportsOption(option)) {
                 socket.setOption(option, value);
-                return method.image.newArrayOfObjects(0L, method.image.wrap(value));
+                return method.image.asArrayOfObjects(0L, method.image.asByteString(value));
             }
-            return method.image.newArrayOfObjects(1L, method.image.wrap("0"));
+            return method.image.asArrayOfObjects(1L, method.image.asByteString("0"));
         }
     }
 
@@ -371,7 +371,7 @@ public final class SocketPlugin extends AbstractPrimitiveFactoryHolder {
         @TruffleBoundary
         protected AbstractSqueakObject doAddress(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final long socketID) {
             try {
-                return method.image.wrap(getSocketOrPrimFail(method, socketID).getRemoteAddress());
+                return method.image.asByteArray(getSocketOrPrimFail(method, socketID).getRemoteAddress());
             } catch (final IOException e) {
                 LOG.log(Level.FINE, "Retrieving remote address failed", e);
                 throw PrimitiveFailed.andTransferToInterpreter();
@@ -416,8 +416,8 @@ public final class SocketPlugin extends AbstractPrimitiveFactoryHolder {
         protected final Object doGetOption(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final long socketID, final NativeObject option) {
             try {
                 final SqueakSocket socket = getSocketOrPrimFail(method, socketID);
-                final String value = socket.getOption(option.asString());
-                return method.image.newArrayOfObjects(0L, method.image.wrap(value));
+                final String value = socket.getOption(option.asStringUnsafe());
+                return method.image.asArrayOfObjects(0L, method.image.asByteString(value));
             } catch (final IOException e) {
                 LOG.log(Level.FINE, "Retrieving socket option failed", e);
                 throw PrimitiveFailed.andTransferToInterpreter();
@@ -471,7 +471,7 @@ public final class SocketPlugin extends AbstractPrimitiveFactoryHolder {
         protected final AbstractSqueakObject doLocalAddress(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final long socketID) {
             try {
                 final SqueakSocket socket = getSocketOrPrimFail(method, socketID);
-                return method.image.wrap(socket.getLocalAddress());
+                return method.image.asByteArray(socket.getLocalAddress());
             } catch (final IOException e) {
                 LOG.log(Level.FINE, "Retrieving local address failed", e);
                 throw PrimitiveFailed.andTransferToInterpreter();
@@ -564,7 +564,7 @@ public final class SocketPlugin extends AbstractPrimitiveFactoryHolder {
         @TruffleBoundary
         protected final Object doSendDone(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final long socketID) {
             try {
-                return method.image.wrap(getSocketOrPrimFail(method, socketID).isSendDone());
+                return method.image.asBoolean(getSocketOrPrimFail(method, socketID).isSendDone());
             } catch (final IOException e) {
                 LOG.log(Level.FINE, "Checking completed send failed", e);
                 throw PrimitiveFailed.andTransferToInterpreter();

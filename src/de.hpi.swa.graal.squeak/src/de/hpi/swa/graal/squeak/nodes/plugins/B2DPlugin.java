@@ -118,7 +118,7 @@ public final class B2DPlugin extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(guards = {"colorRamp.isBitmap()", "origin.isPoint()", "direction.isPoint()", "normal.isPoint()"})
+        @Specialization(guards = {"colorRamp.getSqueakClass().isBitmapClass()", "origin.isPoint()", "direction.isPoint()", "normal.isPoint()"})
         @TruffleBoundary(transferToInterpreterOnException = false)
         protected static final Object doAdd(final PointersObject receiver, final NativeObject colorRamp, final PointersObject origin, final PointersObject direction, final PointersObject normal,
                         final boolean isRadial) {
@@ -423,7 +423,7 @@ public final class B2DPlugin extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(guards = {"fillBitmap.isBitmap()"})
+        @Specialization(guards = {"fillBitmap.getSqueakClass().isBitmapClass()"})
         @TruffleBoundary(transferToInterpreterOnException = false)
         protected static final Object doCopy(final PointersObject receiver, final NativeObject fillBitmap, final PointersObject fill) {
             return B2D.primitiveMergeFillFrom(receiver, fillBitmap, fill);

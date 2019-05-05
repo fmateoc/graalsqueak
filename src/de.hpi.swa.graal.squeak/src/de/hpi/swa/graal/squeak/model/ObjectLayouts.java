@@ -82,12 +82,12 @@ public final class ObjectLayouts {
         public static String getClassComment(final ClassObject squeakClass) {
             CompilerAsserts.neverPartOfCompilation("For instrumentation access only.");
             final AbstractSqueakObject organization = squeakClass.getOrganization();
-            if (organization.isNil()) {
+            if (organization == NilObject.SINGLETON) {
                 return null;
             }
-            final AbstractSqueakObject classComment = (AbstractSqueakObject) ((PointersObject) organization).at0(CLASS_ORGANIZER.CLASS_COMMENT);
+            final AbstractSqueakObjectWithClassAndHash classComment = (AbstractSqueakObjectWithClassAndHash) ((PointersObject) organization).at0(CLASS_ORGANIZER.CLASS_COMMENT);
             final NativeObject string = (NativeObject) classComment.send("string");
-            return string.asString();
+            return string.asStringUnsafe();
         }
     }
 
@@ -118,8 +118,8 @@ public final class ObjectLayouts {
             final ArrayObject classBindings = (ArrayObject) dictionary.at0(HASHED_COLLECTION.ARRAY);
             final Map<Object, Object> keyValues = new HashMap<>();
             // TODO: Avoid node allocation in next line.
-            for (final Object classBinding : ArrayObjectToObjectArrayNode.create().execute(classBindings)) {
-                if (classBinding != dictionary.image.nil) {
+            for (final Object classBinding : ArrayObjectToObjectArrayNode.getUncached().execute(classBindings)) {
+                if (classBinding != NilObject.SINGLETON) {
                     final PointersObject classBindingPointer = (PointersObject) classBinding;
                     keyValues.put(classBindingPointer.at0(CLASS_BINDING.KEY), classBindingPointer.at0(CLASS_BINDING.VALUE));
                 }

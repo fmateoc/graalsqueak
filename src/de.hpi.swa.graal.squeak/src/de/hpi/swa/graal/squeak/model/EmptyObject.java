@@ -2,7 +2,7 @@ package de.hpi.swa.graal.squeak.model;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 
-public final class EmptyObject extends AbstractSqueakObject {
+public final class EmptyObject extends AbstractSqueakObjectWithClassAndHash {
 
     public EmptyObject(final SqueakImageContext image, final ClassObject classObject) {
         super(image, classObject);
@@ -12,7 +12,7 @@ public final class EmptyObject extends AbstractSqueakObject {
         super(image, hash, classObject);
     }
 
-    public EmptyObject(final EmptyObject original) {
+    private EmptyObject(final EmptyObject original) {
         super(original.image, original.getSqueakClass());
     }
 
@@ -30,7 +30,7 @@ public final class EmptyObject extends AbstractSqueakObject {
         becomeOtherClass(other);
     }
 
-    public AbstractSqueakObject shallowCopy() {
+    public EmptyObject shallowCopy() {
         return new EmptyObject(this);
     }
 }

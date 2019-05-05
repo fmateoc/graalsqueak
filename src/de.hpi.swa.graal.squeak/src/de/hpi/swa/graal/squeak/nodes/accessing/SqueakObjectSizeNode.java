@@ -1,15 +1,25 @@
 package de.hpi.swa.graal.squeak.nodes.accessing;
 
 import com.oracle.truffle.api.dsl.Cached;
-import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.GenerateUncached;
 import com.oracle.truffle.api.dsl.Specialization;
 
-import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
-import de.hpi.swa.graal.squeak.model.*;
+
+import de.hpi.swa.graal.squeak.model.AbstractPointersObject;
+import de.hpi.swa.graal.squeak.model.ArrayObject;
+import de.hpi.swa.graal.squeak.model.BlockClosureObject;
+import de.hpi.swa.graal.squeak.model.ClassObject;
+import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
+import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
+import de.hpi.swa.graal.squeak.model.ContextObject;
+import de.hpi.swa.graal.squeak.model.EmptyObject;
+import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
+import de.hpi.swa.graal.squeak.model.NativeImmutableBytesObject;
+import de.hpi.swa.graal.squeak.model.NativeObject;
+import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.NativeImmutableObjectNodes.NativeImmutableObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectSizeNode;
 
 @GenerateUncached
@@ -20,6 +30,11 @@ public abstract class SqueakObjectSizeNode extends AbstractNode {
     }
 
     public abstract int execute(Object obj);
+
+    @Specialization
+    protected static final int doNil(final NilObject obj) {
+        return obj.size();
+    }
 
     @Specialization
     protected static final int doArray(final ArrayObject obj, @Cached final ArrayObjectSizeNode sizeNode) {
@@ -79,15 +94,5 @@ public abstract class SqueakObjectSizeNode extends AbstractNode {
     @Specialization
     protected static final int doLargeInteger(final LargeIntegerObject obj) {
         return obj.size();
-    }
-
-    @Specialization
-    protected static final int doNil(final NilObject obj) {
-        return obj.size();
-    }
-
-    @Fallback
-    protected static final int doFallback(final Object obj) {
-        throw SqueakException.create("Object does not support size:", obj);
     }
 }

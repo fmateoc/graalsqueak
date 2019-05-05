@@ -15,8 +15,6 @@ import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.BinaryPrimit
 import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
 
 public final class DropPlugin extends AbstractPrimitiveFactoryHolder {
-    public String[] fileList = new String[0];
-
     public static void updateFileList(final SqueakImageContext image, final String[] newList) {
         image.dropPluginFileList = newList;
     }
@@ -59,7 +57,7 @@ public final class DropPlugin extends AbstractPrimitiveFactoryHolder {
 
         @Specialization(guards = "dropIndex <= getFileListSize(method.image)")
         protected final Object doRequest(@SuppressWarnings("unused") final Object receiver, final long dropIndex) {
-            return method.image.wrap(getFileList(method.image)[(int) dropIndex - 1]);
+            return method.image.asByteString(getFileList(method.image)[(int) dropIndex - 1]);
         }
     }
 }

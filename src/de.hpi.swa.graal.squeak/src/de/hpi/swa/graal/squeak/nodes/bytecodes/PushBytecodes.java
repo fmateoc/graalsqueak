@@ -5,13 +5,11 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.Truffle;
-import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 
-import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
@@ -65,9 +63,9 @@ public final class PushBytecodes {
     }
 
     public static final class PushClosureNode extends AbstractPushNode {
-        protected final int blockSize;
-        protected final int numArgs;
-        protected final int numCopied;
+        private final int blockSize;
+        private final int numArgs;
+        private final int numCopied;
 
         @Child private StackPopNReversedNode popNReversedNode;
         @Child private GetOrCreateContextNode getOrCreateContextNode;
@@ -199,18 +197,13 @@ public final class PushBytecodes {
 
         @Specialization(guards = {"popNReversedNode != null"})
         protected final void doPushArray(final VirtualFrame frame) {
-            pushNode.executeWrite(frame, code.image.newArrayOfObjects(popNReversedNode.executePopN(frame)));
+            pushNode.executeWrite(frame, code.image.asArrayOfObjects(popNReversedNode.executePopN(frame)));
         }
 
         @Specialization(guards = {"popNReversedNode == null"})
         protected final void doPushNewArray(final VirtualFrame frame) {
             // TODO: createEmptyStrategy?
             pushNode.executeWrite(frame, ArrayObject.createObjectStrategy(code.image, code.image.arrayClass, arraySize));
-        }
-
-        @Fallback
-        protected static final void doFail(@SuppressWarnings("unused") final VirtualFrame frame) {
-            throw SqueakException.create("Should never happen");
         }
 
         @Override
