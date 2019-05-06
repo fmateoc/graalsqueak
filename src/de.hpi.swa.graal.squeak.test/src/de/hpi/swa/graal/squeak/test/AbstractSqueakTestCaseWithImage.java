@@ -179,7 +179,7 @@ public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
     }
 
     private static String testCommand(final TestRequest request) {
-        return String.format("[(%s selector: #%s) runCase. '%s'] on: Exception do: [:e | e asString ]", request.testCase, request.testSelector, PASSED_VALUE);
+        return String.format("[(%s selector: #%s) runCase. '%s'] on: Error, TestFailure do: [:e | e asString ]", request.testCase, request.testSelector, PASSED_VALUE);
     }
 
     private static TestResult extractFailuresAndErrorsFromTestResult(final Object result) {
