@@ -4,6 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.TruffleFile;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakAbortException;
@@ -93,6 +94,7 @@ public final class SqueakImageReader {
         chunktable.clear();
     }
 
+    @TruffleBoundary
     private void readBytes(final byte[] bytes, final int length) {
         try {
             stream.read(bytes, 0, length);
@@ -148,6 +150,7 @@ public final class SqueakImageReader {
                         bytes[0] & 0xFF;
     }
 
+    @TruffleBoundary
     private void skipBytes(final long count) {
         try {
             position += stream.skip(count);
@@ -232,6 +235,7 @@ public final class SqueakImageReader {
         closeStream();
     }
 
+    @TruffleBoundary
     private void closeStream() {
         try {
             stream.close();

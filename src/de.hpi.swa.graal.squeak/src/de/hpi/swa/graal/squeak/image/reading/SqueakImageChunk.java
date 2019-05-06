@@ -2,6 +2,8 @@ package de.hpi.swa.graal.squeak.image.reading;
 
 import java.util.Arrays;
 
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
@@ -224,6 +226,7 @@ public final class SqueakImageChunk {
         }
     }
 
+    @TruffleBoundary
     private void logBogusPointer(final long ptr) {
         image.getError().println("Bogus pointer: " + ptr + ". Treating as smallint.");
     }
