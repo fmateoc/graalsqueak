@@ -188,13 +188,13 @@ public final class SqueakImageContext {
         if (!loaded()) {
             // Load image.
             SqueakImageReader.load(this);
+            getOutput().println("Preparing image for headless execution...");
             // Remove active context.
             getActiveProcess().atputNil0(PROCESS.SUSPENDED_CONTEXT);
             // Modify StartUpList for headless execution.
-            // TODO: Also start ProcessorScheduler and WeakArray (see SqueakSUnitTest).
-            evaluate("{EventSensor. ProcessorScheduler. Project. WeakArray} do: [:ea | Smalltalk removeFromStartUpList: ea]");
+            evaluate("{EventSensor. Project} do: [:ea | Smalltalk removeFromStartUpList: ea]");
             try {
-                evaluate("[Smalltalk processStartUpList: true] value");
+                evaluate("[Smalltalk clearExternalObjects. Smalltalk processStartUpList: true. Smalltalk setPlatformPreferences] value");
             } catch (final Exception e) {
                 printToStdErr("startUpList failed:");
                 e.printStackTrace();
