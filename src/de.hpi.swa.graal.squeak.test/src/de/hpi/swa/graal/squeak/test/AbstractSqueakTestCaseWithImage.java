@@ -168,21 +168,17 @@ public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
 
     protected static TestResult runTestCase(final TestRequest request) {
         return runWithTimeout(request, () -> {
-            final String testCommand = testCommand(request);
             context.enter();
             try {
-                return extractFailuresAndErrorsFromTestResult(evaluate(testCommand));
+                return extractFailuresAndErrorsFromTestResult(request);
             } finally {
                 context.leave();
             }
         });
     }
 
-    private static String testCommand(final TestRequest request) {
-        return String.format("[(%s selector: #%s) runCase. '%s'] on: Error, TestFailure do: [:e | e asString ]", request.testCase, request.testSelector, PASSED_VALUE);
-    }
-
-    private static TestResult extractFailuresAndErrorsFromTestResult(final Object result) {
+    private static TestResult extractFailuresAndErrorsFromTestResult(final TestRequest request) {
+        final Object result = evaluate(testCommand(request));
         if (!(result instanceof NativeObject) || !((NativeObject) result).isByteType()) {
             return TestResult.failure("did not return a ByteString, got " + result);
         }
@@ -190,8 +186,22 @@ public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
         if (PASSED_VALUE.equals(testResult)) {
             return TestResult.success(testResult);
         } else {
-            return TestResult.failure(testResult);
+            final boolean shouldPass = (boolean) evaluate(shouldPassCommand(request));
+            if (shouldPass) {
+                return TestResult.failure(testResult);
+            } else {
+                return TestResult.success("expected failure");
+            }
         }
+    }
+
+    private static String testCommand(final TestRequest request) {
+        return String.format("[ [(%s selector: #%s) runCase. '%s'] on: TestFailure do: [:e | e asString ] ] on: Error do: [:e | e asString, String crlf, e signalerContext shortStack ]",
+                        request.testCase, request.testSelector, PASSED_VALUE);
+    }
+
+    private static String shouldPassCommand(final TestRequest request) {
+        return String.format("(%s selector: #%s) shouldPass", request.testCase, request.testSelector, PASSED_VALUE);
     }
 
     private static TestResult runWithTimeout(final TestRequest request, final Supplier<TestResult> action) {
