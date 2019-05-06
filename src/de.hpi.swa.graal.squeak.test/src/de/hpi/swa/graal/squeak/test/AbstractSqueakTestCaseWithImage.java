@@ -65,6 +65,7 @@ public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
         assert idleProcess.at0(PROCESS.NEXT_LINK) == NilObject.SINGLETON : "Idle process expected to have `nil` successor";
         image.getOutput().println("Increasing default timeout...");
         patchMethod("TestCase", "defaultTimeout", "defaultTimeout ^ " + SQUEAK_TIMEOUT_SECONDS);
+        patchMethod("TestCase", "timeout:after:", "timeout: aBlock after: seconds ^ aBlock value");
         if (!runsOnMXGate()) {
             // Patch TestCase>>#performTest, so errors are printed to stderr for debugging purposes.
             patchMethod("TestCase", "performTest", "performTest [self perform: testSelector asSymbol] on: Error do: [:e | e printVerboseOn: FileStream stderr. e signal]");
