@@ -218,11 +218,11 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         if (size() > 7) {
             final String className = getClassName();
             setInstancesAreClasses(className);
-            if ("Compiler".equals(className)) {
+            if (image.getCompilerClass() == null && "Compiler".equals(className)) {
                 image.setCompilerClass(this);
-            } else if ("Parser".equals(className)) {
+            } else if (image.getParserClass() == null && "Parser".equals(className)) {
                 image.setParserClass(this);
-            } else if (!image.flags.is64bit() && "SmallFloat64".equals(className)) {
+            } else if (!image.flags.is64bit() && image.smallFloatClass == null && "SmallFloat64".equals(className)) {
                 image.setSmallFloat(this);
             }
         }
