@@ -240,9 +240,6 @@ public final class SqueakImageContext {
 
     public ExecuteTopLevelContextNode getActiveContextNode() {
         assert lastParseRequestSource == null : "Image should not have been executed manually before.";
-        SqueakImageReader.load(this);
-        interrupt.start();
-        disableHeadless();
         final PointersObject activeProcess = getActiveProcess();
         final ContextObject activeContext = (ContextObject) activeProcess.at0(PROCESS.SUSPENDED_CONTEXT);
         activeProcess.atputNil0(PROCESS.SUSPENDED_CONTEXT);

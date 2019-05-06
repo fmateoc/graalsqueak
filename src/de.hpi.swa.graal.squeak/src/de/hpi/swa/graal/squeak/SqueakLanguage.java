@@ -51,7 +51,7 @@ public final class SqueakLanguage extends TruffleLanguage<SqueakImageContext> {
         final Source source = request.getSource();
         if (source.hasBytes()) {
             image.setImagePath(source.getPath());
-            return Truffle.getRuntime().createCallTarget(image.getActiveContextNode());
+            return image.getSqueakImage().asCallTarget();
         } else {
             image.ensureLoaded();
             if (source.isInternal()) {
