@@ -4,13 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 
-import com.oracle.truffle.api.CompilerDirectives;
-import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.TruffleFile;
-import com.oracle.truffle.api.frame.VirtualFrame;
-import com.oracle.truffle.api.nodes.ExplodeLoop;
-import com.oracle.truffle.api.nodes.RootNode;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakAbortException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
@@ -25,8 +19,8 @@ import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadN
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
-public final class SqueakImageReaderNode extends RootNode {
-    @CompilationFinal(dimensions = 1) private static final int[] CHUNK_HEADER_BIT_PATTERN = new int[]{22, 2, 5, 3, 22, 2, 8};
+public final class SqueakImageReader {
+    private static final int[] CHUNK_HEADER_BIT_PATTERN = new int[]{22, 2, 5, 3, 22, 2, 8};
     public static final Object NIL_OBJECT_PLACEHOLDER = new Object();
     public static final long IMAGE_32BIT_VERSION = 6521;
     public static final long IMAGE_64BIT_VERSION = 68021;
@@ -35,9 +29,9 @@ public final class SqueakImageReaderNode extends RootNode {
     private static final long OVERFLOW_SLOTS = 255;
     private static final int HIDDEN_ROOTS_CHUNK_INDEX = 4;
 
-    @CompilationFinal protected boolean is64bit = false;
-    @CompilationFinal private int wordSize = 4;
-    @CompilationFinal protected SqueakImageChunk hiddenRootsChunk;
+    protected boolean is64bit = false;
+    private int wordSize = 4;
+    protected SqueakImageChunk hiddenRootsChunk;
 
     private final BufferedInputStream stream;
     private final HashMap<Long, SqueakImageChunk> chunktable = new HashMap<>(750000);
@@ -53,8 +47,7 @@ public final class SqueakImageReaderNode extends RootNode {
     private long segmentEnd;
     private long currentAddressSwizzle;
 
-    public SqueakImageReaderNode(final SqueakImageContext image) {
-        super(image.getLanguage());
+    private SqueakImageReader(final SqueakImageContext image) {
         final TruffleFile truffleFile = image.env.getTruffleFile(image.getImagePath());
         if (!truffleFile.isRegularFile()) {
             if (image.getImagePath().isEmpty()) {
@@ -75,8 +68,11 @@ public final class SqueakImageReaderNode extends RootNode {
         this.image = image;
     }
 
-    @Override
-    public Object execute(final VirtualFrame frame) {
+    public static void load(final SqueakImageContext image) {
+        new SqueakImageReader(image).run();
+    }
+
+    public Object run() {
         if (stream == null && image.isTesting()) {
             return null;
         }
@@ -89,17 +85,14 @@ public final class SqueakImageReaderNode extends RootNode {
         return image.getSqueakImage();
     }
 
-    @TruffleBoundary
     private static long currentTimeMillis() {
         return System.currentTimeMillis();
     }
 
-    @TruffleBoundary
     private void clearChunktable() {
         chunktable.clear();
     }
 
-    @TruffleBoundary
     private void readBytes(final byte[] bytes, final int length) {
         try {
             stream.read(bytes, 0, length);
@@ -155,7 +148,6 @@ public final class SqueakImageReaderNode extends RootNode {
                         bytes[0] & 0xFF;
     }
 
-    @TruffleBoundary
     private void skipBytes(final long count) {
         try {
             position += stream.skip(count);
@@ -166,7 +158,6 @@ public final class SqueakImageReaderNode extends RootNode {
 
     private void readVersion() {
         final long version = nextWord();
-        CompilerDirectives.transferToInterpreterAndInvalidate();
         assert version == IMAGE_32BIT_VERSION || version == IMAGE_64BIT_VERSION : "Image not supported: " + version;
         if (version == IMAGE_64BIT_VERSION) {
             // nextWord(); // magic2
@@ -241,7 +232,6 @@ public final class SqueakImageReaderNode extends RootNode {
         closeStream();
     }
 
-    @TruffleBoundary
     private void closeStream() {
         try {
             stream.close();
@@ -250,11 +240,9 @@ public final class SqueakImageReaderNode extends RootNode {
         }
     }
 
-    @TruffleBoundary
     private void putChunk(final SqueakImageChunk chunk) {
         chunktable.put(chunk.pos + currentAddressSwizzle, chunk);
         if (chunkCount++ == HIDDEN_ROOTS_CHUNK_INDEX) {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
             hiddenRootsChunk = chunk;
         }
     }
@@ -372,7 +360,6 @@ public final class SqueakImageReaderNode extends RootNode {
         setPrebuiltObject(SPECIAL_OBJECT.SPECIAL_SELECTORS, image.specialSelectors);
     }
 
-    @ExplodeLoop
     private void initPrebuiltSelectors() {
         final SqueakImageChunk specialObjectsChunk = getChunk(specialObjectsPointer);
         final SqueakImageChunk specialSelectorChunk = getChunk(specialObjectsChunk.getWords()[SPECIAL_OBJECT.SPECIAL_SELECTORS]);
@@ -459,13 +446,7 @@ public final class SqueakImageReaderNode extends RootNode {
         }
     }
 
-    @TruffleBoundary
     public SqueakImageChunk getChunk(final long ptr) {
         return chunktable.get(ptr);
-    }
-
-    @Override
-    public String getName() {
-        return getClass().getSimpleName();
     }
 }

@@ -21,7 +21,7 @@ import com.oracle.truffle.api.utilities.CyclicAssumption;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
-import de.hpi.swa.graal.squeak.image.reading.SqueakImageReaderNode;
+import de.hpi.swa.graal.squeak.image.reading.SqueakImageReader;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CLASS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CLASS_DESCRIPTION;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.METACLASS;
@@ -200,7 +200,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
 
     /**
      * {@link ClassObject}s are filled in at an earlier stage in
-     * {@link SqueakImageReaderNode#fillInClassObjects}.
+     * {@link SqueakImageReader#fillInClassObjects}.
      */
     @Override
     public void fillin(final SqueakImageChunk chunk) {

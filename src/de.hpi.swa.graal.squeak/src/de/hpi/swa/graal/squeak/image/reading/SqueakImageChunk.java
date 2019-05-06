@@ -2,11 +2,6 @@ package de.hpi.swa.graal.squeak.image.reading;
 
 import java.util.Arrays;
 
-import com.oracle.truffle.api.CompilerDirectives;
-import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
-import com.oracle.truffle.api.nodes.ExplodeLoop;
-
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
@@ -28,20 +23,20 @@ public final class SqueakImageChunk {
     private static final long SMALLFLOAT_MASK = 896L << 52 + 1;
 
     protected Object object;
-    @CompilationFinal private ClassObject sqClass;
+    private ClassObject sqClass;
     private Object[] pointers;
 
     protected final int classid;
     protected final int pos;
 
     public final SqueakImageContext image;
-    private final SqueakImageReaderNode reader;
+    private final SqueakImageReader reader;
     private final int format;
     private final int hash;
-    @CompilationFinal(dimensions = 1) private final byte[] data;
+    private final byte[] data;
     private long[] words;
 
-    public SqueakImageChunk(final SqueakImageReaderNode reader,
+    public SqueakImageChunk(final SqueakImageReader reader,
                     final SqueakImageContext image,
                     final byte[] data,
                     final int format,
@@ -67,7 +62,7 @@ public final class SqueakImageChunk {
         if (object == null) {
             assert format == 1;
             object = new ClassObject(image, hash);
-        } else if (object == SqueakImageReaderNode.NIL_OBJECT_PLACEHOLDER) {
+        } else if (object == SqueakImageReader.NIL_OBJECT_PLACEHOLDER) {
             return null;
         }
         return (ClassObject) object;
@@ -122,7 +117,7 @@ public final class SqueakImageChunk {
                 object = new CompiledMethodObject(image, hash);
             }
         }
-        if (object == SqueakImageReaderNode.NIL_OBJECT_PLACEHOLDER) {
+        if (object == SqueakImageReader.NIL_OBJECT_PLACEHOLDER) {
             return NilObject.SINGLETON;
         } else {
             return object;
@@ -139,7 +134,6 @@ public final class SqueakImageChunk {
 
     public ClassObject getSqClass() {
         if (sqClass == null) {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
             sqClass = getClassChunk().asClassObject();
         }
         return sqClass;
@@ -166,7 +160,6 @@ public final class SqueakImageChunk {
         sqClass = baseSqueakObject;
     }
 
-    @ExplodeLoop
     public Object[] getPointers() {
         if (pointers == null) {
             final long[] theWords = getWords();
@@ -231,7 +224,6 @@ public final class SqueakImageChunk {
         }
     }
 
-    @TruffleBoundary
     private void logBogusPointer(final long ptr) {
         image.getError().println("Bogus pointer: " + ptr + ". Treating as smallint.");
     }

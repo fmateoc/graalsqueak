@@ -15,7 +15,7 @@ import com.oracle.truffle.api.frame.MaterializedFrame;
 import de.hpi.swa.graal.squeak.exceptions.ProcessSwitch;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
-import de.hpi.swa.graal.squeak.image.reading.SqueakImageReaderNode;
+import de.hpi.swa.graal.squeak.image.reading.SqueakImageReader;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS_SCHEDULER;
@@ -93,7 +93,7 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
 
     /**
      * {@link ContextObject}s are filled in at a later stage by a
-     * {@link SqueakImageReaderNode#fillInContextObjects}.
+     * {@link SqueakImageReader#fillInContextObjects}.
      */
     @Override
     public void fillin(final SqueakImageChunk chunk) {
