@@ -17,10 +17,10 @@ import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
 import java.util.Arrays;
 
 @ExportLibrary(InteropLibrary.class)
-public final class NativeImmutableBytesObject extends AbstractSqueakObjectWithClassAndHash {
+public final class NativeImmutableBytesObject extends AbstractImmutableSqueakObjectWithClassAndHash {
     public static final short BYTE_MAX = (short) (Math.pow(2, Byte.SIZE) - 1);
 
-    @CompilationFinal private final byte[] storage;
+    @CompilationFinal(dimensions = 1) private final byte[] storage;
 
     public NativeImmutableBytesObject(final NativeObject original){
         super(original.image, original.getSqueakClass());
