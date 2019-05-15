@@ -6,6 +6,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 
 import de.hpi.swa.graal.squeak.SqueakLanguage;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
+import de.hpi.swa.graal.squeak.model.AbstractImmutableSqueakObjectWithClassAndHash;
 import de.hpi.swa.graal.squeak.model.AbstractPointersObject;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
@@ -137,7 +138,7 @@ public final class LookupClassNodes {
 
 
         @Specialization
-        protected static final ClassObject doNativeImmutableBytes(final NativeImmutableBytesObject value) {
+        protected static final ClassObject doAbstractImmutableSqueakObjectWithClassAndHash(final AbstractImmutableSqueakObjectWithClassAndHash value) {
             return value.getSqueakClass();
         }
 

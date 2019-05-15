@@ -4,9 +4,12 @@ import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
+import de.hpi.swa.graal.squeak.model.AbstractImmutableSqueakObjectWithClassAndHash;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
+import de.hpi.swa.graal.squeak.model.ImmutablePointersObject;
 import de.hpi.swa.graal.squeak.model.NativeImmutableBytesObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
+import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.UnaryPrimitive;
@@ -38,6 +41,16 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
         protected Object doNativeImmutableBytes(final NativeImmutableBytesObject receiver) {
             return new NativeImmutableBytesObject(receiver);
         }
+
+        @Specialization
+        protected Object doPointersObject(final PointersObject receiver) {
+            return new ImmutablePointersObject(receiver);
+        }
+
+        @Specialization
+        protected Object doImmutablePointersObject(final ImmutablePointersObject receiver) {
+            return new ImmutablePointersObject(receiver);
+        }
     }
 
     @GenerateNodeFactory
@@ -48,7 +61,7 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected boolean doNativeImmutableBytesObject(final NativeImmutableBytesObject receiver){
+        protected boolean doAbstractImmutableSqueakObjectWithClassAndHash(final AbstractImmutableSqueakObjectWithClassAndHash receiver){
             return true;
         }
 

@@ -12,6 +12,7 @@ import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.ImmutablePointersObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeImmutableBytesObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
@@ -64,8 +65,13 @@ public abstract class SqueakObjectAt0Node extends AbstractNode {
     }
 
     @Specialization
-    protected static final Object doNativeImuutableBytes(final NativeImmutableBytesObject obj, final long index) {
+    protected static final Object doNativeImmutableBytes(final NativeImmutableBytesObject obj, final long index) {
         return Byte.toUnsignedLong(obj.getByteStorage()[(int) index]);
+    }
+
+    @Specialization
+    protected static final Object doImmutablePointers(final ImmutablePointersObject obj, final long index){
+        return obj.at0(index);
     }
     @Specialization
     protected static final Object doLargeInteger(final LargeIntegerObject obj, final long index) {
