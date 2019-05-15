@@ -11,6 +11,7 @@ import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.ImmutablePointersObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
@@ -47,6 +48,15 @@ public abstract class SqueakObjectAtPut0Node extends AbstractNode {
     @Specialization
     protected static final void doPointers(final PointersObject obj, final long index, final Object value) {
         obj.atput0(index, value);
+    }
+
+    @Specialization
+    protected static final void doPointers(final ImmutablePointersObject obj, final long index, final Object value) {
+        System.err.println("SqueakObjectAtPut0Node: Trying to store pointer in ImmutablePointersObject." +
+                " Class name: \"" + obj.getSqueakClassName() + "\". Doing nothing!\nStacktrace:");
+        for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
+            System.err.println(element);
+        }
     }
 
     @Specialization
