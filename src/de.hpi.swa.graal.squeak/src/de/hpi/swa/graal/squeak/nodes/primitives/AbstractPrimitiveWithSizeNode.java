@@ -4,6 +4,7 @@ import com.oracle.truffle.api.CompilerDirectives;
 
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
+import de.hpi.swa.graal.squeak.model.NativeImmutableBytesObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
@@ -23,6 +24,10 @@ public abstract class AbstractPrimitiveWithSizeNode extends AbstractPrimitiveNod
 
     protected final boolean inBounds(final long index, final NativeObject object) {
         return SqueakGuards.inBounds1(index, getNativeObjectSizeNode().execute(object));
+    }
+
+    protected final boolean inBounds(final long index, final NativeImmutableBytesObject object) {
+        return SqueakGuards.inBounds1(index, object.getByteLength());
     }
 
     protected final ArrayObjectSizeNode getArrayObjectSizeNode() {

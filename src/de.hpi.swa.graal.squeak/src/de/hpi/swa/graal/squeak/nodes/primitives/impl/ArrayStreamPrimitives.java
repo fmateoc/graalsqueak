@@ -419,6 +419,11 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         protected final Object doNativeObject(final NativeObject obj, final long index) {
             return CharacterObject.valueOf(method.image, (int) (long) readNode.execute(obj, index - 1));
         }
+
+        @Specialization(guards = {"inBounds(index, obj)"})
+        protected final Object doNativeImmutableBytesObject(final NativeImmutableBytesObject obj, final long index) {
+            return CharacterObject.valueOf(method.image, (int) Byte.toUnsignedLong(obj.getByteStorage()[(int) (index-1)]));
+        }
     }
 
     @GenerateNodeFactory
