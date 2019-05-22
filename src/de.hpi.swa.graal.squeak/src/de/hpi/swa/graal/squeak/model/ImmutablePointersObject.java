@@ -17,7 +17,7 @@ public final class ImmutablePointersObject extends AbstractImmutableSqueakObject
 
     public ImmutablePointersObject(final ImmutablePointersObject original) {
         super(original.image, original.getSqueakClass());
-        pointers = original.getPointers().clone();
+        pointers = original.getPointers();
     }
 
     public ImmutablePointersObject(final PointersObject original) {
@@ -28,8 +28,6 @@ public final class ImmutablePointersObject extends AbstractImmutableSqueakObject
     public Object at0(final long i) {
         return getPointer((int) i);
     }
-
-
 
     public boolean isActiveProcess() {
         return false;

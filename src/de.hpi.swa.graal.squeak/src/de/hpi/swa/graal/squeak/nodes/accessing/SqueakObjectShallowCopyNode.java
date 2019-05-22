@@ -12,7 +12,9 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.EmptyObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.ImmutablePointersObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
+import de.hpi.swa.graal.squeak.model.NativeImmutableBytesObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
@@ -49,6 +51,11 @@ public abstract class SqueakObjectShallowCopyNode extends AbstractNodeWithImage 
 
     @Specialization
     protected static final PointersObject doPointers(final PointersObject receiver) {
+        return receiver.shallowCopy();
+    }
+
+    @Specialization
+    protected static final ImmutablePointersObject doImmutablePointers(final ImmutablePointersObject receiver) {
         return receiver.shallowCopy();
     }
 
@@ -96,6 +103,11 @@ public abstract class SqueakObjectShallowCopyNode extends AbstractNodeWithImage 
     @Specialization(guards = "receiver.isByteType()")
     protected static final NativeObject doNativeBytes(final NativeObject receiver) {
         return NativeObject.newNativeBytes(receiver.image, receiver.getSqueakClass(), receiver.getByteStorage().clone());
+    }
+
+    @Specialization
+    protected static final NativeImmutableBytesObject doNativeImmutableBytes(final NativeImmutableBytesObject receiver) {
+        return new NativeImmutableBytesObject(receiver);
     }
 
     @Specialization(guards = "receiver.isShortType()")
