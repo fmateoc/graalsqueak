@@ -61,12 +61,12 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected boolean doAbstractImmutableSqueakObjectWithClassAndHash(final AbstractImmutableSqueakObjectWithClassAndHash receiver){
+        protected boolean doAbstractImmutableSqueakObjectWithClassAndHash(@SuppressWarnings("unused") final AbstractImmutableSqueakObjectWithClassAndHash receiver){
             return true;
         }
 
         @Fallback
-        protected boolean doNotImmutable(final Object receiver){
+        protected boolean doNotImmutable(@SuppressWarnings("unused") final Object receiver){
             return false;
         }
     }

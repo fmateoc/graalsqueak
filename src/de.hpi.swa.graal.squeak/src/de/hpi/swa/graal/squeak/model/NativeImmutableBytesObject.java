@@ -1,7 +1,6 @@
 package de.hpi.swa.graal.squeak.model;
 
 import com.oracle.truffle.api.CompilerAsserts;
-import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.interop.InteropLibrary;
@@ -10,9 +9,6 @@ import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
-import de.hpi.swa.graal.squeak.image.SqueakImageContext;
-import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
-import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
 import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
 import java.util.Arrays;
 
@@ -53,44 +49,11 @@ public final class NativeImmutableBytesObject extends AbstractImmutableSqueakObj
         return storage;
     }
 
-    public boolean isByteType() {
-        return true;
-    }
-
-    public boolean isIntType() {
-        return false;
-    }
-
-    public boolean isLongType() {
-        return false;
-    }
-
-    public boolean isShortType() {
-        return false;
-    }
-
-    public LargeIntegerObject normalize() {
-        // FIXME: getSqueakClass()?
-        return new LargeIntegerObject(image, getSqueakClass(), getByteStorage());
-    }
-
     @TruffleBoundary
     @Override
     public String toString() {
         CompilerAsserts.neverPartOfCompilation();
         return asStringUnsafe();
-    }
-
-    public boolean isDebugErrorSelector() {
-        return false;
-    }
-
-    public boolean isDebugSyntaxErrorSelector() {
-        return false;
-    }
-
-    public boolean isDoesNotUnderstand() {
-        return false;
     }
 
     /*

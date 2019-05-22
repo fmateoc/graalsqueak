@@ -26,7 +26,7 @@ public abstract class AbstractPrimitiveWithSizeNode extends AbstractPrimitiveNod
         return SqueakGuards.inBounds1(index, getNativeObjectSizeNode().execute(object));
     }
 
-    protected final boolean inBounds(final long index, final NativeImmutableBytesObject object) {
+    protected static boolean inBounds(final long index, final NativeImmutableBytesObject object) {
         return SqueakGuards.inBounds1(index, object.getByteLength());
     }
 

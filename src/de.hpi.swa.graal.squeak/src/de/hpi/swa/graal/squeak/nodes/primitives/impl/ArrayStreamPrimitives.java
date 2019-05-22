@@ -347,7 +347,7 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
 
         @Specialization
         protected static final long doNativeImmutableBytesObject(final NativeImmutableBytesObject receiver,
-                                                                 final NotProvided notProvided,
+                                                                 @SuppressWarnings("unused") final NotProvided notProvided,
                                                                  @Cached
                                                                  final SqueakObjectSizeNode objectSizeNode) {
             return objectSizeNode.execute(receiver);

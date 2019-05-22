@@ -51,7 +51,7 @@ public abstract class SqueakObjectAtPut0Node extends AbstractNode {
     }
 
     @Specialization
-    protected static final void doPointers(final ImmutablePointersObject obj, final long index, final Object value) {
+    protected static final void doPointers(final ImmutablePointersObject obj, @SuppressWarnings("unused") final long index, @SuppressWarnings("unused") final Object value) {
         System.err.println("SqueakObjectAtPut0Node: Trying to store pointer in ImmutablePointersObject." +
                 " Class name: \"" + obj.getSqueakClassName() + "\". Doing nothing!\nStacktrace:");
         for (StackTraceElement element : Thread.currentThread().getStackTrace()) {

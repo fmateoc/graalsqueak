@@ -25,7 +25,6 @@ import de.hpi.swa.graal.squeak.util.ArrayUtils;
 public abstract class AbstractImmutableSqueakObjectWithClassAndHash extends AbstractSqueakObject {
     public static final int IDENTITY_HASH_MASK = 0x400000 - 1;
     private static final int PINNED_BIT_SHIFT = 30;
-    private static final int PINNED_BIT_MASK = 1 << PINNED_BIT_SHIFT;
 
     public final SqueakImageContext image;
     private final long squeakHash;
@@ -116,6 +115,7 @@ public abstract class AbstractImmutableSqueakObjectWithClassAndHash extends Abst
         return 0 <= index && index < sizeNode.execute(this);
     }
 
+    @SuppressWarnings("static-method")
     @ExportMessage(name = "isArrayElementInsertable")
     @ExportMessage(name = "isArrayElementModifiable")
     protected final boolean isArrayElementModifiable(@SuppressWarnings("unused") final long index) {
@@ -126,7 +126,8 @@ public abstract class AbstractImmutableSqueakObjectWithClassAndHash extends Abst
     protected final Object readArrayElement(final long index, @Cached final SqueakObjectAt0Node at0Node) {
         return at0Node.execute(this, index);
     }
-    
+
+    @SuppressWarnings("static-method")
     @ExportMessage
     protected final void writeArrayElement(@SuppressWarnings("unused") final long index,
                                            @SuppressWarnings("unused") final Object value) throws UnsupportedMessageException {
