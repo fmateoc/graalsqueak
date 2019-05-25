@@ -5,13 +5,16 @@ import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
 import de.hpi.swa.graal.squeak.model.AbstractImmutableSqueakObjectWithClassAndHash;
+import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ImmutablePointersObject;
 import de.hpi.swa.graal.squeak.model.NativeImmutableBytesObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
+import de.hpi.swa.graal.squeak.model.NotProvided;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
+import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.OctonaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.UnaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.UnaryPrimitiveWithoutFallback;
 import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
@@ -68,6 +71,72 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
         @Fallback
         protected boolean doNotImmutable(@SuppressWarnings("unused") final Object receiver){
             return false;
+        }
+    }
+    @GenerateNodeFactory
+    @SqueakPrimitive(names = "primitiveImmutableFromArgs")
+    public abstract static class PrimImmutableFromArgs extends AbstractPrimitiveNode implements OctonaryPrimitive {
+
+        protected PrimImmutableFromArgs(final CompiledMethodObject method) {
+            super(method);
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0"})
+        protected final Object doArg0(final ClassObject classObject, final NotProvided n1, final NotProvided n2, final NotProvided n3, final NotProvided n4, final NotProvided n5,
+                                      final NotProvided n6, final NotProvided n7) {
+            return new ImmutablePointersObject(method.image,classObject, new Object[]{});
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)"})
+        protected final Object doArg1(final ClassObject classObject, final Object arg1, final NotProvided n2, final NotProvided n3, final NotProvided n4, final NotProvided n5,
+                                      final NotProvided n6, final NotProvided n7) {
+            return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1});
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)", "!isNotProvided(arg2)"})
+        protected final Object doArg2(final ClassObject classObject, final Object arg1, final Object arg2, final NotProvided n3, final NotProvided n4, final NotProvided n5, final NotProvided n6,
+                                      final NotProvided n7) {
+            return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1,arg2});
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)"})
+        protected final Object doArg3(final ClassObject classObject, final Object arg1, final Object arg2, final Object arg3, final NotProvided n4, final NotProvided n5, final NotProvided n6,
+                                      final NotProvided n7) {
+            return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1,arg2,arg3});
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)", "!isNotProvided(arg4)"})
+        protected final Object doArg3(final ClassObject classObject, final Object arg1, final Object arg2, final Object arg3, final Object arg4, final NotProvided n5, final NotProvided n6,
+                                      final NotProvided n7) {
+            return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1,arg2,arg3,arg4});
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)", "!isNotProvided(arg4)", "!isNotProvided(arg5)"})
+        protected final Object doArg5(final ClassObject classObject, final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final NotProvided n6,
+                                      final NotProvided n7) {
+            return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1,arg2,arg3,arg4,arg5});
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)", "!isNotProvided(arg4)", "!isNotProvided(arg5)",
+                "!isNotProvided(arg6)"})
+        protected final Object doArg6(final ClassObject classObject, final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final Object arg6,
+                                      final NotProvided n7) {
+            return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6});
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)", "!isNotProvided(arg4)", "!isNotProvided(arg5)",
+                "!isNotProvided(arg6)", "!isNotProvided(arg7)"})
+        protected final Object doArg7(final ClassObject classObject, final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final Object arg6,
+                                      final Object arg7) {
+            return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6,arg7});
         }
     }
 }
