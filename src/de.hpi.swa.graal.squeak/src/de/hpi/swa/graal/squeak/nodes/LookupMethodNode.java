@@ -30,7 +30,7 @@ public abstract class LookupMethodNode extends AbstractNode {
         return cachedMethod;
     }
 
-    @Specialization(replaces = "doCached")
+    @Specialization// (replaces = "doCached")
     protected static final Object doUncached(final ClassObject classObject, final NativeObject selector) {
         ClassObject lookupClass = classObject;
         while (lookupClass != null) {
