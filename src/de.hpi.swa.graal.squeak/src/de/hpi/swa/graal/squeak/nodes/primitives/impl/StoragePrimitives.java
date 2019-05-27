@@ -370,7 +370,7 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
     }
 
     @GenerateNodeFactory
-    @SqueakPrimitive(indices = {75, 171, 175})
+    @SqueakPrimitive(indices = 75)
     protected abstract static class PrimIdentityHashNode extends AbstractPrimitiveNode implements UnaryPrimitive {
 
         protected PrimIdentityHashNode(final CompiledMethodObject method) {
@@ -378,7 +378,7 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected static final long doNil(@SuppressWarnings("unused") final NilObject receiver) {
+        protected static final long doNil(@SuppressWarnings("unused") final NilObject nil) {
             return NilObject.getSqueakHash();
         }
 
@@ -397,6 +397,7 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
             return obj;
         }
 
+        @Specialization
         protected static final long doChar(final CharacterObject obj) {
             return obj.getValue();
         }
@@ -411,7 +412,7 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
             return Double.doubleToLongBits(receiver);
         }
 
-        @Specialization(guards = {"!isCharacterObject(receiver)", "!isFloatObject(receiver)"})
+        @Specialization
         protected static final long doSqueakObject(final AbstractSqueakObjectWithClassAndHash receiver) {
             return receiver.getSqueakHash();
         }
@@ -614,6 +615,30 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
         }
     }
 
+    @GenerateNodeFactory
+    @SqueakPrimitive(indices = 171)
+    protected abstract static class PrimImmediateAsIntegerNode extends AbstractPrimitiveNode implements UnaryPrimitive {
+
+        protected PrimImmediateAsIntegerNode(final CompiledMethodObject method) {
+            super(method);
+        }
+
+        @Specialization
+        protected static final long doChar(final char obj) {
+            return obj;
+        }
+
+        @Specialization
+        protected static final long doChar(final CharacterObject obj) {
+            return obj.getValue();
+        }
+
+        @Specialization
+        protected static final long doDouble(final double receiver) {
+            return Double.doubleToLongBits(receiver);
+        }
+    }
+
     @NodeInfo(cost = NodeCost.NONE)
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 173)
@@ -655,6 +680,20 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
                         @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
             objectLibrary.atput0(target, (int) index - 1, value);
             return value;
+        }
+    }
+
+    @GenerateNodeFactory
+    @SqueakPrimitive(indices = 175)
+    protected abstract static class PrimBehaviorHashNode extends AbstractPrimitiveNode implements UnaryPrimitive {
+
+        protected PrimBehaviorHashNode(final CompiledMethodObject method) {
+            super(method);
+        }
+
+        @Specialization
+        protected static final long doBehavior(final ClassObject receiver) {
+            return receiver.getSqueakHash();
         }
     }
 
