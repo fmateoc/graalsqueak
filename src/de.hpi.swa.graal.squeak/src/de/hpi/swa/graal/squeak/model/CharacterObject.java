@@ -55,4 +55,9 @@ public final class CharacterObject extends AbstractSqueakObject {
     public CharacterObject shallowCopy() {
         return new CharacterObject(value);
     }
+
+    @ExportMessage
+    public long squeakHash() {
+        return value;
+    }
 }

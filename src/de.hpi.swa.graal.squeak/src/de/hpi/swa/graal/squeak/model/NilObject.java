@@ -23,10 +23,6 @@ public final class NilObject extends AbstractSqueakObject {
         return object == null ? SINGLETON : object;
     }
 
-    public static long getSqueakHash() {
-        return 1L;
-    }
-
     @SuppressWarnings({"static-method", "unused"})
     @ExportMessage
     public Object at0(final int index) {
@@ -55,6 +51,11 @@ public final class NilObject extends AbstractSqueakObject {
     @ExportMessage
     public NilObject shallowCopy() {
         return SINGLETON;
+    }
+
+    @ExportMessage
+    public static long squeakHash(@SuppressWarnings("unused") final NilObject receiver) {
+        return 1L;
     }
 
     @Override

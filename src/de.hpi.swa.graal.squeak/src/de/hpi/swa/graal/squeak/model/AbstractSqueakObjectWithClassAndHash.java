@@ -24,6 +24,7 @@ import de.hpi.swa.graal.squeak.nodes.DispatchUneagerlyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
+@ExportLibrary(SqueakObjectLibrary.class)
 @ExportLibrary(InteropLibrary.class)
 public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSqueakObject {
     public static final int IDENTITY_HASH_MASK = 0x400000 - 1;
@@ -265,5 +266,10 @@ public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSquea
      */
     private static String toSelector(final String identifier) {
         return identifier.replace('_', ':');
+    }
+
+    @ExportMessage
+    public final long squeakHash() {
+        return getSqueakHash();
     }
 }

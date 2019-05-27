@@ -53,6 +53,7 @@ import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.BinaryPrimit
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.QuaternaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.TernaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.UnaryPrimitive;
+import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.UnaryPrimitiveWithoutFallback;
 import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
@@ -371,50 +372,16 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
 
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 75)
-    protected abstract static class PrimIdentityHashNode extends AbstractPrimitiveNode implements UnaryPrimitive {
+    protected abstract static class PrimIdentityHashNode extends AbstractPrimitiveNode implements UnaryPrimitiveWithoutFallback {
 
         protected PrimIdentityHashNode(final CompiledMethodObject method) {
             super(method);
         }
 
         @Specialization
-        protected static final long doNil(@SuppressWarnings("unused") final NilObject nil) {
-            return NilObject.getSqueakHash();
-        }
-
-        @Specialization(guards = "obj == FALSE")
-        protected static final long doBooleanFalse(@SuppressWarnings("unused") final boolean obj) {
-            return 2L;
-        }
-
-        @Specialization(guards = "obj != FALSE")
-        protected static final long doBooleanTrue(@SuppressWarnings("unused") final boolean obj) {
-            return 3L;
-        }
-
-        @Specialization
-        protected static final long doChar(final char obj) {
-            return obj;
-        }
-
-        @Specialization
-        protected static final long doChar(final CharacterObject obj) {
-            return obj.getValue();
-        }
-
-        @Specialization
-        protected static final long doLong(final long obj) {
-            return obj;
-        }
-
-        @Specialization
-        protected static final long doDouble(final double receiver) {
-            return Double.doubleToLongBits(receiver);
-        }
-
-        @Specialization
-        protected static final long doSqueakObject(final AbstractSqueakObjectWithClassAndHash receiver) {
-            return receiver.getSqueakHash();
+        protected static final long doSqueakObject(final Object receiver,
+                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+            return objectLibrary.squeakHash(receiver);
         }
     }
 
