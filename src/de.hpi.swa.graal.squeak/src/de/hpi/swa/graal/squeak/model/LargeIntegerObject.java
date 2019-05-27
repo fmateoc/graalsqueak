@@ -14,8 +14,10 @@ import com.oracle.truffle.api.library.ExportMessage;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
+@ExportLibrary(SqueakObjectLibrary.class)
 @ExportLibrary(InteropLibrary.class)
 public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHash {
     private static final BigInteger ONE_SHIFTED_BY_64 = BigInteger.ONE.shiftLeft(64);
@@ -552,6 +554,20 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
 
     public BigInteger getBigInteger() {
         return integer;
+    }
+
+    /*
+     * SQUEAK OBJECT ACCESS
+     */
+
+    @ExportMessage
+    public Object at0(final int index) {
+        return getNativeAt0(index);
+    }
+
+    @ExportMessage
+    public void atput0(final int index, final Object value) {
+        setNativeAt0(index, (long) value);
     }
 
     /*

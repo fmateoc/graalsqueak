@@ -7,6 +7,7 @@ import com.oracle.truffle.api.Assumption;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.NodeFactory;
@@ -17,6 +18,7 @@ import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.FrameUtil;
+import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import com.oracle.truffle.api.profiles.BranchProfile;
@@ -40,9 +42,8 @@ import de.hpi.swa.graal.squeak.nodes.NewObjectNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectTraceableToObjectArrayNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectBecomeNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectPointersBecomeOneWayNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.UpdateSqueakObjectHashNode;
@@ -332,20 +333,21 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
     @SqueakPrimitive(indices = 73)
     protected abstract static class PrimInstVarAtNode extends AbstractPrimitiveNode implements TernaryPrimitive {
         @Child protected SqueakObjectSizeNode sizeNode = SqueakObjectSizeNode.create();
-        @Child private SqueakObjectAt0Node at0Node = SqueakObjectAt0Node.create();
 
         protected PrimInstVarAtNode(final CompiledMethodObject method) {
             super(method);
         }
 
         @Specialization(guards = "inBounds1(index, sizeNode.execute(receiver))")
-        protected final Object doAt(final AbstractSqueakObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided) {
-            return at0Node.execute(receiver, index - 1);
+        protected final Object doAt(final AbstractSqueakObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided,
+                        @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibary) {
+            return objectLibary.at0(receiver, (int) index - 1);
         }
 
         @Specialization(guards = "inBounds1(index, sizeNode.execute(target))") // Context>>#object:instVarAt:
-        protected final Object doAt(@SuppressWarnings("unused") final Object receiver, final AbstractSqueakObject target, final long index) {
-            return at0Node.execute(target, index - 1);
+        protected final Object doAt(@SuppressWarnings("unused") final Object receiver, final AbstractSqueakObject target, final long index,
+                        @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibary) {
+            return objectLibary.at0(target, (int) index - 1);
         }
     }
 
@@ -353,21 +355,22 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
     @SqueakPrimitive(indices = 74)
     protected abstract static class PrimInstVarAtPutNode extends AbstractPrimitiveNode implements QuaternaryPrimitive {
         @Child protected SqueakObjectSizeNode sizeNode = SqueakObjectSizeNode.create();
-        @Child private SqueakObjectAtPut0Node atPut0Node = SqueakObjectAtPut0Node.create();
 
         protected PrimInstVarAtPutNode(final CompiledMethodObject method) {
             super(method);
         }
 
         @Specialization(guards = "inBounds1(index, sizeNode.execute(receiver))")
-        protected final Object doAtPut(final AbstractSqueakObject receiver, final long index, final Object value, @SuppressWarnings("unused") final NotProvided notProvided) {
-            atPut0Node.execute(receiver, index - 1, value);
+        protected static final Object doAtPut(final AbstractSqueakObject receiver, final long index, final Object value, @SuppressWarnings("unused") final NotProvided notProvided,
+                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+            objectLibrary.atput0(receiver, (int) index - 1, value);
             return value;
         }
 
         @Specialization(guards = "inBounds1(index, sizeNode.execute(target))") // Context>>#object:instVarAt:put:
-        protected final Object doAtPut(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final AbstractSqueakObject target, final long index, final Object value) {
-            atPut0Node.execute(target, index - 1, value);
+        protected static final Object doAtPut(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final AbstractSqueakObject target, final long index, final Object value,
+                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+            objectLibrary.atput0(receiver, (int) index - 1, value);
             return value;
         }
     }
@@ -628,20 +631,21 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
     @SqueakPrimitive(indices = 173)
     protected abstract static class PrimSlotAtNode extends AbstractPrimitiveNode implements TernaryPrimitive {
         @Child protected SqueakObjectSizeNode sizeNode = SqueakObjectSizeNode.create();
-        @Child private SqueakObjectAt0Node at0Node = SqueakObjectAt0Node.create();
 
         protected PrimSlotAtNode(final CompiledMethodObject method) {
             super(method);
         }
 
         @Specialization(guards = "inBounds1(index, sizeNode.execute(receiver))")
-        protected final Object doSlotAt(final AbstractSqueakObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided) {
-            return at0Node.execute(receiver, index - 1);
+        protected final Object doSlotAt(final AbstractSqueakObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided,
+                        @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibary) {
+            return objectLibary.at0(receiver, (int) index - 1);
         }
 
         @Specialization(guards = "inBounds1(index, sizeNode.execute(target))")
-        protected final Object doSlotAt(@SuppressWarnings("unused") final ContextObject receiver, final AbstractSqueakObject target, final long index) {
-            return at0Node.execute(target, index - 1);
+        protected final Object doSlotAt(@SuppressWarnings("unused") final ContextObject receiver, final AbstractSqueakObject target, final long index,
+                        @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibary) {
+            return objectLibary.at0(target, (int) index - 1);
         }
     }
 
@@ -650,21 +654,22 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
     @SqueakPrimitive(indices = 174)
     protected abstract static class PrimSlotAtPutNode extends AbstractPrimitiveNode implements QuaternaryPrimitive {
         @Child protected SqueakObjectSizeNode sizeNode = SqueakObjectSizeNode.create();
-        @Child private SqueakObjectAtPut0Node atPut0Node = SqueakObjectAtPut0Node.create();
 
         protected PrimSlotAtPutNode(final CompiledMethodObject method) {
             super(method);
         }
 
         @Specialization(guards = "inBounds1(index, sizeNode.execute(receiver))")
-        protected final Object doSlotAtPut(final AbstractSqueakObject receiver, final long index, final Object value, @SuppressWarnings("unused") final NotProvided notProvided) {
-            atPut0Node.execute(receiver, index - 1, value);
+        protected final Object doSlotAtPut(final AbstractSqueakObject receiver, final long index, final Object value, @SuppressWarnings("unused") final NotProvided notProvided,
+                        @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+            objectLibrary.atput0(receiver, (int) index - 1, value);
             return value;
         }
 
         @Specialization(guards = "inBounds1(index, sizeNode.execute(target))")
-        protected final Object doSlotAtPut(@SuppressWarnings("unused") final ContextObject receiver, final AbstractSqueakObject target, final long index, final Object value) {
-            atPut0Node.execute(target, index - 1, value);
+        protected final Object doSlotAtPut(@SuppressWarnings("unused") final ContextObject receiver, final AbstractSqueakObject target, final long index, final Object value,
+                        @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+            objectLibrary.atput0(target, (int) index - 1, value);
             return value;
         }
     }

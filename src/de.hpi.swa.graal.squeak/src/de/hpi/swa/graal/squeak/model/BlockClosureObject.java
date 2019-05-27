@@ -21,9 +21,13 @@ import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.interop.WrapToSqueakNode;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.BLOCK_CLOSURE;
 import de.hpi.swa.graal.squeak.nodes.EnterCodeNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.BlockClosureObjectNodes.BlockClosureObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.BlockClosureObjectNodes.BlockClosureObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
+@ExportLibrary(SqueakObjectLibrary.class)
 @ExportLibrary(InteropLibrary.class)
 public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHash {
     @CompilationFinal private Object receiver;
@@ -224,6 +228,22 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHa
 
     public BlockClosureObject shallowCopy() {
         return new BlockClosureObject(this);
+    }
+
+    /*
+     * SQUEAK OBJECT ACCESS
+     */
+
+    @ExportMessage
+    public Object at0(final int index,
+                    @Cached final BlockClosureObjectReadNode readNode) {
+        return readNode.execute(this, index);
+    }
+
+    @ExportMessage
+    public void atput0(final int index, final Object value,
+                    @Cached final BlockClosureObjectWriteNode writeNode) {
+        writeNode.execute(this, index, value);
     }
 
     /*

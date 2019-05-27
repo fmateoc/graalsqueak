@@ -13,7 +13,9 @@ import de.hpi.swa.graal.squeak.interop.WrapToSqueakNode;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.ADDITIONAL_METHOD_STATE;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CLASS_BINDING;
 import de.hpi.swa.graal.squeak.nodes.DispatchUneagerlyNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 
+@ExportLibrary(SqueakObjectLibrary.class)
 @ExportLibrary(InteropLibrary.class)
 public final class CompiledMethodObject extends CompiledCodeObject {
 
@@ -39,18 +41,6 @@ public final class CompiledMethodObject extends CompiledCodeObject {
 
     public static CompiledMethodObject newOfSize(final SqueakImageContext image, final int size) {
         return new CompiledMethodObject(size, image);
-    }
-
-    public Object at0(final long longIndex) {
-        final int index = (int) longIndex;
-        if (index < getBytecodeOffset()) {
-            assert index % image.flags.wordSize() == 0;
-            return literals[index / image.flags.wordSize()];
-        } else {
-            final int realIndex = index - getBytecodeOffset();
-            assert realIndex >= 0;
-            return Byte.toUnsignedLong(bytes[realIndex]);
-        }
     }
 
     public AbstractSqueakObject penultimateLiteral() {
@@ -162,6 +152,27 @@ public final class CompiledMethodObject extends CompiledCodeObject {
     @Override
     public int size() {
         return getBytecodeOffset() + bytes.length;
+    }
+
+    /*
+     * SQUEAK OBJECT ACCESS
+     */
+
+    @ExportMessage
+    public Object at0(final int index) {
+        if (index < getBytecodeOffset()) {
+            assert index % image.flags.wordSize() == 0;
+            return literals[index / image.flags.wordSize()];
+        } else {
+            final int realIndex = index - getBytecodeOffset();
+            assert realIndex >= 0;
+            return Byte.toUnsignedLong(bytes[realIndex]);
+        }
+    }
+
+    @ExportMessage
+    public void atput0(final int index, final Object value) {
+        atput0Shared(index, value);
     }
 
     /*

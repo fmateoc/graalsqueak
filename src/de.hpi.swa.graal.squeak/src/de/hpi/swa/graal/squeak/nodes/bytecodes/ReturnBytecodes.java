@@ -2,6 +2,7 @@ package de.hpi.swa.graal.squeak.nodes.bytecodes;
 
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
@@ -24,8 +25,12 @@ public final class ReturnBytecodes {
         }
 
         protected final boolean hasModifiedSender(final VirtualFrame frame) {
-            final ContextObject context = getContext(frame);
-            return context != null && context.hasModifiedSender();
+            if (frame.getFrameDescriptor().getFrameSlotKind(code.getThisContextSlot()) == FrameSlotKind.Illegal) {
+                return false;
+            } else {
+                final ContextObject context = getContext(frame);
+                return context != null && context.hasModifiedSender();
+            }
         }
 
         @Override

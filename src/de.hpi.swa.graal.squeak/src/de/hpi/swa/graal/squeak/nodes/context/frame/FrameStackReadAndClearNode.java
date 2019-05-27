@@ -1,7 +1,6 @@
 package de.hpi.swa.graal.squeak.nodes.context.frame;
 
 import com.oracle.truffle.api.dsl.Cached;
-import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameSlot;
@@ -9,11 +8,9 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
-import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithCode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
-@ImportStatic(CONTEXT.class)
 public abstract class FrameStackReadAndClearNode extends AbstractNodeWithCode {
 
     protected FrameStackReadAndClearNode(final CompiledCodeObject code) {
@@ -47,7 +44,7 @@ public abstract class FrameStackReadAndClearNode extends AbstractNodeWithCode {
     protected abstract Object execute(Frame frame, int stackIndex);
 
     @SuppressWarnings("unused")
-    @Specialization(guards = {"index == cachedIndex"}, limit = "MAX_STACK_SIZE")
+    @Specialization(guards = {"index == cachedIndex"}, limit = "code.getSqueakContextSize()")
     protected static final Object doClear(final Frame frame, final int index,
                     @Cached("index") final int cachedIndex,
                     @Cached("code.getStackSlot(index)") final FrameSlot slot,

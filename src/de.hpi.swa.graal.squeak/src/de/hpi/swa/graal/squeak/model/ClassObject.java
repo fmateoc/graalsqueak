@@ -27,11 +27,15 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.CLASS_DESCRIPTION;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.METACLASS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.METHOD_DICT;
 import de.hpi.swa.graal.squeak.nodes.NewObjectNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ClassObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ClassObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
 /*
  * Represents all subclasses of ClassDescription (Class, Metaclass, TraitBehavior, ...).
  */
+@ExportLibrary(SqueakObjectLibrary.class)
 @ExportLibrary(InteropLibrary.class)
 public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     private final CyclicAssumption classHierarchyStable = new CyclicAssumption("Class hierarchy stability");
@@ -507,5 +511,17 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
             default:
                 throw ArityException.create(1, numArguments);
         }
+    }
+
+    @ExportMessage
+    public Object at0(final int index,
+                    @Cached final ClassObjectReadNode readNode) {
+        return readNode.execute(this, index);
+    }
+
+    @ExportMessage
+    public void atput0(final int index, final Object value,
+                    @Cached final ClassObjectWriteNode writeNode) {
+        writeNode.execute(this, index, value);
     }
 }

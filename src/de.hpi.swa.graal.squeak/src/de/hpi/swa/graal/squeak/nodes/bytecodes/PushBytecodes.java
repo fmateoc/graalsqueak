@@ -7,6 +7,7 @@ import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 
@@ -17,10 +18,12 @@ import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.EnterCodeNode;
 import de.hpi.swa.graal.squeak.nodes.GetOrCreateContextNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
+import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodesFactory.PushLiteralVariableNodeGen;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodesFactory.PushNewArrayNodeGen;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodesFactory.PushReceiverNodeGen;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodesFactory.PushReceiverVariableNodeGen;
+import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodesFactory.PushRemoteTempNodeGen;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameSlotReadNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackReadAndClearNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackWriteNode;
@@ -164,18 +167,22 @@ public final class PushBytecodes {
         }
     }
 
-    public static final class PushLiteralVariableNode extends AbstractPushNode {
-        @Child private SqueakObjectAt0Node at0Node = SqueakObjectAt0Node.create();
+    public abstract static class PushLiteralVariableNode extends AbstractPushNode {
         private final int literalIndex;
 
-        public PushLiteralVariableNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int literalIndex) {
+        protected PushLiteralVariableNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int literalIndex) {
             super(code, index, numBytecodes);
             this.literalIndex = literalIndex;
         }
 
-        @Override
-        public void executeVoid(final VirtualFrame frame) {
-            pushNode.executePush(frame, at0Node.execute(code.getLiteral(literalIndex), 1));
+        public static PushLiteralVariableNode create(final CompiledCodeObject code, final int index, final int numBytecodes, final int literalIndex) {
+            return PushLiteralVariableNodeGen.create(code, index, numBytecodes, literalIndex);
+        }
+
+        @Specialization
+        protected final void doPush(final VirtualFrame frame,
+                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibary) {
+            pushNode.executePush(frame, objectLibary.at0(code.getLiteral(literalIndex), 1));
         }
 
         @Override
@@ -246,7 +253,6 @@ public final class PushBytecodes {
 
     @NodeInfo(cost = NodeCost.NONE)
     public abstract static class PushReceiverVariableNode extends AbstractPushNode {
-        @Child private SqueakObjectAt0Node at0Node = SqueakObjectAt0Node.create();
         private final int variableIndex;
 
         protected PushReceiverVariableNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int varIndex) {
@@ -259,8 +265,9 @@ public final class PushBytecodes {
         }
 
         @Specialization
-        protected final void doReceiverVirtualized(final VirtualFrame frame) {
-            pushNode.executePush(frame, at0Node.execute(FrameAccess.getReceiver(frame), variableIndex));
+        protected final void doReceiverVirtualized(final VirtualFrame frame,
+                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibary) {
+            pushNode.executePush(frame, objectLibary.at0(FrameAccess.getReceiver(frame), variableIndex));
         }
 
         @Override
@@ -271,22 +278,26 @@ public final class PushBytecodes {
     }
 
     @NodeInfo(cost = NodeCost.NONE)
-    public static final class PushRemoteTempNode extends AbstractPushNode {
-        @Child private SqueakObjectAt0Node at0Node = SqueakObjectAt0Node.create();
+    public abstract static class PushRemoteTempNode extends AbstractPushNode {
         @Child private FrameSlotReadNode readTempNode;
         private final int indexInArray;
         private final int indexOfArray;
 
-        public PushRemoteTempNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int indexInArray, final int indexOfArray) {
+        protected PushRemoteTempNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int indexInArray, final int indexOfArray) {
             super(code, index, numBytecodes);
             this.indexInArray = indexInArray;
             this.indexOfArray = indexOfArray;
             readTempNode = FrameSlotReadNode.create(code.getStackSlot(indexOfArray));
         }
 
-        @Override
-        public void executeVoid(final VirtualFrame frame) {
-            pushNode.executePush(frame, at0Node.execute(readTempNode.executeRead(frame), indexInArray));
+        public static AbstractBytecodeNode create(final CompiledCodeObject code, final int index, final int numBytecodes, final int indexInArray, final int indexOfArray) {
+            return PushRemoteTempNodeGen.create(code, index, numBytecodes, indexInArray, indexOfArray);
+        }
+
+        @Specialization
+        protected final void executeVoid(final VirtualFrame frame,
+                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibary) {
+            pushNode.executePush(frame, objectLibary.at0(readTempNode.executeRead(frame), indexInArray));
         }
 
         @Override

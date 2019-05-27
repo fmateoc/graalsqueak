@@ -6,7 +6,7 @@ import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 
 public abstract class AbstractPointersObject extends AbstractSqueakObjectWithClassAndHash {
-    @CompilationFinal(dimensions = 0) private Object[] pointers;
+    @CompilationFinal(dimensions = 0) protected Object[] pointers;
 
     protected AbstractPointersObject(final SqueakImageContext image) {
         super(image);
@@ -40,15 +40,5 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         // TODO: find out if invalidation should be avoided by copying values if pointers != null
         CompilerDirectives.transferToInterpreterAndInvalidate();
         this.pointers = pointers;
-    }
-
-    @Override
-    public final int instsize() {
-        return getSqueakClass().getBasicInstanceSize();
-    }
-
-    @Override
-    public final int size() {
-        return pointers.length;
     }
 }

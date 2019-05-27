@@ -78,12 +78,12 @@ public abstract class AbstractSqueakTestCase {
 
     protected static ExecuteTopLevelContextNode createContext(final CompiledMethodObject code, final Object receiver, final Object[] arguments) {
         final ContextObject testContext = ContextObject.create(code.image, arguments.length + code.getSqueakContextSize());
-        testContext.atput0(CONTEXT.METHOD, code);
-        testContext.atput0(CONTEXT.RECEIVER, receiver);
-        testContext.atput0(CONTEXT.INSTRUCTION_POINTER, (long) code.getInitialPC());
-        testContext.atput0(CONTEXT.STACKPOINTER, 0L);
-        testContext.atput0(CONTEXT.CLOSURE_OR_NIL, NilObject.SINGLETON);
-        testContext.atput0(CONTEXT.SENDER_OR_NIL, NilObject.SINGLETON);
+        testContext.atput0Uncached(CONTEXT.METHOD, code);
+        testContext.atput0Uncached(CONTEXT.RECEIVER, receiver);
+        testContext.atput0Uncached(CONTEXT.INSTRUCTION_POINTER, (long) code.getInitialPC());
+        testContext.atput0Uncached(CONTEXT.STACKPOINTER, 0L);
+        testContext.atput0Uncached(CONTEXT.CLOSURE_OR_NIL, NilObject.SINGLETON);
+        testContext.atput0Uncached(CONTEXT.SENDER_OR_NIL, NilObject.SINGLETON);
         for (int i = 0; i < arguments.length; i++) {
             testContext.push(arguments[i]);
         }

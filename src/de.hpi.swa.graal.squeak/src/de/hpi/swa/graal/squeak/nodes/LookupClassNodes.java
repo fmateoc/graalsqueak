@@ -4,7 +4,6 @@ import com.oracle.truffle.api.dsl.GenerateUncached;
 import com.oracle.truffle.api.dsl.Specialization;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
-import de.hpi.swa.graal.squeak.model.AbstractPointersObject;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CharacterObject;
@@ -17,6 +16,8 @@ import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
+import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.LookupClassNodesFactory.LookupClassNodeGen;
 import de.hpi.swa.graal.squeak.nodes.accessing.CompiledCodeNodes.GetCompiledMethodNode;
 
@@ -67,12 +68,17 @@ public final class LookupClassNodes {
         }
 
         @Specialization
-        protected static final ClassObject doAbstractPointers(@SuppressWarnings("unused") final SqueakImageContext image, final AbstractPointersObject value) {
+        protected static final ClassObject doPointers(@SuppressWarnings("unused") final SqueakImageContext image, final PointersObject value) {
             return value.getSqueakClass();
         }
 
         @Specialization
         protected static final ClassObject doArray(@SuppressWarnings("unused") final SqueakImageContext image, final ArrayObject value) {
+            return value.getSqueakClass();
+        }
+
+        @Specialization
+        protected static final ClassObject doNative(@SuppressWarnings("unused") final SqueakImageContext image, final NativeObject value) {
             return value.getSqueakClass();
         }
 
@@ -102,6 +108,11 @@ public final class LookupClassNodes {
         }
 
         @Specialization
+        protected static final ClassObject doWeakPointers(@SuppressWarnings("unused") final SqueakImageContext image, final WeakPointersObject value) {
+            return value.getSqueakClass();
+        }
+
+        @Specialization
         protected static final ClassObject doEmpty(@SuppressWarnings("unused") final SqueakImageContext image, final EmptyObject value) {
             return value.getSqueakClass();
         }
@@ -113,11 +124,6 @@ public final class LookupClassNodes {
 
         @Specialization
         protected static final ClassObject doLargeInteger(@SuppressWarnings("unused") final SqueakImageContext image, final LargeIntegerObject value) {
-            return value.getSqueakClass();
-        }
-
-        @Specialization
-        protected static final ClassObject doNative(@SuppressWarnings("unused") final SqueakImageContext image, final NativeObject value) {
             return value.getSqueakClass();
         }
 

@@ -1,12 +1,19 @@
 package de.hpi.swa.graal.squeak.model;
 
+import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
+
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.LINKED_LIST;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
+import de.hpi.swa.graal.squeak.nodes.accessing.UpdateSqueakObjectHashNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
+@ExportLibrary(SqueakObjectLibrary.class)
 public final class PointersObject extends AbstractPointersObject {
 
     public PointersObject(final SqueakImageContext image) {
@@ -36,24 +43,8 @@ public final class PointersObject extends AbstractPointersObject {
         setPointers(chunk.getPointers());
     }
 
-    public Object at0(final int i) {
-        return getPointer(i);
-    }
-
-    public void atput0(final long i, final Object obj) {
-        assert obj != null; // null indicates a problem
-        setPointer((int) i, obj);
-    }
-
     public void atputNil0(final long i) {
         setPointer((int) i, NilObject.SINGLETON);
-    }
-
-    public void become(final PointersObject other) {
-        becomeOtherClass(other);
-        final Object[] otherPointers = other.getPointers();
-        other.setPointers(getPointers());
-        setPointers(otherPointers);
     }
 
     public boolean isActiveProcess() {
@@ -86,6 +77,59 @@ public final class PointersObject extends AbstractPointersObject {
         return first;
     }
 
+    @ExportMessage
+    public Object at0(final int i) {
+        return getPointer(i);
+    }
+
+    @ExportMessage
+    public void atput0(final int i, final Object obj) {
+        assert obj != null; // null indicates a problem
+        setPointer(i, obj);
+    }
+
+// @ExportMessage
+    public boolean become(final Object otherObject) {
+        if (!(otherObject instanceof PointersObject)) {
+            return false;
+        }
+        final PointersObject other = (PointersObject) otherObject;
+        becomeOtherClass(other);
+        final Object[] otherPointers = other.getPointers();
+        other.setPointers(getPointers());
+        setPointers(otherPointers);
+        return true;
+    }
+
+// @ExportMessage
+    public void pointersBecomeOneWay(final Object[] from, final Object[] to, final boolean copyHash,
+                    @Cached final UpdateSqueakObjectHashNode updateHashNode) {
+        for (int i = 0; i < from.length; i++) {
+            final Object fromPointer = from[i];
+            for (int j = 0; j < pointers.length; j++) {
+                final Object newPointer = pointers[j];
+                if (newPointer == fromPointer) {
+                    final Object toPointer = to[i];
+                    pointers[j] = toPointer;
+                    updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
+                }
+            }
+        }
+    }
+
+    @Override
+// @ExportMessage
+    public int instsize() {
+        return getSqueakClass().getBasicInstanceSize();
+    }
+
+    @Override
+// @ExportMessage
+    public int size() {
+        return pointers.length;
+    }
+
+// @ExportMessage
     public PointersObject shallowCopy() {
         return new PointersObject(this);
     }

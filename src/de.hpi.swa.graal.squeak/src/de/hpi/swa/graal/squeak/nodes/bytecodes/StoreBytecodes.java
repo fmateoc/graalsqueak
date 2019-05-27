@@ -17,11 +17,11 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 public final class StoreBytecodes {
 
     private abstract static class AbstractStoreIntoAssociationNode extends AbstractStoreIntoNode {
-        protected final long variableIndex;
+        protected final int variableIndex;
 
         private AbstractStoreIntoAssociationNode(final CompiledCodeObject code, final int index, final int numBytecodes, final long variableIndex) {
             super(code, index, numBytecodes);
-            this.variableIndex = variableIndex;
+            this.variableIndex = (int) variableIndex;
             storeNode = SqueakObjectAtPutAndMarkContextsNode.create(ASSOCIATION.VALUE);
         }
 
@@ -44,12 +44,12 @@ public final class StoreBytecodes {
     }
 
     private abstract static class AbstractStoreIntoReceiverVariableNode extends AbstractStoreIntoNode {
-        protected final long receiverIndex;
+        protected final int receiverIndex;
 
-        private AbstractStoreIntoReceiverVariableNode(final CompiledCodeObject code, final int index, final int numBytecodes, final long receiverIndex) {
+        private AbstractStoreIntoReceiverVariableNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int receiverIndex) {
             super(code, index, numBytecodes);
             this.receiverIndex = receiverIndex;
-            storeNode = SqueakObjectAtPutAndMarkContextsNode.create(receiverIndex);
+            storeNode = SqueakObjectAtPutAndMarkContextsNode.create(this.receiverIndex);
         }
 
         @Override
@@ -122,7 +122,7 @@ public final class StoreBytecodes {
     public static final class PopIntoReceiverVariableNode extends AbstractStoreIntoReceiverVariableNode {
         @Child private FrameStackReadAndClearNode popNode;
 
-        public PopIntoReceiverVariableNode(final CompiledCodeObject code, final int index, final int numBytecodes, final long receiverIndex) {
+        public PopIntoReceiverVariableNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int receiverIndex) {
             super(code, index, numBytecodes, receiverIndex);
             popNode = FrameStackReadAndClearNode.create(code);
         }
@@ -198,7 +198,7 @@ public final class StoreBytecodes {
     public static final class StoreIntoReceiverVariableNode extends AbstractStoreIntoReceiverVariableNode {
         @Child private FrameStackReadNode topNode;
 
-        public StoreIntoReceiverVariableNode(final CompiledCodeObject code, final int index, final int numBytecodes, final long receiverIndex) {
+        public StoreIntoReceiverVariableNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int receiverIndex) {
             super(code, index, numBytecodes, receiverIndex);
             topNode = FrameStackReadNode.create(code);
         }

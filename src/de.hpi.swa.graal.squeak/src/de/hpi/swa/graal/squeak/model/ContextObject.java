@@ -7,10 +7,13 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
+import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.MaterializedFrame;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
 
 import de.hpi.swa.graal.squeak.exceptions.ProcessSwitch;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
@@ -19,11 +22,15 @@ import de.hpi.swa.graal.squeak.image.reading.SqueakImageReader;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS_SCHEDULER;
+import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.MiscellaneousBytecodes.CallPrimitiveNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
+@ExportLibrary(SqueakObjectLibrary.class)
 public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
     @CompilationFinal private MaterializedFrame truffleFrame;
     @CompilationFinal private int size;
@@ -121,10 +128,10 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
         truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, code.getFrameDescriptor());
         FrameAccess.initializeMarker(truffleFrame, code);
         FrameAccess.setContext(truffleFrame, code, this);
-        atput0(CONTEXT.INSTRUCTION_POINTER, pointers[CONTEXT.INSTRUCTION_POINTER]);
-        atput0(CONTEXT.STACKPOINTER, pointers[CONTEXT.STACKPOINTER]);
+        atput0Uncached(CONTEXT.INSTRUCTION_POINTER, pointers[CONTEXT.INSTRUCTION_POINTER]);
+        atput0Uncached(CONTEXT.STACKPOINTER, pointers[CONTEXT.STACKPOINTER]);
         for (int i = CONTEXT.TEMP_FRAME_START; i < pointers.length; i++) {
-            atput0(i, pointers[i]);
+            atput0Uncached(i, pointers[i]);
         }
     }
 
@@ -133,12 +140,12 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
         assert hasTruffleFrame();
         final Object[] pointers = new Object[size];
         for (int i = 0; i < size; i++) {
-            pointers[i] = at0(i);
+            pointers[i] = at0Uncached(i);
         }
         return pointers;
     }
 
-    private Object at0(final long longIndex) {
+    private Object at0Uncached(final long longIndex) {
         assert longIndex >= 0;
         final int index = (int) longIndex;
         switch (index) {
@@ -160,7 +167,7 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
         }
     }
 
-    public void atput0(final long longIndex, final Object value) {
+    public void atput0Uncached(final long longIndex, final Object value) {
         assert longIndex >= 0 && value != null;
         final int index = (int) longIndex;
         assert value != null : "null indicates a problem";
@@ -420,8 +427,8 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
 
     public void terminate() {
         // Remove pc and sender.
-        atput0(CONTEXT.INSTRUCTION_POINTER, NilObject.SINGLETON);
-        atput0(CONTEXT.SENDER_OR_NIL, NilObject.SINGLETON);
+        atput0Uncached(CONTEXT.INSTRUCTION_POINTER, NilObject.SINGLETON);
+        atput0Uncached(CONTEXT.SENDER_OR_NIL, NilObject.SINGLETON);
     }
 
     public boolean isTerminated() {
@@ -570,11 +577,27 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
         // TODO: make sure this works correctly
         if (truffleFrame != null) {
             for (int i = 0; i < size(); i++) {
-                if (at0(i) == thang) {
+                if (at0Uncached(i) == thang) {
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    /*
+     * SQUEAK OBJECT ACCESS
+     */
+
+    @ExportMessage
+    public Object at0(final int index,
+                    @Cached final ContextObjectReadNode readNode) {
+        return readNode.execute(this, index);
+    }
+
+    @ExportMessage
+    public void atput0(final int index, final Object value,
+                    @Cached final ContextObjectWriteNode writeNode) {
+        writeNode.execute(this, index, value);
     }
 }

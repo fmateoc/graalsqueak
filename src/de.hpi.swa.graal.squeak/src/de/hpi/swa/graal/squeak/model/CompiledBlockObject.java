@@ -3,7 +3,12 @@ package de.hpi.swa.graal.squeak.model;
 import java.util.Arrays;
 
 import com.oracle.truffle.api.CompilerAsserts;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
 
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
+
+@ExportLibrary(SqueakObjectLibrary.class)
 public final class CompiledBlockObject extends CompiledCodeObject {
     private final CompiledMethodObject outerMethod;
     private final int offset;
@@ -32,16 +37,6 @@ public final class CompiledBlockObject extends CompiledCodeObject {
     public static CompiledBlockObject create(final CompiledCodeObject code, final CompiledMethodObject outerMethod, final int numArgs, final int numCopied, final int bytecodeOffset,
                     final int blockSize) {
         return new CompiledBlockObject(code, outerMethod, numArgs, numCopied, bytecodeOffset, blockSize);
-    }
-
-    public Object at0(final long longIndex) {
-        final int index = (int) longIndex;
-        if (index < getBytecodeOffset() - getOffset()) {
-            assert index % image.flags.wordSize() == 0;
-            return literals[index / image.flags.wordSize()];
-        } else {
-            return getMethod().at0(longIndex);
-        }
     }
 
     @Override
@@ -79,5 +74,20 @@ public final class CompiledBlockObject extends CompiledCodeObject {
     @Override
     public int size() {
         return outerMethod.size();
+    }
+
+    @ExportMessage
+    public Object at0(final int index) {
+        if (index < getBytecodeOffset() - getOffset()) {
+            assert index % image.flags.wordSize() == 0;
+            return literals[index / image.flags.wordSize()];
+        } else {
+            return getMethod().at0(index);
+        }
+    }
+
+    @ExportMessage
+    public void atput0(final int index, final Object value) {
+        atput0Shared(index, value);
     }
 }

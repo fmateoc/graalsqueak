@@ -1,13 +1,15 @@
 package de.hpi.swa.graal.squeak.nodes.context;
 
+import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 
 /**
  * This node should only be used for stores into associations, receivers, and remote temps as it
@@ -15,27 +17,28 @@ import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
  */
 @NodeInfo(cost = NodeCost.NONE)
 public abstract class SqueakObjectAtPutAndMarkContextsNode extends AbstractNode {
-    @Child private SqueakObjectAtPut0Node atPut0Node = SqueakObjectAtPut0Node.create();
-    private final long index;
+    private final int index;
 
-    protected SqueakObjectAtPutAndMarkContextsNode(final long variableIndex) {
+    protected SqueakObjectAtPutAndMarkContextsNode(final int variableIndex) {
         index = variableIndex;
     }
 
-    public static SqueakObjectAtPutAndMarkContextsNode create(final long index) {
+    public static SqueakObjectAtPutAndMarkContextsNode create(final int index) {
         return SqueakObjectAtPutAndMarkContextsNodeGen.create(index);
     }
 
     public abstract void executeWrite(Object object, Object value);
 
     @Specialization
-    protected final void doContext(final AbstractSqueakObject object, final ContextObject value) {
+    protected final void doContext(final AbstractSqueakObject object, final ContextObject value,
+                    @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
         value.markEscaped();
-        atPut0Node.execute(object, index, value);
+        objectLibrary.atput0(object, index, value);
     }
 
     @Specialization(guards = {"!isContextObject(value)"})
-    protected final void doSqueakObject(final AbstractSqueakObject object, final Object value) {
-        atPut0Node.execute(object, index, value);
+    protected final void doSqueakObject(final AbstractSqueakObject object, final Object value,
+                    @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+        objectLibrary.atput0(object, index, value);
     }
 }

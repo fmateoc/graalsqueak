@@ -18,6 +18,7 @@ import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
@@ -41,8 +42,7 @@ import de.hpi.swa.graal.squeak.model.NotProvided;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectShallowCopyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.context.ObjectGraphNode;
@@ -618,10 +618,10 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
                         "sizeNode.execute(receiver) == sizeNode.execute(anotherObject)"}, limit = "1")
         protected static final AbstractSqueakObject doCopy(final AbstractSqueakObjectWithClassAndHash receiver, final AbstractSqueakObjectWithClassAndHash anotherObject,
                         @Cached final SqueakObjectSizeNode sizeNode,
-                        @Cached final SqueakObjectAtPut0Node atput0Node,
-                        @Cached final SqueakObjectAt0Node at0Node) {
+                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary1,
+                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary2) {
             for (int i = 0; i < sizeNode.execute(receiver); i++) {
-                atput0Node.execute(receiver, i, at0Node.execute(anotherObject, i));
+                objectLibrary1.atput0(receiver, i, objectLibrary2.at0(anotherObject, i));
             }
             return receiver;
         }

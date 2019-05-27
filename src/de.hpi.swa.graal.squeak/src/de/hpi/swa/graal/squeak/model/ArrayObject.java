@@ -2,15 +2,22 @@ package de.hpi.swa.graal.squeak.model;
 
 import java.util.Arrays;
 
+import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.TruffleLogger;
+import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
+import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
+@ExportLibrary(SqueakObjectLibrary.class)
 public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
     public static final byte BOOLEAN_NIL_TAG = 0;
     public static final byte BOOLEAN_TRUE_TAG = 1;
@@ -152,7 +159,7 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
 
     public Object[] getObjectStorage() {
         assert isObjectType();
-        return (Object[]) storage;
+        return CompilerDirectives.castExact(storage, Object[].class);
     }
 
     public Class<? extends Object> getStorageType() {
@@ -315,5 +322,17 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
             objects[i] = toObjectFromNativeObject(natives[i]);
         }
         storage = objects;
+    }
+
+    @ExportMessage
+    public Object at0(final int index,
+                    @Cached final ArrayObjectReadNode readNode) {
+        return readNode.execute(this, index);
+    }
+
+    @ExportMessage
+    public void atput0(final int index, final Object value,
+                    @Cached final ArrayObjectWriteNode writeNode) {
+        writeNode.execute(this, index, value);
     }
 }

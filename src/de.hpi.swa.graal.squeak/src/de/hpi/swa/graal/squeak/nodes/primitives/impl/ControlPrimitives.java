@@ -16,6 +16,7 @@ import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 
@@ -45,8 +46,8 @@ import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectToObjectArrayCopyNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectChangeClassOfToNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.SendBytecodes.AbstractSendNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.CreateEagerArgumentsNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
@@ -1090,17 +1091,17 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
     @NodeInfo(cost = NodeCost.NONE)
     @GenerateNodeFactory
     public abstract static class PrimQuickReturnReceiverVariableNode extends AbstractPrimitiveNode implements UnaryPrimitiveWithoutFallback {
-        @Child private SqueakObjectAt0Node at0Node = SqueakObjectAt0Node.create();
-        private final long variableIndex;
+        private final int variableIndex;
 
         protected PrimQuickReturnReceiverVariableNode(final CompiledMethodObject method, final long variableIndex) {
             super(method);
-            this.variableIndex = variableIndex;
+            this.variableIndex = (int) variableIndex;
         }
 
         @Specialization
-        protected final Object doReceiverVariable(final Object receiver) {
-            return at0Node.execute(receiver, variableIndex);
+        protected final Object doReceiverVariable(final Object receiver,
+                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibary) {
+            return objectLibary.at0(receiver, variableIndex);
         }
     }
 }

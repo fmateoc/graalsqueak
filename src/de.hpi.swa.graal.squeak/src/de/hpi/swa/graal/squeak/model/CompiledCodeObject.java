@@ -262,7 +262,7 @@ public abstract class CompiledCodeObject extends AbstractSqueakObjectWithClassAn
         return (1 + numLiterals) * image.flags.wordSize(); // header plus numLiterals
     }
 
-    public final void atput0(final long longIndex, final Object obj) {
+    public final void atput0Shared(final long longIndex, final Object obj) {
         final int index = (int) longIndex;
         assert index >= 0;
         CompilerDirectives.transferToInterpreterAndInvalidate();

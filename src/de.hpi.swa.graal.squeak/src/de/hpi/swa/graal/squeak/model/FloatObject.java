@@ -1,13 +1,20 @@
 package de.hpi.swa.graal.squeak.model;
 
 import com.oracle.truffle.api.CompilerAsserts;
+import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.GenerateUncached;
+import com.oracle.truffle.api.dsl.ImportStatic;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
+import com.oracle.truffle.api.nodes.Node;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 
+@ExportLibrary(SqueakObjectLibrary.class)
 @ExportLibrary(InteropLibrary.class)
 public final class FloatObject extends AbstractSqueakObjectWithClassAndHash {
     public static final int PRECISION = 53;
@@ -123,6 +130,53 @@ public final class FloatObject extends AbstractSqueakObjectWithClassAndHash {
 
     public FloatObject shallowCopy() {
         return new FloatObject(this);
+    }
+
+    /*
+     * SQUEAK OBJECT ACCESS
+     */
+
+    @ExportMessage
+    public Object at0(final int index,
+                    @Cached final FloatObjectReadNode readNode) {
+        return readNode.execute(this, index);
+    }
+
+    @ExportMessage
+    public void atput0(final int index, final Object value,
+                    @Cached final FloatObjectWriteNode writeNode) {
+        writeNode.execute(this, index, value);
+    }
+
+    @GenerateUncached
+    protected abstract static class FloatObjectReadNode extends Node {
+        public abstract Object execute(Object obj, int index);
+
+        @Specialization(guards = "index == 0")
+        protected static final long doFloatHigh(final FloatObject obj, @SuppressWarnings("unused") final int index) {
+            return obj.getHigh();
+        }
+
+        @Specialization(guards = "index == 1")
+        protected static final long doFloatLow(final FloatObject obj, @SuppressWarnings("unused") final int index) {
+            return obj.getLow();
+        }
+    }
+
+    @ImportStatic(NativeObject.class)
+    @GenerateUncached
+    protected abstract static class FloatObjectWriteNode extends Node {
+        public abstract void execute(Object obj, int index, Object value);
+
+        @Specialization(guards = {"index == 0", "value >= 0", "value <= INTEGER_MAX"})
+        protected static final void doFloatHigh(final FloatObject obj, @SuppressWarnings("unused") final int index, final long value) {
+            obj.setHigh(value);
+        }
+
+        @Specialization(guards = {"index == 1", "value >= 0", "value <= INTEGER_MAX"})
+        protected static final void doFloatLow(final FloatObject obj, @SuppressWarnings("unused") final int index, final long value) {
+            obj.setLow(value);
+        }
     }
 
     /*

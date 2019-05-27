@@ -1,11 +1,13 @@
 package de.hpi.swa.graal.squeak.nodes.accessing;
 
 import com.oracle.truffle.api.dsl.Fallback;
+import com.oracle.truffle.api.dsl.GenerateUncached;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.nodes.Node;
 
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithClassAndHash;
 
+@GenerateUncached
 public abstract class UpdateSqueakObjectHashNode extends Node {
     public static UpdateSqueakObjectHashNode create() {
         return UpdateSqueakObjectHashNodeGen.create();

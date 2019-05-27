@@ -9,6 +9,7 @@ import com.oracle.truffle.api.interop.ArityException;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.interop.InvalidArrayIndexException;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
+import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
@@ -20,8 +21,7 @@ import de.hpi.swa.graal.squeak.interop.LookupMethodByStringNode;
 import de.hpi.swa.graal.squeak.interop.WrapToSqueakNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchUneagerlyNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectSizeNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
@@ -174,16 +174,16 @@ public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSquea
     }
 
     @ExportMessage
-    protected final Object readArrayElement(final long index, @Cached final SqueakObjectAt0Node at0Node) {
-        return at0Node.execute(this, index);
+    protected final Object readArrayElement(final long index, @CachedLibrary("this") final SqueakObjectLibrary objectLibrary) {
+        return objectLibrary.at0(this, (int) index);
     }
 
     @ExportMessage
     protected final void writeArrayElement(final long index, final Object value,
                     @Shared("wrapNode") @Cached final WrapToSqueakNode wrapNode,
-                    @Cached final SqueakObjectAtPut0Node atput0Node) throws InvalidArrayIndexException {
+                    @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) throws InvalidArrayIndexException {
         try {
-            atput0Node.execute(this, index, wrapNode.executeWrap(value));
+            objectLibrary.atput0(this, (int) index, wrapNode.executeWrap(value));
         } catch (final ArrayIndexOutOfBoundsException e) {
             throw InvalidArrayIndexException.create(index);
         }
