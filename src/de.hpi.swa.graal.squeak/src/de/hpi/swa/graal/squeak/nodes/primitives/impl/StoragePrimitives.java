@@ -7,7 +7,6 @@ import com.oracle.truffle.api.Assumption;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
-import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.NodeFactory;
@@ -295,23 +294,26 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(guards = {"objectLibrary.size(fromArray) == objectLibrary.size(toArray)", "fromArray.isTraceable()", "toArray.isTraceable()"})
+        @Specialization(guards = {"fromArrayLibrary.size(fromArray) == toArrayLibrary.size(toArray)", "fromArray.isTraceable()", "toArray.isTraceable()"}, limit = "1")
         protected final ArrayObject doForward(final ArrayObject fromArray, final ArrayObject toArray,
-                        @SuppressWarnings("unused") @Shared("objectLibrary") @CachedLibrary(limit = "2") final SqueakObjectLibrary objectLibrary) {
+                        @SuppressWarnings("unused") @CachedLibrary("fromArray") final SqueakObjectLibrary fromArrayLibrary,
+                        @SuppressWarnings("unused") @CachedLibrary("toArray") final SqueakObjectLibrary toArrayLibrary) {
             return performPointersBecomeOneWay(fromArray, toArray, true);
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"objectLibrary.size(fromArray) == objectLibrary.size(toArray)", "!fromArray.isTraceable() || !toArray.isTraceable()"})
+        @Specialization(guards = {"fromArrayLibrary.size(fromArray) == toArrayLibrary.size(toArray)", "!fromArray.isTraceable() || !toArray.isTraceable()"}, limit = "1")
         protected static final ArrayObject doInapproriateOperation(final ArrayObject fromArray, final ArrayObject toArray,
-                        @SuppressWarnings("unused") @Shared("objectLibrary") @CachedLibrary(limit = "2") final SqueakObjectLibrary objectLibrary) {
+                        @SuppressWarnings("unused") @CachedLibrary("fromArray") final SqueakObjectLibrary fromArrayLibrary,
+                        @SuppressWarnings("unused") @CachedLibrary("toArray") final SqueakObjectLibrary toArrayLibrary) {
             throw new PrimitiveFailed(ERROR_TABLE.INAPPROPRIATE_OPERATION);
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = "objectLibrary.size(fromArray) != objectLibrary.size(toArray)")
+        @Specialization(guards = "fromArrayLibrary.size(fromArray) != toArrayLibrary.size(toArray)", limit = "1")
         protected static final ArrayObject doBadArgument(final ArrayObject fromArray, final ArrayObject toArray,
-                        @SuppressWarnings("unused") @Shared("objectLibrary") @CachedLibrary(limit = "2") final SqueakObjectLibrary objectLibrary) {
+                        @SuppressWarnings("unused") @CachedLibrary("fromArray") final SqueakObjectLibrary fromArrayLibrary,
+                        @SuppressWarnings("unused") @CachedLibrary("toArray") final SqueakObjectLibrary toArrayLibrary) {
             throw new PrimitiveFailed(ERROR_TABLE.BAD_ARGUMENT);
         }
 
@@ -335,15 +337,15 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(guards = "inBounds1(index, objectLibrary.size(receiver))")
+        @Specialization(guards = "inBounds1(index, objectLibrary.size(receiver))", limit = "1")
         protected static final Object doAt(final AbstractSqueakObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided,
-                        @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
             return objectLibrary.at0(receiver, (int) index - 1);
         }
 
-        @Specialization(guards = "inBounds1(index, objectLibrary.size(target))") // Context>>#object:instVarAt:
+        @Specialization(guards = "inBounds1(index, objectLibrary.size(target))", limit = "1") // Context>>#object:instVarAt:
         protected static final Object doAt(@SuppressWarnings("unused") final Object receiver, final AbstractSqueakObject target, final long index,
-                        @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+                        @CachedLibrary("target") final SqueakObjectLibrary objectLibrary) {
             return objectLibrary.at0(target, (int) index - 1);
         }
     }
@@ -355,16 +357,16 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(guards = "inBounds1(index, objectLibrary.size(receiver))")
+        @Specialization(guards = "inBounds1(index, objectLibrary.size(receiver))", limit = "1")
         protected static final Object doAtPut(final AbstractSqueakObject receiver, final long index, final Object value, @SuppressWarnings("unused") final NotProvided notProvided,
-                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
             objectLibrary.atput0(receiver, (int) index - 1, value);
             return value;
         }
 
-        @Specialization(guards = "inBounds1(index, objectLibrary.size(target))") // Context>>#object:instVarAt:put:
+        @Specialization(guards = "inBounds1(index, objectLibrary.size(target))", limit = "1") // Context>>#object:instVarAt:put:
         protected static final Object doAtPut(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final AbstractSqueakObject target, final long index, final Object value,
-                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+                        @CachedLibrary("target") final SqueakObjectLibrary objectLibrary) {
             objectLibrary.atput0(target, (int) index - 1, value);
             return value;
         }
@@ -614,15 +616,15 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(guards = "inBounds1(index, objectLibrary.size(receiver))")
+        @Specialization(guards = "inBounds1(index, objectLibrary.size(receiver))", limit = "1")
         protected static final Object doSlotAt(final AbstractSqueakObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided,
-                        @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
             return objectLibrary.at0(receiver, (int) index - 1);
         }
 
-        @Specialization(guards = "inBounds1(index, objectLibrary.size(target))")
+        @Specialization(guards = "inBounds1(index, objectLibrary.size(target))", limit = "1")
         protected static final Object doSlotAt(@SuppressWarnings("unused") final ContextObject receiver, final AbstractSqueakObject target, final long index,
-                        @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+                        @CachedLibrary("target") final SqueakObjectLibrary objectLibrary) {
             return objectLibrary.at0(target, (int) index - 1);
         }
     }
@@ -635,16 +637,16 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(guards = "inBounds1(index, objectLibrary.size(receiver))")
+        @Specialization(guards = "inBounds1(index, objectLibrary.size(receiver))", limit = "1")
         protected static final Object doSlotAtPut(final AbstractSqueakObject receiver, final long index, final Object value, @SuppressWarnings("unused") final NotProvided notProvided,
-                        @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
             objectLibrary.atput0(receiver, (int) index - 1, value);
             return value;
         }
 
-        @Specialization(guards = "inBounds1(index, objectLibrary.size(target))")
+        @Specialization(guards = "inBounds1(index, objectLibrary.size(target))", limit = "1")
         protected static final Object doSlotAtPut(@SuppressWarnings("unused") final ContextObject receiver, final AbstractSqueakObject target, final long index, final Object value,
-                        @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+                        @CachedLibrary("target") final SqueakObjectLibrary objectLibrary) {
             objectLibrary.atput0(target, (int) index - 1, value);
             return value;
         }
@@ -731,23 +733,26 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(guards = {"objectLibrary.size(fromArray) == objectLibrary.size(toArray)", "fromArray.isTraceable()", "toArray.isTraceable()"})
+        @Specialization(guards = {"fromArrayLibrary.size(fromArray) == toArrayLibrary.size(toArray)", "fromArray.isTraceable()", "toArray.isTraceable()"}, limit = "1")
         protected final ArrayObject doForward(final ArrayObject fromArray, final ArrayObject toArray, final boolean copyHash,
-                        @SuppressWarnings("unused") @Shared("objectLibrary") @CachedLibrary(limit = "2") final SqueakObjectLibrary objectLibrary) {
+                        @SuppressWarnings("unused") @CachedLibrary("fromArray") final SqueakObjectLibrary fromArrayLibrary,
+                        @SuppressWarnings("unused") @CachedLibrary("toArray") final SqueakObjectLibrary toArrayLibrary) {
             return performPointersBecomeOneWay(fromArray, toArray, copyHash);
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"objectLibrary.size(fromArray) == objectLibrary.size(toArray)", "!fromArray.isTraceable() || !toArray.isTraceable()"})
+        @Specialization(guards = {"fromArrayLibrary.size(fromArray) == toArrayLibrary.size(toArray)", "!fromArray.isTraceable() || !toArray.isTraceable()"}, limit = "1")
         protected static final ArrayObject doInapproriateOperation(final ArrayObject fromArray, final ArrayObject toArray, final boolean copyHash,
-                        @SuppressWarnings("unused") @Shared("objectLibrary") @CachedLibrary(limit = "2") final SqueakObjectLibrary objectLibrary) {
+                        @SuppressWarnings("unused") @CachedLibrary("fromArray") final SqueakObjectLibrary fromArrayLibrary,
+                        @SuppressWarnings("unused") @CachedLibrary("toArray") final SqueakObjectLibrary toArrayLibrary) {
             throw new PrimitiveFailed(ERROR_TABLE.INAPPROPRIATE_OPERATION);
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = "objectLibrary.size(fromArray) != objectLibrary.size(toArray)")
+        @Specialization(guards = "fromArrayLibrary.size(fromArray) != toArrayLibrary.size(toArray)", limit = "1")
         protected static final ArrayObject doBadArgument(final ArrayObject fromArray, final ArrayObject toArray, final boolean copyHash,
-                        @SuppressWarnings("unused") @Shared("objectLibrary") @CachedLibrary(limit = "2") final SqueakObjectLibrary objectLibrary) {
+                        @SuppressWarnings("unused") @CachedLibrary("fromArray") final SqueakObjectLibrary fromArrayLibrary,
+                        @SuppressWarnings("unused") @CachedLibrary("toArray") final SqueakObjectLibrary toArrayLibrary) {
             throw new PrimitiveFailed(ERROR_TABLE.BAD_ARGUMENT);
         }
 
