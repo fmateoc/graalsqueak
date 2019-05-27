@@ -481,9 +481,10 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
         }
 
         @Specialization
-        protected static final Object doShallowCopy(final Object receiver,
+        protected final Object doShallowCopy(final Object receiver,
                         @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
-            return objectLibrary.shallowCopy(receiver);
+            method.image.reportNewAllocationRequest();
+            return method.image.reportNewAllocationResult(objectLibrary.shallowCopy(receiver));
         }
     }
 
@@ -610,7 +611,7 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
 
         @Specialization(guards = {"receiver.getSqueakClass() == anotherObject.getSqueakClass()",
                         "!isNativeObject(receiver)", "!isPointersObject(receiver)", "!isContextObject(receiver)",
-                        "objectLibrary1.size(receiver) == objectLibrary2.size(anotherObject)"}, limit = "1")
+                        "objectLibrary1.size(receiver) == objectLibrary2.size(anotherObject)"})
         protected static final AbstractSqueakObject doCopy(final AbstractSqueakObjectWithClassAndHash receiver, final AbstractSqueakObjectWithClassAndHash anotherObject,
                         @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary1,
                         @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary2) {
