@@ -8,10 +8,10 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
-import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
@@ -164,16 +164,6 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
 
     public Class<? extends Object> getStorageType() {
         return storage.getClass();
-    }
-
-    @Override
-    public int instsize() {
-        return getSqueakClass().getBasicInstanceSize();
-    }
-
-    @Override
-    public int size() {
-        throw SqueakException.create("Use ArrayObjectSizeNode");
     }
 
     public boolean isBooleanType() {
@@ -334,5 +324,15 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
     public void atput0(final int index, final Object value,
                     @Cached final ArrayObjectWriteNode writeNode) {
         writeNode.execute(this, index, value);
+    }
+
+    @ExportMessage
+    public int instsize() {
+        return getSqueakClass().getBasicInstanceSize();
+    }
+
+    @ExportMessage
+    public int size(@Cached final ArrayObjectSizeNode sizeNode) {
+        return sizeNode.execute(this);
     }
 }

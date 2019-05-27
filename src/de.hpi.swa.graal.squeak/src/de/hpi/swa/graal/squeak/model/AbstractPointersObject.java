@@ -41,4 +41,8 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         CompilerDirectives.transferToInterpreterAndInvalidate();
         this.pointers = pointers;
     }
+
+    public final int pointerSize() {
+        return pointers.length;
+    }
 }

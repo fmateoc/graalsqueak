@@ -474,16 +474,6 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
         }
     }
 
-    @Override
-    public int instsize() {
-        return getSqueakClass().getBasicInstanceSize();
-    }
-
-    @Override
-    public int size() {
-        return size;
-    }
-
     public int getStackSize() {
         return getBlockOrMethod().getSqueakContextSize();
     }
@@ -599,5 +589,15 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
     public void atput0(final int index, final Object value,
                     @Cached final ContextObjectWriteNode writeNode) {
         writeNode.execute(this, index, value);
+    }
+
+    @ExportMessage
+    public int instsize() {
+        return getSqueakClass().getBasicInstanceSize();
+    }
+
+    @ExportMessage
+    public int size() {
+        return size;
     }
 }

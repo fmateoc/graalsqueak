@@ -71,11 +71,6 @@ public final class CompiledBlockObject extends CompiledCodeObject {
         return new CompiledBlockObject(this);
     }
 
-    @Override
-    public int size() {
-        return outerMethod.size();
-    }
-
     @ExportMessage
     public Object at0(final int index) {
         if (index < getBytecodeOffset() - getOffset()) {
@@ -87,7 +82,17 @@ public final class CompiledBlockObject extends CompiledCodeObject {
     }
 
     @ExportMessage
-    public void atput0(final int index, final Object value) {
-        atput0Shared(index, value);
+    public void atput0(final int index, final Object obj) {
+        atput0Shared(index, obj);
+    }
+
+    @ExportMessage
+    public int instsize() {
+        return 0;
+    }
+
+    @ExportMessage
+    public int size() {
+        return outerMethod.size();
     }
 }

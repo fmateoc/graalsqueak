@@ -22,7 +22,6 @@ import de.hpi.swa.graal.squeak.interop.WrapToSqueakNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchUneagerlyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectSizeNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
 @ExportLibrary(InteropLibrary.class)
@@ -161,16 +160,16 @@ public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSquea
     }
 
     @ExportMessage
-    protected final long getArraySize(@Shared("sizeNode") @Cached final SqueakObjectSizeNode sizeNode) {
-        return sizeNode.execute(this);
+    protected final long getArraySize(@Shared("sizeNode") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+        return objectLibrary.size(this);
     }
 
     @SuppressWarnings("static-method")
     @ExportMessage(name = "isArrayElementReadable")
     @ExportMessage(name = "isArrayElementModifiable")
     @ExportMessage(name = "isArrayElementInsertable")
-    protected final boolean isArrayElementReadable(final long index, @Shared("sizeNode") @Cached final SqueakObjectSizeNode sizeNode) {
-        return 0 <= index && index < sizeNode.execute(this);
+    protected final boolean isArrayElementReadable(final long index, @Shared("sizeNode") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+        return 0 <= index && index < objectLibrary.size(this);
     }
 
     @ExportMessage

@@ -93,14 +93,12 @@ public final class WeakPointersObject extends AbstractPointersObject {
         }
     }
 
-    @Override
-// @ExportMessage
+    @ExportMessage
     public int instsize() {
         return getSqueakClass().getBasicInstanceSize();
     }
 
-    @Override
-// @ExportMessage
+    @ExportMessage
     public int size() {
         return pointers.length;
     }

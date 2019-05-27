@@ -16,6 +16,7 @@ import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
@@ -113,16 +114,6 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         } else {
             throw SqueakException.create("Unsupported type");
         }
-    }
-
-    @Override
-    public int instsize() {
-        return 0;
-    }
-
-    @Override
-    public int size() {
-        throw SqueakException.create("Use NativeObjectSizeNode");
     }
 
     public void become(final NativeObject other) {
@@ -286,5 +277,15 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
     public void atput0(final int index, final Object value,
                     @Cached final NativeObjectWriteNode writeNode) {
         writeNode.execute(this, index, value);
+    }
+
+    @ExportMessage
+    public int instsize() {
+        return 0;
+    }
+
+    @ExportMessage
+    public int size(@Cached final NativeObjectSizeNode sizeNode) {
+        return sizeNode.execute(this);
     }
 }

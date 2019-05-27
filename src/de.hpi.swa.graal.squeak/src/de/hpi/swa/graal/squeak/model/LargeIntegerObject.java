@@ -170,16 +170,6 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
         return bitLength / 8 + (bitLength % 8 == 0 ? 0 : 1);
     }
 
-    @Override
-    public int instsize() {
-        return 0;
-    }
-
-    @Override
-    public int size() {
-        return exposedSize;
-    }
-
     public void setInteger(final LargeIntegerObject other) {
         integer = other.integer;
     }
@@ -568,6 +558,16 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
     @ExportMessage
     public void atput0(final int index, final Object value) {
         setNativeAt0(index, (long) value);
+    }
+
+    @ExportMessage
+    public int instsize() {
+        return 0;
+    }
+
+    @ExportMessage
+    public int size() {
+        return exposedSize;
     }
 
     /*

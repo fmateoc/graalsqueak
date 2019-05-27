@@ -108,16 +108,6 @@ public final class FloatObject extends AbstractSqueakObjectWithClassAndHash {
         return Double.isNaN(doubleValue);
     }
 
-    @Override
-    public int instsize() {
-        return 0;
-    }
-
-    @Override
-    public int size() {
-        return WORD_LENGTH;
-    }
-
     public double getValue() {
         return doubleValue;
     }
@@ -146,6 +136,16 @@ public final class FloatObject extends AbstractSqueakObjectWithClassAndHash {
     public void atput0(final int index, final Object value,
                     @Cached final FloatObjectWriteNode writeNode) {
         writeNode.execute(this, index, value);
+    }
+
+    @ExportMessage
+    public int instsize() {
+        return 0;
+    }
+
+    @ExportMessage
+    public int size() {
+        return WORD_LENGTH;
     }
 
     @GenerateUncached

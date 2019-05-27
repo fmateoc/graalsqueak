@@ -7,6 +7,7 @@ import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 
@@ -15,7 +16,7 @@ import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.nodes.BlockActivationNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectToObjectArrayCopyNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectSizeNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.BinaryPrimitive;
@@ -113,9 +114,9 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
             super(method);
         }
 
-        @Specialization(guards = {"block.getCompiledBlock().getNumArgs() == sizeNode.execute(argArray)"}, limit = "1")
+        @Specialization(guards = {"block.getCompiledBlock().getNumArgs() == objectLibrary.size(argArray)"}, limit = "1")
         protected final Object doValue(final VirtualFrame frame, final BlockClosureObject block, final ArrayObject argArray,
-                        @SuppressWarnings("unused") @Cached final SqueakObjectSizeNode sizeNode,
+                        @SuppressWarnings("unused") @CachedLibrary("argArray") final SqueakObjectLibrary objectLibrary,
                         @Cached final BlockActivationNode activationNode,
                         @Cached final ArrayObjectToObjectArrayCopyNode getObjectArrayNode) {
             return activationNode.executeBlock(block, FrameAccess.newClosureArguments(block, getContextOrMarker(frame), getObjectArrayNode.execute(argArray)));
@@ -154,9 +155,9 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
             super(method);
         }
 
-        @Specialization(guards = {"block.getCompiledBlock().getNumArgs() == sizeNode.execute(argArray)"}, limit = "1")
+        @Specialization(guards = {"block.getCompiledBlock().getNumArgs() == objectLibrary.size(argArray)"}, limit = "1")
         protected final Object doValue(final VirtualFrame frame, final BlockClosureObject block, final ArrayObject argArray,
-                        @SuppressWarnings("unused") @Cached final SqueakObjectSizeNode sizeNode,
+                        @SuppressWarnings("unused") @CachedLibrary("argArray") final SqueakObjectLibrary objectLibrary,
                         @Cached final BlockActivationNode activationNode,
                         @Cached final ArrayObjectToObjectArrayCopyNode getObjectArrayNode) {
             final Object[] arguments = FrameAccess.newClosureArguments(block, getContextOrMarker(frame), getObjectArrayNode.execute(argArray));

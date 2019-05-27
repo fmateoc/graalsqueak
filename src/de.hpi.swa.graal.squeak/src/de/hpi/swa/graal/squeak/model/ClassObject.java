@@ -245,16 +245,6 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         this.format = format;
     }
 
-    @Override
-    public int instsize() {
-        return getSqueakClass().getBasicInstanceSize();
-    }
-
-    @Override
-    public int size() {
-        return CLASS_DESCRIPTION.SIZE + pointers.length;
-    }
-
     public static boolean isSuperclassIndex(final long index) {
         return index == CLASS_DESCRIPTION.SUPERCLASS;
     }
@@ -523,5 +513,15 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     public void atput0(final int index, final Object value,
                     @Cached final ClassObjectWriteNode writeNode) {
         writeNode.execute(this, index, value);
+    }
+
+    @ExportMessage
+    public int instsize() {
+        return getSqueakClass().getBasicInstanceSize();
+    }
+
+    @ExportMessage
+    public int size() {
+        return CLASS_DESCRIPTION.SIZE + pointers.length;
     }
 }

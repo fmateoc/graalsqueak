@@ -149,11 +149,6 @@ public final class CompiledMethodObject extends CompiledCodeObject {
         return getBytecodeOffset() + 1;
     }
 
-    @Override
-    public int size() {
-        return getBytecodeOffset() + bytes.length;
-    }
-
     /*
      * SQUEAK OBJECT ACCESS
      */
@@ -171,8 +166,18 @@ public final class CompiledMethodObject extends CompiledCodeObject {
     }
 
     @ExportMessage
-    public void atput0(final int index, final Object value) {
-        atput0Shared(index, value);
+    public void atput0(final int index, final Object obj) {
+        atput0Shared(index, obj);
+    }
+
+    @ExportMessage
+    public int instsize() {
+        return 0;
+    }
+
+    @ExportMessage
+    public int size() {
+        return getBytecodeOffset() + bytes.length;
     }
 
     /*

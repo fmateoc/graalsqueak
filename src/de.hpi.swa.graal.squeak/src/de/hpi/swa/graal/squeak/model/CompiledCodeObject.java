@@ -200,6 +200,25 @@ public abstract class CompiledCodeObject extends AbstractSqueakObjectWithClassAn
         bytes = chunk.getBytes(ptrs.length * image.flags.wordSize());
     }
 
+    public final void atput0Shared(final int index, final Object obj) {
+        assert index >= 0;
+        CompilerDirectives.transferToInterpreterAndInvalidate();
+        if (index < getBytecodeOffset()) {
+            assert index % image.flags.wordSize() == 0;
+            setLiteral(index / image.flags.wordSize(), obj);
+        } else {
+            final int realIndex = index - getBytecodeOffset();
+            assert realIndex < bytes.length;
+            if (obj instanceof Integer) {
+                bytes[realIndex] = (byte) (int) obj;
+            } else if (obj instanceof Long) {
+                bytes[realIndex] = (byte) (long) obj;
+            } else {
+                bytes[realIndex] = (byte) obj;
+            }
+        }
+    }
+
     private int getHeader() {
         return (int) (long) literals[0];
     }
@@ -262,26 +281,6 @@ public abstract class CompiledCodeObject extends AbstractSqueakObjectWithClassAn
         return (1 + numLiterals) * image.flags.wordSize(); // header plus numLiterals
     }
 
-    public final void atput0Shared(final long longIndex, final Object obj) {
-        final int index = (int) longIndex;
-        assert index >= 0;
-        CompilerDirectives.transferToInterpreterAndInvalidate();
-        if (index < getBytecodeOffset()) {
-            assert index % image.flags.wordSize() == 0;
-            setLiteral(index / image.flags.wordSize(), obj);
-        } else {
-            final int realIndex = index - getBytecodeOffset();
-            assert realIndex < bytes.length;
-            if (obj instanceof Integer) {
-                bytes[realIndex] = (byte) (int) obj;
-            } else if (obj instanceof Long) {
-                bytes[realIndex] = (byte) (long) obj;
-            } else {
-                bytes[realIndex] = (byte) obj;
-            }
-        }
-    }
-
     public final Object getLiteral(final long longIndex) {
         return literals[(int) (1 + longIndex)]; // +1 for skipping header.
     }
@@ -311,11 +310,6 @@ public abstract class CompiledCodeObject extends AbstractSqueakObjectWithClassAn
 
     public final boolean isUnwindMarked() {
         return hasPrimitive() && primitiveIndex() == 198;
-    }
-
-    @Override
-    public final int instsize() {
-        return 0;
     }
 
     public final Object[] getLiterals() {

@@ -13,7 +13,6 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
-import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.NodeFactory;
@@ -44,7 +43,6 @@ import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectShallowCopyNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.context.ObjectGraphNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
@@ -574,7 +572,7 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
             super(method);
         }
 
-        @Specialization(guards = {"!isContextObject(receiver)", "receiver.getSqueakClass() == anotherObject.getSqueakClass()", "receiver.size() == anotherObject.size()"})
+        @Specialization(guards = {"!isContextObject(receiver)", "receiver.getSqueakClass() == anotherObject.getSqueakClass()", "receiver.pointerSize() == anotherObject.pointerSize()"})
         protected static final AbstractPointersObject doCopyAbstractPointers(final AbstractPointersObject receiver, final AbstractPointersObject anotherObject) {
             final Object[] destStorage = receiver.getPointers();
             System.arraycopy(anotherObject.getPointers(), 0, destStorage, 0, destStorage.length);
@@ -615,12 +613,11 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
 
         @Specialization(guards = {"receiver.getSqueakClass() == anotherObject.getSqueakClass()",
                         "!isNativeObject(receiver)", "!isPointersObject(receiver)", "!isContextObject(receiver)",
-                        "sizeNode.execute(receiver) == sizeNode.execute(anotherObject)"}, limit = "1")
+                        "objectLibrary1.size(receiver) == objectLibrary2.size(anotherObject)"}, limit = "1")
         protected static final AbstractSqueakObject doCopy(final AbstractSqueakObjectWithClassAndHash receiver, final AbstractSqueakObjectWithClassAndHash anotherObject,
-                        @Cached final SqueakObjectSizeNode sizeNode,
                         @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary1,
                         @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary2) {
-            for (int i = 0; i < sizeNode.execute(receiver); i++) {
+            for (int i = 0; i < objectLibrary1.size(receiver); i++) {
                 objectLibrary1.atput0(receiver, i, objectLibrary2.at0(anotherObject, i));
             }
             return receiver;

@@ -12,7 +12,6 @@ import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.library.CachedLibrary;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
-import de.hpi.swa.graal.squeak.model.AbstractPointersObject;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
@@ -24,17 +23,16 @@ import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
+import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeAcceptsValueNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectWriteNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectInstSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveWithSizeNode;
@@ -51,31 +49,12 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
     }
 
     protected abstract static class AbstractBasicAtOrAtPutNode extends AbstractPrimitiveWithSizeNode {
-        @Child protected SqueakObjectInstSizeNode instSizeNode;
-        @Child private SqueakObjectSizeNode sizeNode;
-
         protected AbstractBasicAtOrAtPutNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        protected final boolean inBoundsOfSqueakObject(final long index, final AbstractSqueakObject target) {
-            return SqueakGuards.inBounds1(index + getInstSizeNode().execute(target), getSizeNode().execute(target));
-        }
-
-        protected final SqueakObjectInstSizeNode getInstSizeNode() {
-            if (instSizeNode == null) {
-                CompilerDirectives.transferToInterpreterAndInvalidate();
-                instSizeNode = insert(SqueakObjectInstSizeNode.create());
-            }
-            return instSizeNode;
-        }
-
-        protected final SqueakObjectSizeNode getSizeNode() {
-            if (sizeNode == null) {
-                CompilerDirectives.transferToInterpreterAndInvalidate();
-                sizeNode = insert(SqueakObjectSizeNode.create());
-            }
-            return sizeNode;
+        protected static final boolean inBoundsOfSqueakObject(final long index, final AbstractSqueakObject target, final SqueakObjectLibrary objectLibrary) {
+            return SqueakGuards.inBounds1(index + objectLibrary.instsize(target), objectLibrary.size(target));
         }
     }
 
@@ -86,56 +65,20 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
             super(method);
         }
 
-        @Specialization(guards = "inBounds(index, receiver)")
-        protected static final Object doNative(final NativeObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided,
-                        @Shared("nativeObjectReadNode") @Cached final NativeObjectReadNode nativeObjectReadNode) {
-            return nativeObjectReadNode.execute(receiver, index - 1);
-        }
-
-        @Specialization(guards = "inBounds1(index, receiver.size())")
-        protected static final long doLargeInteger(final LargeIntegerObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided) {
-            return receiver.getNativeAt0(index - 1);
-        }
-
-        @Specialization(guards = "inBounds(index, receiver)")
-        protected static final Object doArray(final ArrayObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided,
-                        @Shared("arrayObjectReadNode") @Cached final ArrayObjectReadNode arrayObjectReadNode) {
-            return arrayObjectReadNode.execute(receiver, index - 1);
-        }
-
-        @Specialization(guards = {"inBoundsOfSqueakObject(index, receiver)",
-                        "!isNativeObject(receiver)", "!isLargeIntegerObject(receiver)", "!isFloatObject(receiver)", "!isArrayObject(receiver)"})
-        protected final Object doSqueakObject(final AbstractSqueakObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided,
+        @Specialization(guards = {"inBoundsOfSqueakObject(index, receiver, objectLibrary)"})
+        protected static final Object doSqueakObject(final AbstractSqueakObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided,
                         @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
-            return objectLibrary.at0(receiver, (int) index - 1 + instSizeNode.execute(receiver));
+            return objectLibrary.at0(receiver, (int) index - 1 + objectLibrary.instsize(receiver));
         }
 
         /*
          * Context>>#object:basicAt:
          */
 
-        @Specialization(guards = "inBounds(index, target)")
-        protected static final Object doNative(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final NativeObject target, final long index,
-                        @Shared("nativeObjectReadNode") @Cached final NativeObjectReadNode nativeObjectReadNode) {
-            return nativeObjectReadNode.execute(target, index - 1);
-        }
-
-        @Specialization(guards = "inBounds1(index, target.size())")
-        protected static final long doLargeInteger(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final LargeIntegerObject target, final long index) {
-            return target.getNativeAt0(index - 1);
-        }
-
-        @Specialization(guards = "inBounds(index, target)")
-        protected static final Object doArray(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final ArrayObject target, final long index,
-                        @Shared("arrayObjectReadNode") @Cached final ArrayObjectReadNode arrayObjectReadNode) {
-            return arrayObjectReadNode.execute(target, index - 1);
-        }
-
-        @Specialization(guards = {"inBoundsOfSqueakObject(index, target)",
-                        "!isNativeObject(target)", "!isLargeIntegerObject(target)", "!isFloatObject(target)", "!isArrayObject(target)"})
-        protected final Object doSqueakObject(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final AbstractSqueakObject target, final long index,
+        @Specialization(guards = {"inBoundsOfSqueakObject(index, target, objectLibrary)"})
+        protected static final Object doSqueakObject(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final AbstractSqueakObject target, final long index,
                         @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
-            return objectLibrary.at0(target, (int) index - 1 + getInstSizeNode().execute(target));
+            return objectLibrary.at0(target, (int) index - 1 + objectLibrary.instsize(target));
         }
     }
 
@@ -202,12 +145,12 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
             return value;
         }
 
-        @Specialization(guards = {"inBoundsOfSqueakObject(index, receiver)",
+        @Specialization(guards = {"inBoundsOfSqueakObject(index, receiver, objectLibrary)",
                         "!isNativeObject(receiver)", "!isEmptyObject(receiver)", "!isArrayObject(receiver)"})
-        protected final Object doSqueakObject(final AbstractSqueakObject receiver, final long index, final Object value,
+        protected static final Object doSqueakObject(final AbstractSqueakObject receiver, final long index, final Object value,
                         @SuppressWarnings("unused") final NotProvided notProvided,
                         @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
-            objectLibrary.atput0(receiver, (int) index - 1 + getInstSizeNode().execute(receiver), value);
+            objectLibrary.atput0(receiver, (int) index - 1 + objectLibrary.instsize(receiver), value);
             return value;
         }
 
@@ -268,12 +211,12 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
             return value;
         }
 
-        @Specialization(guards = {"inBoundsOfSqueakObject(index, target)",
+        @Specialization(guards = {"inBoundsOfSqueakObject(index, target, objectLibrary)",
                         "!isNativeObject(target)", "!isEmptyObject(target)", "!isArrayObject(target)"})
         protected Object doSqueakObject(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final AbstractSqueakObject target, final long index,
                         final Object value,
                         @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
-            objectLibrary.atput0(target, (int) index - 1 + getInstSizeNode().execute(target), value);
+            objectLibrary.atput0(target, (int) index - 1 + objectLibrary.instsize(target), value);
             return value;
         }
 
@@ -297,7 +240,12 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         }
 
         @Specialization(guards = "receiver.getSqueakClass().isVariable()")
-        protected static final long doAbstractPointers(final AbstractPointersObject receiver, @SuppressWarnings("unused") final NotProvided notProvided) {
+        protected static final long doPointers(final PointersObject receiver, @SuppressWarnings("unused") final NotProvided notProvided) {
+            return receiver.size() - receiver.instsize();
+        }
+
+        @Specialization(guards = "receiver.getSqueakClass().isVariable()")
+        protected static final long doWeakPointers(final WeakPointersObject receiver, @SuppressWarnings("unused") final NotProvided notProvided) {
             return receiver.size() - receiver.instsize();
         }
 
@@ -348,7 +296,12 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
          */
 
         @Specialization(guards = "target.getSqueakClass().isVariable()")
-        protected static final long doAbstractPointers(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final AbstractPointersObject target) {
+        protected static final long doPointers(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final PointersObject target) {
+            return target.size() - target.instsize();
+        }
+
+        @Specialization(guards = "target.getSqueakClass().isVariable()")
+        protected static final long doWeakPointers(@SuppressWarnings("unused") final AbstractSqueakObject receiver, final WeakPointersObject target) {
             return target.size() - target.instsize();
         }
 

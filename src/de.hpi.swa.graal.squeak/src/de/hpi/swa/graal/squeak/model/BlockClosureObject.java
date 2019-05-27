@@ -147,16 +147,6 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHa
         setCopied(otherCopied);
     }
 
-    @Override
-    public int instsize() {
-        return BLOCK_CLOSURE.FIRST_COPIED_VALUE;
-    }
-
-    @Override
-    public int size() {
-        return copied.length + instsize();
-    }
-
     public Object getReceiver() {
         if (receiver == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
@@ -244,6 +234,16 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHa
     public void atput0(final int index, final Object value,
                     @Cached final BlockClosureObjectWriteNode writeNode) {
         writeNode.execute(this, index, value);
+    }
+
+    @ExportMessage
+    public int instsize() {
+        return BLOCK_CLOSURE.FIRST_COPIED_VALUE;
+    }
+
+    @ExportMessage
+    public int size() {
+        return copied.length + instsize();
     }
 
     /*
