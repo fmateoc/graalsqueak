@@ -99,6 +99,13 @@ public final class ContextObjectNodes {
 
         @Specialization(guards = {"index == INSTRUCTION_POINTER"})
         protected static final void doInstructionPointer(final ContextObject context, @SuppressWarnings("unused") final long index, final long value) {
+            /**
+             * TODO: Adjust control flow when pc of active context is changed. For this, an
+             * exception could be used to unwind Truffle frames until the target frame is found.
+             * However, this exception should only be thrown when the context object is actually
+             * active. So it might need to be necessary to extend ContextObjects with an `isActive`
+             * field to avoid the use of iterateFrames.
+             */
             context.setInstructionPointer((int) value);
         }
 

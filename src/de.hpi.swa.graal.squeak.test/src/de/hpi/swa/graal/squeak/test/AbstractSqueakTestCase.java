@@ -24,6 +24,7 @@ import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.nodes.ExecuteTopLevelContextNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
@@ -78,12 +79,13 @@ public abstract class AbstractSqueakTestCase {
 
     protected static ExecuteTopLevelContextNode createContext(final CompiledMethodObject code, final Object receiver, final Object[] arguments) {
         final ContextObject testContext = ContextObject.create(code.image, arguments.length + code.getSqueakContextSize());
-        testContext.atput0Uncached(CONTEXT.METHOD, code);
-        testContext.atput0Uncached(CONTEXT.RECEIVER, receiver);
-        testContext.atput0Uncached(CONTEXT.INSTRUCTION_POINTER, (long) code.getInitialPC());
-        testContext.atput0Uncached(CONTEXT.STACKPOINTER, 0L);
-        testContext.atput0Uncached(CONTEXT.CLOSURE_OR_NIL, NilObject.SINGLETON);
-        testContext.atput0Uncached(CONTEXT.SENDER_OR_NIL, NilObject.SINGLETON);
+        final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getFactory().getUncached(testContext);
+        objectLibrary.atput0(testContext, CONTEXT.METHOD, code);
+        objectLibrary.atput0(testContext, CONTEXT.RECEIVER, receiver);
+        objectLibrary.atput0(testContext, CONTEXT.INSTRUCTION_POINTER, (long) code.getInitialPC());
+        objectLibrary.atput0(testContext, CONTEXT.STACKPOINTER, 0L);
+        objectLibrary.atput0(testContext, CONTEXT.CLOSURE_OR_NIL, NilObject.SINGLETON);
+        objectLibrary.atput0(testContext, CONTEXT.SENDER_OR_NIL, NilObject.SINGLETON);
         for (int i = 0; i < arguments.length; i++) {
             testContext.push(arguments[i]);
         }

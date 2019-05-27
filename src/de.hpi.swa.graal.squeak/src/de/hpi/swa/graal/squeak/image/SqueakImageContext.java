@@ -52,6 +52,7 @@ import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.ExecuteTopLevelContextNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.plugins.SqueakSSL.SqSSL;
 import de.hpi.swa.graal.squeak.nodes.plugins.network.SqueakSocket;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveNodeFactory;
@@ -273,12 +274,13 @@ public final class SqueakImageContext {
         final CompiledMethodObject doItMethod = (CompiledMethodObject) methodNode.send("generate");
 
         final ContextObject doItContext = ContextObject.create(this, doItMethod.getSqueakContextSize());
-        doItContext.atput0Uncached(CONTEXT.METHOD, doItMethod);
-        doItContext.atput0Uncached(CONTEXT.INSTRUCTION_POINTER, (long) doItMethod.getInitialPC());
-        doItContext.atput0Uncached(CONTEXT.RECEIVER, nilClass);
-        doItContext.atput0Uncached(CONTEXT.STACKPOINTER, 0L);
-        doItContext.atput0Uncached(CONTEXT.CLOSURE_OR_NIL, NilObject.SINGLETON);
-        doItContext.atput0Uncached(CONTEXT.SENDER_OR_NIL, NilObject.SINGLETON);
+        final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getFactory().getUncached(doItContext);
+        objectLibrary.atput0(doItContext, CONTEXT.METHOD, doItMethod);
+        objectLibrary.atput0(doItContext, CONTEXT.INSTRUCTION_POINTER, (long) doItMethod.getInitialPC());
+        objectLibrary.atput0(doItContext, CONTEXT.RECEIVER, nilClass);
+        objectLibrary.atput0(doItContext, CONTEXT.STACKPOINTER, 0L);
+        objectLibrary.atput0(doItContext, CONTEXT.CLOSURE_OR_NIL, NilObject.SINGLETON);
+        objectLibrary.atput0(doItContext, CONTEXT.SENDER_OR_NIL, NilObject.SINGLETON);
         return ExecuteTopLevelContextNode.create(getLanguage(), doItContext, false);
     }
 

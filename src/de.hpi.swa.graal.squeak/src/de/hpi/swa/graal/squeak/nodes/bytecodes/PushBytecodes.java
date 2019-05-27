@@ -5,6 +5,7 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.Truffle;
+import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.library.CachedLibrary;
@@ -251,6 +252,7 @@ public final class PushBytecodes {
         }
     }
 
+    @ImportStatic(FrameAccess.class)
     @NodeInfo(cost = NodeCost.NONE)
     public abstract static class PushReceiverVariableNode extends AbstractPushNode {
         private final int variableIndex;
@@ -264,9 +266,9 @@ public final class PushBytecodes {
             return PushReceiverVariableNodeGen.create(code, index, numBytecodes, varIndex);
         }
 
-        @Specialization
-        protected final void doReceiverVirtualized(final VirtualFrame frame,
-                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibary) {
+        @Specialization(limit = "1")
+        protected final void doReceiver(final VirtualFrame frame,
+                        @CachedLibrary("getReceiver(frame)") final SqueakObjectLibrary objectLibary) {
             pushNode.executePush(frame, objectLibary.at0(FrameAccess.getReceiver(frame), variableIndex));
         }
 

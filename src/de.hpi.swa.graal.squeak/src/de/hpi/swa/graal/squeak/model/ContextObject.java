@@ -128,83 +128,23 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
         truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, code.getFrameDescriptor());
         FrameAccess.initializeMarker(truffleFrame, code);
         FrameAccess.setContext(truffleFrame, code, this);
-        atput0Uncached(CONTEXT.INSTRUCTION_POINTER, pointers[CONTEXT.INSTRUCTION_POINTER]);
-        atput0Uncached(CONTEXT.STACKPOINTER, pointers[CONTEXT.STACKPOINTER]);
+        final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getFactory().getUncached(this);
+        objectLibrary.atput0(this, CONTEXT.INSTRUCTION_POINTER, pointers[CONTEXT.INSTRUCTION_POINTER]);
+        objectLibrary.atput0(this, CONTEXT.STACKPOINTER, pointers[CONTEXT.STACKPOINTER]);
         for (int i = CONTEXT.TEMP_FRAME_START; i < pointers.length; i++) {
-            atput0Uncached(i, pointers[i]);
+            objectLibrary.atput0(this, i, pointers[i]);
         }
     }
 
     /** Turns a ContextObject back into an array of pointers (fillIn reversed). */
     public Object[] asPointers() {
         assert hasTruffleFrame();
+        final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getFactory().getUncached(this);
         final Object[] pointers = new Object[size];
         for (int i = 0; i < size; i++) {
-            pointers[i] = at0Uncached(i);
+            pointers[i] = objectLibrary.at0(this, i);
         }
         return pointers;
-    }
-
-    private Object at0Uncached(final long longIndex) {
-        assert longIndex >= 0;
-        final int index = (int) longIndex;
-        switch (index) {
-            case CONTEXT.SENDER_OR_NIL:
-                return getSender();
-            case CONTEXT.INSTRUCTION_POINTER:
-                final int pc = getInstructionPointer();
-                return pc < 0 ? NilObject.SINGLETON : (long) pc;  // Must return a long here.
-            case CONTEXT.STACKPOINTER:
-                return (long) getStackPointer(); // Must return a long here.
-            case CONTEXT.METHOD:
-                return getMethod();
-            case CONTEXT.CLOSURE_OR_NIL:
-                return NilObject.nullToNil(getClosure());
-            case CONTEXT.RECEIVER:
-                return getReceiver();
-            default:
-                return atTemp(index - CONTEXT.TEMP_FRAME_START);
-        }
-    }
-
-    public void atput0Uncached(final long longIndex, final Object value) {
-        assert longIndex >= 0 && value != null;
-        final int index = (int) longIndex;
-        assert value != null : "null indicates a problem";
-        switch (index) {
-            case CONTEXT.SENDER_OR_NIL:
-                if (value == NilObject.SINGLETON) {
-                    removeSender();
-                } else {
-                    setSender((ContextObject) value);
-                }
-                break;
-            case CONTEXT.INSTRUCTION_POINTER:
-                /**
-                 * TODO: Adjust control flow when pc of active context is changed. For this, an
-                 * exception could be used to unwind Truffle frames until the target frame is found.
-                 * However, this exception should only be thrown when the context object is actually
-                 * active. So it might need to be necessary to extend ContextObjects with an
-                 * `isActive` field to avoid the use of iterateFrames.
-                 */
-                setInstructionPointer(value == NilObject.SINGLETON ? -1 : (int) (long) value);
-                break;
-            case CONTEXT.STACKPOINTER:
-                setStackPointer((int) (long) value);
-                break;
-            case CONTEXT.METHOD:
-                setMethod((CompiledMethodObject) value);
-                break;
-            case CONTEXT.CLOSURE_OR_NIL:
-                setClosure(value == NilObject.SINGLETON ? null : (BlockClosureObject) value);
-                break;
-            case CONTEXT.RECEIVER:
-                setReceiver(value);
-                break;
-            default:
-                atTempPut(index - CONTEXT.TEMP_FRAME_START, value);
-                break;
-        }
     }
 
     public MaterializedFrame getOrCreateTruffleFrame() {
@@ -427,8 +367,8 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
 
     public void terminate() {
         // Remove pc and sender.
-        atput0Uncached(CONTEXT.INSTRUCTION_POINTER, NilObject.SINGLETON);
-        atput0Uncached(CONTEXT.SENDER_OR_NIL, NilObject.SINGLETON);
+        setInstructionPointer(-1);
+        removeSender();
     }
 
     public boolean isTerminated() {
@@ -561,9 +501,10 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
 
     public boolean pointsTo(final Object thang) {
         // TODO: make sure this works correctly
+        final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getFactory().getUncached(this);
         if (truffleFrame != null) {
             for (int i = 0; i < size(); i++) {
-                if (at0Uncached(i) == thang) {
+                if (objectLibrary.at0(this, i) == thang) {
                     return true;
                 }
             }
