@@ -28,6 +28,7 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.METACLASS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.METHOD_DICT;
 import de.hpi.swa.graal.squeak.nodes.NewObjectNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ClassObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ClassObjectShallowCopyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ClassObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
@@ -364,7 +365,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         return (int) (format >> 16 & 0x1f);
     }
 
-    public ClassObject shallowCopy(final ArrayObject copiedInstanceVariablesOrNull) {
+    public ClassObject shallowCopyWithInstVars(final ArrayObject copiedInstanceVariablesOrNull) {
         return new ClassObject(this, copiedInstanceVariablesOrNull);
     }
 
@@ -523,5 +524,10 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     @ExportMessage
     public int size() {
         return CLASS_DESCRIPTION.SIZE + pointers.length;
+    }
+
+    @ExportMessage
+    public ClassObject shallowCopy(@Cached final ClassObjectShallowCopyNode copyNode) {
+        return copyNode.execute(this);
     }
 }

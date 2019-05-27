@@ -132,10 +132,6 @@ public final class CompiledMethodObject extends CompiledCodeObject {
         }
     }
 
-    public CompiledMethodObject shallowCopy() {
-        return new CompiledMethodObject(this);
-    }
-
     public boolean isExceptionHandlerMarked() {
         return hasPrimitive() && primitiveIndex() == 199;
     }
@@ -170,6 +166,7 @@ public final class CompiledMethodObject extends CompiledCodeObject {
         atput0Shared(index, obj);
     }
 
+    @SuppressWarnings("static-method")
     @ExportMessage
     public int instsize() {
         return 0;
@@ -178,6 +175,11 @@ public final class CompiledMethodObject extends CompiledCodeObject {
     @ExportMessage
     public int size() {
         return getBytecodeOffset() + bytes.length;
+    }
+
+    @ExportMessage
+    public CompiledMethodObject shallowCopy() {
+        return new CompiledMethodObject(this);
     }
 
     /*

@@ -27,24 +27,34 @@ public final class NilObject extends AbstractSqueakObject {
         return 1L;
     }
 
+    @SuppressWarnings({"static-method", "unused"})
     @ExportMessage
     public Object at0(final int index) {
         throw SqueakException.create("Illegal state");
     }
 
+    @SuppressWarnings({"static-method", "unused"})
     @ExportMessage
     public void atput0(final int index, final Object value) {
         throw SqueakException.create("Illegal state");
     }
 
+    @SuppressWarnings("static-method")
     @ExportMessage
     public int instsize() {
         return 0;
     }
 
+    @SuppressWarnings("static-method")
     @ExportMessage
     public int size() {
         return 0;
+    }
+
+    @SuppressWarnings("static-method")
+    @ExportMessage
+    public NilObject shallowCopy() {
+        return SINGLETON;
     }
 
     @Override

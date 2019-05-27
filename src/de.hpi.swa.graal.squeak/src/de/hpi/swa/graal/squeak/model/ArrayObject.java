@@ -11,6 +11,7 @@ import com.oracle.truffle.api.library.ExportMessage;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectShallowCopyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
@@ -334,5 +335,10 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
     @ExportMessage
     public int size(@Cached final ArrayObjectSizeNode sizeNode) {
         return sizeNode.execute(this);
+    }
+
+    @ExportMessage
+    public ArrayObject shallowCopy(@Cached final ArrayObjectShallowCopyNode copyNode) {
+        return copyNode.execute(this);
     }
 }

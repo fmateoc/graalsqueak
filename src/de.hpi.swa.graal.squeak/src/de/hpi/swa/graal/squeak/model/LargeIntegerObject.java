@@ -202,10 +202,6 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
         return super.hashCode();
     }
 
-    public LargeIntegerObject shallowCopy() {
-        return new LargeIntegerObject(this);
-    }
-
     private Object reduceIfPossible(final BigInteger value) {
         return reduceIfPossible(image, value);
     }
@@ -560,6 +556,7 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
         setNativeAt0(index, (long) value);
     }
 
+    @SuppressWarnings("static-method")
     @ExportMessage
     public int instsize() {
         return 0;
@@ -568,6 +565,11 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
     @ExportMessage
     public int size() {
         return exposedSize;
+    }
+
+    @ExportMessage
+    public LargeIntegerObject shallowCopy() {
+        return new LargeIntegerObject(this);
     }
 
     /*

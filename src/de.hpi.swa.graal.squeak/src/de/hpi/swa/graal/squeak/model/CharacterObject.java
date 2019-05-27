@@ -18,6 +18,10 @@ public final class CharacterObject extends AbstractSqueakObjectWithClassAndHash 
         this.value = value;
     }
 
+    private CharacterObject(final CharacterObject other) {
+        this(other.image, other.value);
+    }
+
     @Override
     public void fillin(final SqueakImageChunk chunk) {
         // Nothing to do.
@@ -35,23 +39,32 @@ public final class CharacterObject extends AbstractSqueakObjectWithClassAndHash 
         return Integer.toUnsignedLong(value);
     }
 
+    @SuppressWarnings({"static-method", "unused"})
     @ExportMessage
     public Object at0(final int index) {
         throw SqueakException.create("Illegal state");
     }
 
+    @SuppressWarnings({"static-method", "unused"})
     @ExportMessage
-    public void atput0(final int index, final Object value) {
+    public void atput0(final int index, final Object object) {
         throw SqueakException.create("Illegal state");
     }
 
+    @SuppressWarnings("static-method")
     @ExportMessage
     public int instsize() {
         return 0;
     }
 
+    @SuppressWarnings("static-method")
     @ExportMessage
     public int size() {
         return 0;
+    }
+
+    @ExportMessage
+    public CharacterObject shallowCopy() {
+        return new CharacterObject(this);
     }
 }

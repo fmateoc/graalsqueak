@@ -22,9 +22,9 @@ public abstract class SqueakObjectLibrary extends Library {
 
     @Abstract
     public abstract int size(Object receiver);
-//
-// public abstract Object shallowCopy(Object receiver);
-//
+
+    public abstract Object shallowCopy(Object receiver);
+
 // public abstract void pointersBecomeOneWay(Object obj, Object[] from, Object[] to, boolean
 // copyHash);
 

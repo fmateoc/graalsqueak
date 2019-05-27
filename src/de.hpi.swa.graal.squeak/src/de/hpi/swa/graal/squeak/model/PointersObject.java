@@ -127,7 +127,7 @@ public final class PointersObject extends AbstractPointersObject {
         return pointers.length;
     }
 
-// @ExportMessage
+    @ExportMessage
     public PointersObject shallowCopy() {
         return new PointersObject(this);
     }

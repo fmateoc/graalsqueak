@@ -118,10 +118,6 @@ public final class FloatObject extends AbstractSqueakObjectWithClassAndHash {
         return "" + doubleValue;
     }
 
-    public FloatObject shallowCopy() {
-        return new FloatObject(this);
-    }
-
     /*
      * SQUEAK OBJECT ACCESS
      */
@@ -138,14 +134,21 @@ public final class FloatObject extends AbstractSqueakObjectWithClassAndHash {
         writeNode.execute(this, index, value);
     }
 
+    @SuppressWarnings("static-method")
     @ExportMessage
     public int instsize() {
         return 0;
     }
 
+    @SuppressWarnings("static-method")
     @ExportMessage
     public int size() {
         return WORD_LENGTH;
+    }
+
+    @ExportMessage
+    public FloatObject shallowCopy() {
+        return new FloatObject(this);
     }
 
     @GenerateUncached

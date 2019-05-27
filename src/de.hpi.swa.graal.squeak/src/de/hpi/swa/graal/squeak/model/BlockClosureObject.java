@@ -216,10 +216,6 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHa
         }
     }
 
-    public BlockClosureObject shallowCopy() {
-        return new BlockClosureObject(this);
-    }
-
     /*
      * SQUEAK OBJECT ACCESS
      */
@@ -236,6 +232,7 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHa
         writeNode.execute(this, index, value);
     }
 
+    @SuppressWarnings("static-method")
     @ExportMessage
     public int instsize() {
         return BLOCK_CLOSURE.FIRST_COPIED_VALUE;
@@ -244,6 +241,11 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHa
     @ExportMessage
     public int size() {
         return copied.length + instsize();
+    }
+
+    @ExportMessage
+    public BlockClosureObject shallowCopy() {
+        return new BlockClosureObject(this);
     }
 
     /*

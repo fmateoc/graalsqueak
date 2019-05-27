@@ -67,10 +67,6 @@ public final class CompiledBlockObject extends CompiledCodeObject {
         return offset;
     }
 
-    public CompiledBlockObject shallowCopy() {
-        return new CompiledBlockObject(this);
-    }
-
     @ExportMessage
     public Object at0(final int index) {
         if (index < getBytecodeOffset() - getOffset()) {
@@ -86,6 +82,7 @@ public final class CompiledBlockObject extends CompiledCodeObject {
         atput0Shared(index, obj);
     }
 
+    @SuppressWarnings("static-method")
     @ExportMessage
     public int instsize() {
         return 0;
@@ -94,5 +91,10 @@ public final class CompiledBlockObject extends CompiledCodeObject {
     @ExportMessage
     public int size() {
         return outerMethod.size();
+    }
+
+    @ExportMessage
+    public CompiledBlockObject shallowCopy() {
+        return new CompiledBlockObject(this);
     }
 }

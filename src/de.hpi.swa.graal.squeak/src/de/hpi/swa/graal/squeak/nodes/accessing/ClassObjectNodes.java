@@ -11,6 +11,7 @@ import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectShallowCopyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodesFactory.ClassObjectReadNodeGen;
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodesFactory.ClassObjectWriteNodeGen;
 
@@ -71,6 +72,22 @@ public final class ClassObjectNodes {
         @Specialization(guards = "isOtherIndex(index)")
         protected static final Object doClass(final ClassObject obj, final long index) {
             return obj.getOtherPointer((int) index);
+        }
+    }
+
+    @GenerateUncached
+    public abstract static class ClassObjectShallowCopyNode extends AbstractNode {
+        public abstract ClassObject execute(ClassObject obj);
+
+        @Specialization(guards = "!receiver.hasInstanceVariables()")
+        protected static final ClassObject doClassNoInstanceVariables(final ClassObject receiver) {
+            return receiver.shallowCopyWithInstVars(null);
+        }
+
+        @Specialization(guards = "receiver.hasInstanceVariables()")
+        protected static final ClassObject doClass(final ClassObject receiver,
+                        @Cached final ArrayObjectShallowCopyNode arrayCopyNode) {
+            return receiver.shallowCopyWithInstVars(arrayCopyNode.execute(receiver.getInstanceVariablesOrNull()));
         }
     }
 

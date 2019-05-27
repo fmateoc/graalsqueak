@@ -103,7 +103,7 @@ public final class WeakPointersObject extends AbstractPointersObject {
         return pointers.length;
     }
 
-// @ExportMessage
+    @ExportMessage
     public WeakPointersObject shallowCopy() {
         return new WeakPointersObject(this);
     }

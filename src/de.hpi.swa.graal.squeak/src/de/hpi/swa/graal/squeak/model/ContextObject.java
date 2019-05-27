@@ -435,10 +435,6 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
         return getInstructionPointerForBytecodeLoop() < 0 && getSender() == NilObject.SINGLETON;
     }
 
-    public ContextObject shallowCopy() {
-        return new ContextObject(this);
-    }
-
     public boolean hasEscaped() {
         return escaped;
     }
@@ -599,5 +595,10 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
     @ExportMessage
     public int size() {
         return size;
+    }
+
+    @ExportMessage
+    public ContextObject shallowCopy() {
+        return new ContextObject(this);
     }
 }

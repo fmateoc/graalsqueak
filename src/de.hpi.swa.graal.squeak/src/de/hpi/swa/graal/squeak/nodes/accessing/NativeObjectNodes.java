@@ -227,6 +227,31 @@ public final class NativeObjectNodes {
     }
 
     @GenerateUncached
+    public abstract static class NativeObjectShallowCopyNode extends AbstractNode {
+        public abstract NativeObject execute(NativeObject obj);
+
+        @Specialization(guards = "receiver.isByteType()")
+        protected static final NativeObject doNativeBytes(final NativeObject receiver) {
+            return NativeObject.newNativeBytes(receiver.image, receiver.getSqueakClass(), receiver.getByteStorage().clone());
+        }
+
+        @Specialization(guards = "receiver.isShortType()")
+        protected static final NativeObject doNativeShorts(final NativeObject receiver) {
+            return NativeObject.newNativeShorts(receiver.image, receiver.getSqueakClass(), receiver.getShortStorage().clone());
+        }
+
+        @Specialization(guards = "receiver.isIntType()")
+        protected static final NativeObject doNativeInts(final NativeObject receiver) {
+            return NativeObject.newNativeInts(receiver.image, receiver.getSqueakClass(), receiver.getIntStorage().clone());
+        }
+
+        @Specialization(guards = "receiver.isLongType()")
+        protected static final NativeObject doNativeLongs(final NativeObject receiver) {
+            return NativeObject.newNativeLongs(receiver.image, receiver.getSqueakClass(), receiver.getLongStorage().clone());
+        }
+    }
+
+    @GenerateUncached
     public abstract static class NativeObjectSizeNode extends AbstractNode {
 
         public static NativeObjectSizeNode create() {

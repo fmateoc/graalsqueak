@@ -16,6 +16,7 @@ import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectShallowCopyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
@@ -279,6 +280,7 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         writeNode.execute(this, index, value);
     }
 
+    @SuppressWarnings("static-method")
     @ExportMessage
     public int instsize() {
         return 0;
@@ -287,5 +289,10 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
     @ExportMessage
     public int size(@Cached final NativeObjectSizeNode sizeNode) {
         return sizeNode.execute(this);
+    }
+
+    @ExportMessage
+    public NativeObject shallowCopy(@Cached final NativeObjectShallowCopyNode copyNode) {
+        return copyNode.execute(this);
     }
 }

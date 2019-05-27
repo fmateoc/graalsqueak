@@ -42,7 +42,6 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectShallowCopyNode;
 import de.hpi.swa.graal.squeak.nodes.context.ObjectGraphNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
@@ -477,16 +476,14 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 148)
     public abstract static class PrimShallowCopyNode extends AbstractPrimitiveNode implements UnaryPrimitiveWithoutFallback {
-        @Child private SqueakObjectShallowCopyNode shallowCopyNode;
-
         protected PrimShallowCopyNode(final CompiledMethodObject method) {
             super(method);
-            shallowCopyNode = SqueakObjectShallowCopyNode.create(method.image);
         }
 
         @Specialization
-        protected final Object doShallowCopy(final Object receiver) {
-            return shallowCopyNode.execute(receiver);
+        protected static final Object doShallowCopy(final Object receiver,
+                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+            return objectLibrary.shallowCopy(receiver);
         }
     }
 
