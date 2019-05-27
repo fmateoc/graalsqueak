@@ -2,9 +2,13 @@ package de.hpi.swa.graal.squeak.model;
 
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 
+@ExportLibrary(SqueakObjectLibrary.class)
 public abstract class AbstractPointersObject extends AbstractSqueakObjectWithClassAndHash {
     @CompilationFinal(dimensions = 0) protected Object[] pointers;
 
@@ -42,7 +46,13 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         this.pointers = pointers;
     }
 
-    public final int pointerSize() {
+    @ExportMessage
+    public final int instsize() {
+        return getSqueakClass().getBasicInstanceSize();
+    }
+
+    @ExportMessage
+    public final int size() {
         return pointers.length;
     }
 }

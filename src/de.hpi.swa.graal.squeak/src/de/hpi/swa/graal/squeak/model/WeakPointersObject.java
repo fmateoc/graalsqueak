@@ -64,7 +64,7 @@ public final class WeakPointersObject extends AbstractPointersObject {
         writeNode.execute(this, index, value);
     }
 
-// @ExportMessage
+    // @ExportMessage
     public boolean become(final Object otherObject) {
         if (!(otherObject instanceof PointersObject)) {
             return false;
@@ -77,7 +77,7 @@ public final class WeakPointersObject extends AbstractPointersObject {
         return true;
     }
 
-// @ExportMessage
+    // @ExportMessage
     public void pointersBecomeOneWay(final Object[] from, final Object[] to, final boolean copyHash,
                     @Cached final UpdateSqueakObjectHashNode updateHashNode) {
         for (int i = 0; i < from.length; i++) {
@@ -91,16 +91,6 @@ public final class WeakPointersObject extends AbstractPointersObject {
                 }
             }
         }
-    }
-
-    @ExportMessage
-    public int instsize() {
-        return getSqueakClass().getBasicInstanceSize();
-    }
-
-    @ExportMessage
-    public int size() {
-        return pointers.length;
     }
 
     @ExportMessage

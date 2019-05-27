@@ -161,7 +161,7 @@ public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSquea
     }
 
     @ExportMessage
-    protected final long getArraySize(@Shared("sizeNode") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+    protected final long getArraySize(@CachedLibrary("this") final SqueakObjectLibrary objectLibrary) {
         return objectLibrary.size(this);
     }
 
@@ -169,7 +169,7 @@ public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSquea
     @ExportMessage(name = "isArrayElementReadable")
     @ExportMessage(name = "isArrayElementModifiable")
     @ExportMessage(name = "isArrayElementInsertable")
-    protected final boolean isArrayElementReadable(final long index, @Shared("sizeNode") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+    protected final boolean isArrayElementReadable(final long index, @CachedLibrary("this") final SqueakObjectLibrary objectLibrary) {
         return 0 <= index && index < objectLibrary.size(this);
     }
 
@@ -181,7 +181,7 @@ public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSquea
     @ExportMessage
     protected final void writeArrayElement(final long index, final Object value,
                     @Shared("wrapNode") @Cached final WrapToSqueakNode wrapNode,
-                    @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) throws InvalidArrayIndexException {
+                    @CachedLibrary("this") final SqueakObjectLibrary objectLibrary) throws InvalidArrayIndexException {
         try {
             objectLibrary.atput0(this, (int) index, wrapNode.executeWrap(value));
         } catch (final ArrayIndexOutOfBoundsException e) {

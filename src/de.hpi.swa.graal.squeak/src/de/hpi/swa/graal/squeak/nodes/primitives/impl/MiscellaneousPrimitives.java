@@ -570,7 +570,7 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
             super(method);
         }
 
-        @Specialization(guards = {"!isContextObject(receiver)", "receiver.getSqueakClass() == anotherObject.getSqueakClass()", "receiver.pointerSize() == anotherObject.pointerSize()"})
+        @Specialization(guards = {"!isContextObject(receiver)", "receiver.getSqueakClass() == anotherObject.getSqueakClass()", "receiver.size() == anotherObject.size()"})
         protected static final AbstractPointersObject doCopyAbstractPointers(final AbstractPointersObject receiver, final AbstractPointersObject anotherObject) {
             final Object[] destStorage = receiver.getPointers();
             System.arraycopy(anotherObject.getPointers(), 0, destStorage, 0, destStorage.length);

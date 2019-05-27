@@ -88,7 +88,7 @@ public final class PointersObject extends AbstractPointersObject {
         setPointer(i, obj);
     }
 
-// @ExportMessage
+    // @ExportMessage
     public boolean become(final Object otherObject) {
         if (!(otherObject instanceof PointersObject)) {
             return false;
@@ -101,7 +101,7 @@ public final class PointersObject extends AbstractPointersObject {
         return true;
     }
 
-// @ExportMessage
+    // @ExportMessage
     public void pointersBecomeOneWay(final Object[] from, final Object[] to, final boolean copyHash,
                     @Cached final UpdateSqueakObjectHashNode updateHashNode) {
         for (int i = 0; i < from.length; i++) {
@@ -115,16 +115,6 @@ public final class PointersObject extends AbstractPointersObject {
                 }
             }
         }
-    }
-
-    @ExportMessage
-    public int instsize() {
-        return getSqueakClass().getBasicInstanceSize();
-    }
-
-    @ExportMessage
-    public int size() {
-        return pointers.length;
     }
 
     @ExportMessage
