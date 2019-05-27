@@ -28,6 +28,10 @@ public abstract class SqueakObjectLibrary extends Library {
 // public abstract void pointersBecomeOneWay(Object obj, Object[] from, Object[] to, boolean
 // copyHash);
 
+    public static SqueakObjectLibrary getUncached() {
+        return FACTORY.getUncached();
+    }
+
     public static LibraryFactory<SqueakObjectLibrary> getFactory() {
         return FACTORY;
     }

@@ -464,7 +464,7 @@ public class SqueakBytecodeTest extends AbstractSqueakTestCaseWithDummyImage {
         Object result = runMethod(method, rcvr);
         assertTrue(result instanceof ArrayObject);
         ArrayObject resultList = (ArrayObject) result;
-        final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getFactory().getUncached(resultList);
+        final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getUncached();
         assertEquals(127, objectLibrary.size(resultList));
 
         // pushNewArray and pop
@@ -532,7 +532,7 @@ public class SqueakBytecodeTest extends AbstractSqueakTestCaseWithDummyImage {
             final Object result = createContext(method, rcvr).execute(frame);
             assertTrue(result instanceof ArrayObject);
             final ArrayObject resultList = (ArrayObject) result;
-            final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getFactory().getUncached(resultList);
+            final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getUncached();
             assertEquals(2, objectLibrary.size(resultList));
             assertEquals(BooleanObject.FALSE, objectLibrary.at0(resultList, 0));
             assertEquals(BooleanObject.FALSE, objectLibrary.at0(resultList, 1));
@@ -556,7 +556,7 @@ public class SqueakBytecodeTest extends AbstractSqueakTestCaseWithDummyImage {
             final Object result = createContext(method, rcvr).execute(frame);
             assertTrue(result instanceof ArrayObject);
             final ArrayObject resultList = (ArrayObject) result;
-            final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getFactory().getUncached(resultList);
+            final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getUncached();
             assertEquals(2, objectLibrary.size(resultList));
             assertEquals(BooleanObject.FALSE, objectLibrary.at0(resultList, 0));
             assertEquals(BooleanObject.TRUE, objectLibrary.at0(resultList, 1));
