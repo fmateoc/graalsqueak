@@ -316,7 +316,7 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
                     storeStateInReceiver(receiver, scanDestX, scanLastIndex);
                     return stopReason;
                 }
-                if (ascii < 0 || scanMapSize <= ascii) {
+                if (/* ascii < 0 || */ scanMapSize <= ascii) {
                     throw PrimitiveFailed.andTransferToInterpreter();
                 }
                 final int glyphIndex = (int) (long) scanMapLib.at0(scanMap, ascii);
