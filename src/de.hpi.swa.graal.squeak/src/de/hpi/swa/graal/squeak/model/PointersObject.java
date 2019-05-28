@@ -93,17 +93,22 @@ public final class PointersObject extends AbstractPointersObject {
         setPointer(i, obj);
     }
 
-    // @ExportMessage
-    public boolean become(final Object otherObject) {
-        if (!(otherObject instanceof PointersObject)) {
+    @ExportMessage
+    public static class Become {
+        @Specialization(guards = "receiver != other")
+        protected static final boolean doBecome(final PointersObject receiver, final PointersObject other) {
+            receiver.becomeOtherClass(other);
+            final Object[] otherPointers = other.getPointers();
+            other.setPointers(receiver.getPointers());
+            receiver.setPointers(otherPointers);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final PointersObject receiver, final Object other) {
             return false;
         }
-        final PointersObject other = (PointersObject) otherObject;
-        becomeOtherClass(other);
-        final Object[] otherPointers = other.getPointers();
-        other.setPointers(getPointers());
-        setPointers(otherPointers);
-        return true;
     }
 
     // @ExportMessage

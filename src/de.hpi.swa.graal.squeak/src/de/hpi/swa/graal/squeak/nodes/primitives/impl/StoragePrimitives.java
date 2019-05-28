@@ -38,7 +38,6 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.ERROR_TABLE;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.NewObjectNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectTraceableToObjectArrayNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectBecomeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectPointersBecomeOneWayNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.UpdateSqueakObjectHashNode;
@@ -446,7 +445,6 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 128)
     protected abstract static class PrimArrayBecomeNode extends AbstractPrimitiveNode implements BinaryPrimitive {
-        @Child private SqueakObjectBecomeNode becomeNode = SqueakObjectBecomeNode.create();
         private final BranchProfile failProfile = BranchProfile.create();
 
         protected PrimArrayBecomeNode(final CompiledMethodObject method) {
@@ -456,7 +454,8 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
         @Specialization(guards = {"receiverLib.size(receiver) == otherLib.size(other)"}, limit = "1")
         protected final ArrayObject doBecome(final ArrayObject receiver, final ArrayObject other,
                         @CachedLibrary("receiver") final SqueakObjectLibrary receiverLib,
-                        @CachedLibrary("other") final SqueakObjectLibrary otherLib) {
+                        @CachedLibrary("other") final SqueakObjectLibrary otherLib,
+                        @CachedLibrary(limit = "0") final SqueakObjectLibrary becomeLib) {
             final int receiverSize = receiverLib.size(receiver);
             int numBecomes = 0;
             final Object[] lefts = new Object[receiverSize];
@@ -464,14 +463,14 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
             for (int i = 0; i < receiverSize; i++) {
                 final Object left = receiverLib.at0(receiver, i);
                 final Object right = otherLib.at0(other, i);
-                if (becomeNode.execute(left, right)) {
+                if (becomeLib.become(left, right)) {
                     lefts[numBecomes] = left;
                     rights[numBecomes] = right;
                     numBecomes++;
                 } else {
                     failProfile.enter();
                     for (int j = 0; j < numBecomes; j++) {
-                        becomeNode.execute(lefts[j], rights[j]);
+                        becomeLib.become(lefts[j], rights[j]);
                     }
                     throw new PrimitiveFailed();
                 }

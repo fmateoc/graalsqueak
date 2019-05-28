@@ -8,6 +8,7 @@ import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.Frame;
@@ -416,16 +417,6 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
         return getBlockOrMethod().getSqueakContextSize();
     }
 
-    public void become(final ContextObject other) {
-        becomeOtherClass(other);
-        final MaterializedFrame otherTruffleFrame = other.truffleFrame;
-        final int otherSize = other.size;
-        final boolean otherHasModifiedSender = other.hasModifiedSender;
-        final boolean otherEscaped = other.escaped;
-        other.setFields(truffleFrame, size, hasModifiedSender, escaped);
-        setFields(otherTruffleFrame, otherSize, otherHasModifiedSender, otherEscaped);
-    }
-
     private void setFields(final MaterializedFrame otherTruffleFrame, final int otherSize, final boolean otherHasModifiedSender, final boolean otherEscaped) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
         truffleFrame = otherTruffleFrame;
@@ -649,6 +640,27 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
         @Specialization(guards = "index >= TEMP_FRAME_START")
         protected static final void doTemp(final ContextObject context, final int index, final Object value) {
             context.atTempPut(index - CONTEXT.TEMP_FRAME_START, value);
+        }
+    }
+
+    @ExportMessage
+    public static class Become {
+        @Specialization(guards = "receiver != other")
+        protected static final boolean doBecome(final ContextObject receiver, final ContextObject other) {
+            receiver.becomeOtherClass(other);
+            final MaterializedFrame otherTruffleFrame = other.truffleFrame;
+            final int otherSize = other.size;
+            final boolean otherHasModifiedSender = other.hasModifiedSender;
+            final boolean otherEscaped = other.escaped;
+            other.setFields(receiver.truffleFrame, receiver.size, receiver.hasModifiedSender, receiver.escaped);
+            receiver.setFields(otherTruffleFrame, otherSize, otherHasModifiedSender, otherEscaped);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final ContextObject receiver, final Object other) {
+            return false;
         }
     }
 

@@ -96,11 +96,22 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         }
     }
 
-    public void become(final ArrayObject other) {
-        becomeOtherClass(other);
-        final Object otherStorage = other.storage;
-        other.setStorage(storage);
-        setStorage(otherStorage);
+    @ExportMessage
+    public static class Become {
+        @Specialization(guards = "receiver != other")
+        protected static final boolean doBecome(final ArrayObject receiver, final ArrayObject other) {
+            receiver.becomeOtherClass(other);
+            final Object otherStorage = other.storage;
+            other.setStorage(receiver.storage);
+            receiver.setStorage(otherStorage);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final ArrayObject receiver, final Object other) {
+            return false;
+        }
     }
 
     public int getBooleanLength() {

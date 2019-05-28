@@ -10,6 +10,7 @@ import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Cached.Shared;
+import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.interop.ArityException;
@@ -140,13 +141,6 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHa
         this.copied = copied;
     }
 
-    public void become(final BlockClosureObject other) {
-        becomeOtherClass(other);
-        final Object[] otherCopied = other.copied;
-        other.setCopied(copied);
-        setCopied(otherCopied);
-    }
-
     public Object getReceiver() {
         if (receiver == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
@@ -265,6 +259,24 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHa
         @Specialization(guards = "index > ARGUMENT_COUNT")
         protected static final void doClosureCopiedValues(final BlockClosureObject closure, final int index, final Object value) {
             closure.setCopiedAt0(index, value);
+        }
+    }
+
+    @ExportMessage
+    public static class Become {
+        @Specialization(guards = "receiver != other")
+        protected static final boolean doBecome(final BlockClosureObject receiver, final BlockClosureObject other) {
+            receiver.becomeOtherClass(other);
+            final Object[] otherCopied = other.copied;
+            other.setCopied(receiver.copied);
+            receiver.setCopied(otherCopied);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final BlockClosureObject receiver, final Object other) {
+            return false;
         }
     }
 

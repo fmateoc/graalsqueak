@@ -81,19 +81,6 @@ public final class WeakPointersObject extends AbstractPointersObject {
     }
 
     // @ExportMessage
-    public boolean become(final Object otherObject) {
-        if (!(otherObject instanceof PointersObject)) {
-            return false;
-        }
-        final PointersObject other = (PointersObject) otherObject;
-        becomeOtherClass(other);
-        final Object[] otherPointers = other.getPointers();
-        other.setPointers(getPointers());
-        setPointers(otherPointers);
-        return true;
-    }
-
-    // @ExportMessage
     public void pointersBecomeOneWay(final Object[] from, final Object[] to, final boolean copyHash,
                     @Cached final UpdateSqueakObjectHashNode updateHashNode) {
         for (int i = 0; i < from.length; i++) {

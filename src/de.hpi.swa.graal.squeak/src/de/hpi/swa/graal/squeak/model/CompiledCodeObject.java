@@ -7,9 +7,12 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.Truffle;
+import com.oracle.truffle.api.dsl.Fallback;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
+import com.oracle.truffle.api.library.ExportMessage;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.utilities.CyclicAssumption;
 
@@ -266,15 +269,26 @@ public abstract class CompiledCodeObject extends AbstractSqueakObjectWithClassAn
         }
     }
 
-    public final void become(final CompiledCodeObject other) {
-        becomeOtherClass(other);
-        CompilerDirectives.transferToInterpreterAndInvalidate();
-        final Object[] literals2 = other.literals;
-        final byte[] bytes2 = other.bytes;
-        other.setLiteralsAndBytes(literals, bytes);
-        setLiteralsAndBytes(literals2, bytes2);
-        other.callTargetStable.invalidate();
-        callTargetStable.invalidate();
+    @ExportMessage
+    public static class Become {
+        @Specialization(guards = "receiver != other")
+        protected static final boolean doBecome(final CompiledCodeObject receiver, final CompiledCodeObject other) {
+            receiver.becomeOtherClass(other);
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            final Object[] literals2 = other.literals;
+            final byte[] bytes2 = other.bytes;
+            other.setLiteralsAndBytes(receiver.literals, receiver.bytes);
+            receiver.setLiteralsAndBytes(literals2, bytes2);
+            other.callTargetStable.invalidate();
+            receiver.callTargetStable.invalidate();
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final CompiledCodeObject receiver, final Object other) {
+            return false;
+        }
     }
 
     public final int getBytecodeOffset() {

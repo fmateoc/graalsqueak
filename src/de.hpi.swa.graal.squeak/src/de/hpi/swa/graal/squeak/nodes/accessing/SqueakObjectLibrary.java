@@ -9,12 +9,12 @@ import com.oracle.truffle.api.library.LibraryFactory;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 
+@GenerateLibrary
 @DefaultExport(DefaultBooleanExports.class)
 @DefaultExport(DefaultCharaterExports.class)
 @DefaultExport(DefaultDoubleExports.class)
 @DefaultExport(DefaultLongExports.class)
 @DefaultExport(DefaultTruffleObjectExports.class)
-@GenerateLibrary
 public abstract class SqueakObjectLibrary extends Library {
     private static final LibraryFactory<SqueakObjectLibrary> FACTORY = LibraryFactory.resolve(SqueakObjectLibrary.class);
 
@@ -32,7 +32,9 @@ public abstract class SqueakObjectLibrary extends Library {
         throw SqueakException.create("atput0 not supported by", receiver, "at", index, "with", value);
     }
 
-    // public abstract boolean become(Object left, Object right);
+    public boolean become(final Object left, final Object right) {
+        throw SqueakException.create("become not supported by", left, "and", right);
+    }
 
     public byte[] nativeBytes(final Object receiver) {
         throw SqueakException.create("nativeBytes not supported by", receiver);

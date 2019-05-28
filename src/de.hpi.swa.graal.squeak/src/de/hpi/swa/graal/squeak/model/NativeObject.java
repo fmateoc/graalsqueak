@@ -116,13 +116,6 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         }
     }
 
-    public void become(final NativeObject other) {
-        super.becomeOtherClass(other);
-        final Object otherStorage = other.storage;
-        other.setStorage(storage);
-        setStorage(otherStorage);
-    }
-
     public void convertToBytesStorage(final byte[] bytes) {
         assert storage.getClass() != bytes.getClass() : "Converting storage of same type unnecessary";
         setStorage(bytes);
@@ -451,6 +444,24 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         @Specialization(guards = {"obj.isLongType()", "value.isZeroOrPositive()", "!value.fitsIntoLong()", "value.lessThanOneShiftedBy64()"})
         protected static final void doNativeLongsLargeIntegerSigned(final NativeObject obj, final int index, final LargeIntegerObject value) {
             doNativeLongs(obj, index, value.toSigned().longValueExact());
+        }
+    }
+
+    @ExportMessage
+    public static class Become {
+        @Specialization(guards = "receiver != other")
+        protected static final boolean doBecome(final NativeObject receiver, final NativeObject other) {
+            receiver.becomeOtherClass(other);
+            final Object otherStorage = other.storage;
+            other.setStorage(receiver.storage);
+            receiver.setStorage(otherStorage);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final NativeObject receiver, final Object other) {
+            return false;
         }
     }
 

@@ -9,6 +9,7 @@ import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.interop.ArityException;
 import com.oracle.truffle.api.interop.InteropLibrary;
@@ -386,36 +387,6 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         return ArrayUtils.contains(pointers, thang);
     }
 
-    public void become(final ClassObject other) {
-        becomeOtherClass(other);
-
-        if (instancesAreClasses != other.getSqueakClass().isMetaClass()) {
-            CompilerDirectives.transferToInterpreter();
-            instancesAreClasses = other.getSqueakClass().isMetaClass();
-        }
-
-        final ClassObject otherSuperclass = other.superclass;
-        final PointersObject otherMethodDict = other.methodDict;
-        final long otherFormat = other.format;
-        final ArrayObject otherInstanceVariables = other.instanceVariables;
-        final PointersObject otherOrganization = other.organization;
-        final Object[] otherPointers = other.pointers;
-
-        other.setSuperclass(superclass);
-        other.setMethodDict(methodDict);
-        other.setFormat(format);
-        other.setInstanceVariables(instanceVariables);
-        other.setOrganization(organization);
-        other.setOtherPointers(pointers);
-
-        setSuperclass(otherSuperclass);
-        setMethodDict(otherMethodDict);
-        setFormat(otherFormat);
-        setInstanceVariables(otherInstanceVariables);
-        setOrganization(otherOrganization);
-        setOtherPointers(otherPointers);
-    }
-
     public Assumption getClassHierarchyStable() {
         return classHierarchyStable.getAssumption();
     }
@@ -596,6 +567,47 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         @Specialization(guards = "isOtherIndex(index)")
         protected static final void doClass(final ClassObject obj, final int index, final Object value) {
             obj.setOtherPointer(index, value);
+        }
+    }
+
+    @ExportMessage
+    public static class Become {
+        @Specialization(guards = "receiver != other")
+        protected static final boolean doBecome(final ClassObject receiver, final ClassObject other) {
+            receiver.becomeOtherClass(other);
+
+            if (receiver.instancesAreClasses != other.getSqueakClass().isMetaClass()) {
+                CompilerDirectives.transferToInterpreter();
+                receiver.instancesAreClasses = other.getSqueakClass().isMetaClass();
+            }
+
+            final ClassObject otherSuperclass = other.superclass;
+            final PointersObject otherMethodDict = other.methodDict;
+            final long otherFormat = other.format;
+            final ArrayObject otherInstanceVariables = other.instanceVariables;
+            final PointersObject otherOrganization = other.organization;
+            final Object[] otherPointers = other.pointers;
+
+            other.setSuperclass(receiver.superclass);
+            other.setMethodDict(receiver.methodDict);
+            other.setFormat(receiver.format);
+            other.setInstanceVariables(receiver.instanceVariables);
+            other.setOrganization(receiver.organization);
+            other.setOtherPointers(receiver.pointers);
+
+            receiver.setSuperclass(otherSuperclass);
+            receiver.setMethodDict(otherMethodDict);
+            receiver.setFormat(otherFormat);
+            receiver.setInstanceVariables(otherInstanceVariables);
+            receiver.setOrganization(otherOrganization);
+            receiver.setOtherPointers(otherPointers);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final ClassObject left, final Object right) {
+            return false;
         }
     }
 

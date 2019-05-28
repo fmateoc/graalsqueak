@@ -1,5 +1,7 @@
 package de.hpi.swa.graal.squeak.model;
 
+import com.oracle.truffle.api.dsl.Fallback;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
@@ -40,6 +42,21 @@ public final class EmptyObject extends AbstractSqueakObjectWithClassAndHash {
         throw SqueakException.create("Illegal state");
     }
 
+    @ExportMessage
+    public static class Become {
+        @Specialization(guards = "receiver != other")
+        protected static final boolean doBecome(final EmptyObject receiver, final EmptyObject other) {
+            receiver.becomeOtherClass(other);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final EmptyObject receiver, final Object other) {
+            return false;
+        }
+    }
+
     @SuppressWarnings("static-method")
     @ExportMessage
     public int instsize() {
@@ -56,9 +73,4 @@ public final class EmptyObject extends AbstractSqueakObjectWithClassAndHash {
     public EmptyObject shallowCopy() {
         return new EmptyObject(this);
     }
-
-    public void become(final EmptyObject other) {
-        becomeOtherClass(other);
-    }
-
 }
