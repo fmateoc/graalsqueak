@@ -10,6 +10,8 @@ import com.oracle.truffle.api.RootCallTarget;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Cached.Shared;
+import com.oracle.truffle.api.dsl.ImportStatic;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.interop.ArityException;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.library.ExportLibrary;
@@ -21,8 +23,6 @@ import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.interop.WrapToSqueakNode;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.BLOCK_CLOSURE;
 import de.hpi.swa.graal.squeak.nodes.EnterCodeNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.BlockClosureObjectNodes.BlockClosureObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.BlockClosureObjectNodes.BlockClosureObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
@@ -221,15 +221,51 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHa
      */
 
     @ExportMessage
-    public Object at0(final int index,
-                    @Cached final BlockClosureObjectReadNode readNode) {
-        return readNode.execute(this, index);
+    @ImportStatic(BLOCK_CLOSURE.class)
+    public abstract static class At0 {
+        @Specialization(guards = "index == OUTER_CONTEXT")
+        protected static final AbstractSqueakObject doClosureOuterContext(final BlockClosureObject closure, @SuppressWarnings("unused") final int index) {
+            return closure.getOuterContext();
+        }
+
+        @Specialization(guards = "index == START_PC")
+        protected static final long doClosureStartPC(final BlockClosureObject closure, @SuppressWarnings("unused") final int index) {
+            return closure.getStartPC();
+        }
+
+        @Specialization(guards = "index == ARGUMENT_COUNT")
+        protected static final long doClosureArgumentCount(final BlockClosureObject closure, @SuppressWarnings("unused") final int index) {
+            return closure.getNumArgs();
+        }
+
+        @Specialization(guards = "index > ARGUMENT_COUNT")
+        protected static final Object doClosureCopiedValues(final BlockClosureObject closure, final int index) {
+            return closure.getCopiedAt0(index);
+        }
     }
 
     @ExportMessage
-    public void atput0(final int index, final Object value,
-                    @Cached final BlockClosureObjectWriteNode writeNode) {
-        writeNode.execute(this, index, value);
+    @ImportStatic(BLOCK_CLOSURE.class)
+    public abstract static class Atput0 {
+        @Specialization(guards = "index == OUTER_CONTEXT")
+        protected static final void doClosureOuterContext(final BlockClosureObject closure, @SuppressWarnings("unused") final int index, final ContextObject value) {
+            closure.setOuterContext(value);
+        }
+
+        @Specialization(guards = "index == START_PC")
+        protected static final void doClosureStartPC(final BlockClosureObject closure, @SuppressWarnings("unused") final int index, final long value) {
+            closure.setStartPC((int) value);
+        }
+
+        @Specialization(guards = "index == ARGUMENT_COUNT")
+        protected static final void doClosureArgumentCount(final BlockClosureObject closure, @SuppressWarnings("unused") final int index, final long value) {
+            closure.setNumArgs((int) value);
+        }
+
+        @Specialization(guards = "index > ARGUMENT_COUNT")
+        protected static final void doClosureCopiedValues(final BlockClosureObject closure, final int index, final Object value) {
+            closure.setCopiedAt0(index, value);
+        }
     }
 
     @SuppressWarnings("static-method")

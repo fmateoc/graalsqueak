@@ -4,6 +4,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.GenerateUncached;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.library.CachedLibrary;
 
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
@@ -11,7 +12,6 @@ import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectShallowCopyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodesFactory.ClassObjectReadNodeGen;
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodesFactory.ClassObjectWriteNodeGen;
 
@@ -84,10 +84,10 @@ public final class ClassObjectNodes {
             return receiver.shallowCopyWithInstVars(null);
         }
 
-        @Specialization(guards = "receiver.hasInstanceVariables()")
+        @Specialization(guards = "receiver.hasInstanceVariables()", limit = "1")
         protected static final ClassObject doClass(final ClassObject receiver,
-                        @Cached final ArrayObjectShallowCopyNode arrayCopyNode) {
-            return receiver.shallowCopyWithInstVars(arrayCopyNode.execute(receiver.getInstanceVariablesOrNull()));
+                        @CachedLibrary("receiver.getInstanceVariablesOrNull()") final SqueakObjectLibrary objectLibrary) {
+            return receiver.shallowCopyWithInstVars((ArrayObject) objectLibrary.shallowCopy(receiver.getInstanceVariablesOrNull()));
         }
     }
 

@@ -5,13 +5,13 @@ import java.util.Arrays;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.TruffleLogger;
 import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectShallowCopyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
@@ -338,7 +338,40 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
-    public ArrayObject shallowCopy(@Cached final ArrayObjectShallowCopyNode copyNode) {
-        return copyNode.execute(this);
+    public static class ShallowCopy {
+        @Specialization(guards = "obj.isEmptyType()")
+        protected static final ArrayObject doEmptyArray(final ArrayObject obj) {
+            return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getEmptyStorage());
+        }
+
+        @Specialization(guards = "obj.isBooleanType()")
+        protected static final ArrayObject doArrayOfBooleans(final ArrayObject obj) {
+            return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getBooleanStorage().clone());
+        }
+
+        @Specialization(guards = "obj.isCharType()")
+        protected static final ArrayObject doArrayOfChars(final ArrayObject obj) {
+            return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getCharStorage().clone());
+        }
+
+        @Specialization(guards = "obj.isLongType()")
+        protected static final ArrayObject doArrayOfLongs(final ArrayObject obj) {
+            return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getLongStorage().clone());
+        }
+
+        @Specialization(guards = "obj.isDoubleType()")
+        protected static final ArrayObject doArrayOfDoubles(final ArrayObject obj) {
+            return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getDoubleStorage().clone());
+        }
+
+        @Specialization(guards = "obj.isNativeObjectType()")
+        protected static final ArrayObject doArrayOfNatives(final ArrayObject obj) {
+            return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getNativeObjectStorage().clone());
+        }
+
+        @Specialization(guards = "obj.isObjectType()")
+        protected static final ArrayObject doArrayOfObjects(final ArrayObject obj) {
+            return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getObjectStorage().clone());
+        }
     }
 }

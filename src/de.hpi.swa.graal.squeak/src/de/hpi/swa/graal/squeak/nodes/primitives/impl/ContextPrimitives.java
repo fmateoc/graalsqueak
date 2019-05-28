@@ -4,7 +4,6 @@ import java.util.List;
 
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
-import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.NodeFactory;
@@ -12,6 +11,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameInstanceVisitor;
+import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 
@@ -22,8 +22,7 @@ import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
-import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.BinaryPrimitive;
@@ -272,10 +271,10 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(guards = {"index < receiver.getStackSize()"})
+        @Specialization(guards = {"index < receiver.getStackSize()"}, limit = "1")
         protected static final Object doContextObject(final ContextObject receiver, final long index,
-                        @Cached final ContextObjectReadNode readNode) {
-            return readNode.execute(receiver, CONTEXT.TEMP_FRAME_START + index - 1);
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+            return objectLibrary.at0(receiver, CONTEXT.TEMP_FRAME_START + (int) index - 1);
         }
     }
 
@@ -289,10 +288,11 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
+        // TODO: move limit to spec when codegen is fixed.
         @Specialization(guards = "index < receiver.getStackSize()")
         protected static final Object doContextObject(final ContextObject receiver, final long index, final Object value,
-                        @Cached final ContextObjectWriteNode writeNode) {
-            writeNode.execute(receiver, CONTEXT.TEMP_FRAME_START + index - 1, value);
+                        @CachedLibrary(limit = "1") final SqueakObjectLibrary objectLibrary) {
+            objectLibrary.atput0(receiver, CONTEXT.TEMP_FRAME_START + (int) index - 1, value);
             return value;
         }
     }

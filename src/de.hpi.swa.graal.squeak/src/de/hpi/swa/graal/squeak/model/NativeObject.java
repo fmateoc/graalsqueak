@@ -6,7 +6,8 @@ import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
-import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.ImportStatic;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
 import com.oracle.truffle.api.library.ExportLibrary;
@@ -15,10 +16,6 @@ import com.oracle.truffle.api.library.ExportMessage;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
-import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectShallowCopyNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectSizeNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
 
@@ -269,15 +266,114 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
-    public Object at0(final int index,
-                    @Cached final NativeObjectReadNode readNode) {
-        return readNode.execute(this, index);
+    public abstract static class At0 {
+        @Specialization(guards = "obj.isByteType()")
+        protected static final long doNativeBytes(final NativeObject obj, final int index) {
+            return Byte.toUnsignedLong(obj.getByteStorage()[index]);
+        }
+
+        @Specialization(guards = "obj.isShortType()")
+        protected static final long doNativeShorts(final NativeObject obj, final int index) {
+            return Short.toUnsignedLong(obj.getShortStorage()[index]);
+        }
+
+        @Specialization(guards = "obj.isIntType()")
+        protected static final long doNativeInts(final NativeObject obj, final int index) {
+            return Integer.toUnsignedLong(obj.getIntStorage()[index]);
+        }
+
+        @Specialization(guards = "obj.isLongType()")
+        protected static final Object doNativeLongs(final NativeObject obj, final int index) {
+            final long value = obj.getLongStorage()[index];
+            if (value >= 0) {
+                return value;
+            } else {
+                return LargeIntegerObject.valueOf(obj.image, value).toUnsigned();
+            }
+        }
     }
 
     @ExportMessage
-    public void atput0(final int index, final Object value,
-                    @Cached final NativeObjectWriteNode writeNode) {
-        writeNode.execute(this, index, value);
+    @ImportStatic(NativeObject.class)
+    public abstract static class Atput0 {
+        @Specialization(guards = {"obj.isByteType()", "value >= 0", "value <= BYTE_MAX"})
+        protected static final void doNativeBytes(final NativeObject obj, final int index, final long value) {
+            obj.getByteStorage()[index] = (byte) value;
+        }
+
+        @Specialization(guards = {"obj.isShortType()", "value >= 0", "value <= SHORT_MAX"})
+        protected static final void doNativeShorts(final NativeObject obj, final int index, final long value) {
+            obj.getShortStorage()[index] = (short) value;
+        }
+
+        @Specialization(guards = {"obj.isIntType()", "value >= 0", "value <= INTEGER_MAX"})
+        protected static final void doNativeInts(final NativeObject obj, final int index, final long value) {
+            obj.getIntStorage()[index] = (int) value;
+        }
+
+        @Specialization(guards = {"obj.isLongType()", "value >= 0"})
+        protected static final void doNativeLongs(final NativeObject obj, final int index, final long value) {
+            obj.getLongStorage()[index] = value;
+        }
+
+        protected static final boolean inByteRange(final char value) {
+            return value <= NativeObject.BYTE_MAX;
+        }
+
+        @Specialization(guards = {"obj.isByteType()", "inByteRange(value)"})
+        protected static final void doNativeBytesChar(final NativeObject obj, final int index, final char value) {
+            doNativeBytes(obj, index, value);
+        }
+
+        @Specialization(guards = "obj.isShortType()") // char values fit into short
+        protected static final void doNativeShortsChar(final NativeObject obj, final int index, final char value) {
+            doNativeShorts(obj, index, value);
+        }
+
+        @Specialization(guards = "obj.isIntType()")
+        protected static final void doNativeIntsChar(final NativeObject obj, final int index, final char value) {
+            doNativeInts(obj, index, value);
+        }
+
+        @Specialization(guards = "obj.isIntType()")
+        protected static final void doNativeIntsChar(final NativeObject obj, final int index, final CharacterObject value) {
+            doNativeInts(obj, index, value.getValue());
+        }
+
+        @Specialization(guards = "obj.isLongType()")
+        protected static final void doNativeLongsChar(final NativeObject obj, final int index, final char value) {
+            doNativeLongs(obj, index, value);
+        }
+
+        @Specialization(guards = "obj.isLongType()")
+        protected static final void doNativeLongsChar(final NativeObject obj, final int index, final CharacterObject value) {
+            doNativeLongs(obj, index, value.getValue());
+        }
+
+        @Specialization(guards = {"obj.isByteType()", "value.inRange(0, BYTE_MAX)"})
+        protected static final void doNativeBytesLargeInteger(final NativeObject obj, final int index, final LargeIntegerObject value) {
+            doNativeBytes(obj, index, value.longValueExact());
+        }
+
+        @Specialization(guards = {"obj.isShortType()", "value.inRange(0, SHORT_MAX)"})
+        protected static final void doNativeShortsLargeInteger(final NativeObject obj, final int index, final LargeIntegerObject value) {
+            doNativeShorts(obj, index, value.longValueExact());
+        }
+
+        @Specialization(guards = {"obj.isIntType()", "value.inRange(0, INTEGER_MAX)"})
+        protected static final void doNativeIntsLargeInteger(final NativeObject obj, final int index, final LargeIntegerObject value) {
+            doNativeInts(obj, index, value.longValueExact());
+        }
+
+        @Specialization(guards = {"obj.isLongType()", "value.isZeroOrPositive()", "value.fitsIntoLong()"})
+        protected static final void doNativeLongsLargeInteger(final NativeObject obj, final int index, final LargeIntegerObject value) {
+            doNativeLongs(obj, index, value.longValueExact());
+        }
+
+        @Specialization(guards = {"obj.isLongType()", "value.isZeroOrPositive()", "!value.fitsIntoLong()", "value.lessThanOneShiftedBy64()"})
+        protected static final void doNativeLongsLargeIntegerSigned(final NativeObject obj, final int index, final LargeIntegerObject value) {
+            doNativeLongs(obj, index, value.toSigned().longValueExact());
+        }
     }
 
     @SuppressWarnings("static-method")
@@ -287,12 +383,48 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
-    public int size(@Cached final NativeObjectSizeNode sizeNode) {
-        return sizeNode.execute(this);
+    public abstract static class Size {
+        @Specialization(guards = "obj.isByteType()")
+        protected static final int doNativeBytes(final NativeObject obj) {
+            return obj.getByteLength();
+        }
+
+        @Specialization(guards = "obj.isShortType()")
+        protected static final int doNativeShorts(final NativeObject obj) {
+            return obj.getShortLength();
+        }
+
+        @Specialization(guards = "obj.isIntType()")
+        protected static final int doNativeInts(final NativeObject obj) {
+            return obj.getIntLength();
+        }
+
+        @Specialization(guards = "obj.isLongType()")
+        protected static final int doNativeLongs(final NativeObject obj) {
+            return obj.getLongLength();
+        }
     }
 
     @ExportMessage
-    public NativeObject shallowCopy(@Cached final NativeObjectShallowCopyNode copyNode) {
-        return copyNode.execute(this);
+    public abstract static class ShallowCopy {
+        @Specialization(guards = "receiver.isByteType()")
+        protected static final NativeObject doNativeBytes(final NativeObject receiver) {
+            return NativeObject.newNativeBytes(receiver.image, receiver.getSqueakClass(), receiver.getByteStorage().clone());
+        }
+
+        @Specialization(guards = "receiver.isShortType()")
+        protected static final NativeObject doNativeShorts(final NativeObject receiver) {
+            return NativeObject.newNativeShorts(receiver.image, receiver.getSqueakClass(), receiver.getShortStorage().clone());
+        }
+
+        @Specialization(guards = "receiver.isIntType()")
+        protected static final NativeObject doNativeInts(final NativeObject receiver) {
+            return NativeObject.newNativeInts(receiver.image, receiver.getSqueakClass(), receiver.getIntStorage().clone());
+        }
+
+        @Specialization(guards = "receiver.isLongType()")
+        protected static final NativeObject doNativeLongs(final NativeObject receiver) {
+            return NativeObject.newNativeLongs(receiver.image, receiver.getSqueakClass(), receiver.getLongStorage().clone());
+        }
     }
 }

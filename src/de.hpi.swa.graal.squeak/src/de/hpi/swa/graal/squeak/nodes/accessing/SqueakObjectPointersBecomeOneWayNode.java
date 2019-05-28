@@ -5,6 +5,7 @@ import java.util.Arrays;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.library.CachedLibrary;
 
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
@@ -17,8 +18,6 @@ import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectTraceableToObjectArrayNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectWriteNode;
 
 public abstract class SqueakObjectPointersBecomeOneWayNode extends AbstractNode {
     @Child private UpdateSqueakObjectHashNode updateHashNode = UpdateSqueakObjectHashNode.create();
@@ -135,19 +134,18 @@ public abstract class SqueakObjectPointersBecomeOneWayNode extends AbstractNode 
         }
     }
 
-    @Specialization
+    @Specialization(limit = "1")
     protected final void doContext(final ContextObject obj, final Object[] from, final Object[] to, final boolean copyHash,
-                    @Cached final ContextObjectReadNode readNode,
-                    @Cached final ContextObjectWriteNode writeNode) {
+                    @CachedLibrary("obj") final SqueakObjectLibrary objectLibrary) {
         for (int i = 0; i < from.length; i++) {
             final Object fromPointer = from[i];
             // Skip sender (for performance), pc, and sp.
             // TODO: Check that all pointers are actually traced (obj.size()?).
             for (int j = CONTEXT.METHOD; j < obj.size(); j++) {
-                final Object newPointer = readNode.execute(obj, j);
+                final Object newPointer = objectLibrary.at0(obj, j);
                 if (newPointer == fromPointer) {
                     final Object toPointer = to[i];
-                    writeNode.execute(obj, j, toPointer);
+                    objectLibrary.atput0(obj, j, toPointer);
                     updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
                 }
             }

@@ -8,6 +8,8 @@ import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.ImportStatic;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameSlot;
@@ -22,10 +24,10 @@ import de.hpi.swa.graal.squeak.image.reading.SqueakImageReader;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS_SCHEDULER;
-import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.MiscellaneousBytecodes.CallPrimitiveNode;
+import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackReadNode;
+import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackWriteNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
@@ -517,15 +519,137 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
      */
 
     @ExportMessage
-    public Object at0(final int index,
-                    @Cached final ContextObjectReadNode readNode) {
-        return readNode.execute(this, index);
+    @ImportStatic(CONTEXT.class)
+    public abstract static class At0 {
+        @Specialization(guards = "index == SENDER_OR_NIL")
+        protected static final Object doSender(final ContextObject context, @SuppressWarnings("unused") final int index) {
+            return context.getSender();
+        }
+
+        @Specialization(guards = {"index == INSTRUCTION_POINTER", "context.getInstructionPointer() >= 0"})
+        protected static final long doInstructionPointer(final ContextObject context, @SuppressWarnings("unused") final int index) {
+            return context.getInstructionPointer(); // Must return a long.
+        }
+
+        @Specialization(guards = {"index == INSTRUCTION_POINTER", "context.getInstructionPointer() < 0"})
+        protected static final NilObject doInstructionPointerTerminated(@SuppressWarnings("unused") final ContextObject context, @SuppressWarnings("unused") final int index) {
+            return NilObject.SINGLETON;
+        }
+
+        @Specialization(guards = "index == STACKPOINTER")
+        protected static final long doStackPointer(final ContextObject context, @SuppressWarnings("unused") final int index) {
+            return context.getStackPointer(); // Must return a long.
+        }
+
+        @Specialization(guards = "index == METHOD")
+        protected static final CompiledMethodObject doMethod(final ContextObject context, @SuppressWarnings("unused") final int index) {
+            return context.getMethod();
+        }
+
+        @Specialization(guards = {"index == CLOSURE_OR_NIL", "context.getClosure() != null"})
+        protected static final BlockClosureObject doClosure(final ContextObject context, @SuppressWarnings("unused") final int index) {
+            return context.getClosure();
+        }
+
+        @Specialization(guards = {"index == CLOSURE_OR_NIL", "context.getClosure() == null"})
+        protected static final NilObject doClosureNil(@SuppressWarnings("unused") final ContextObject context, @SuppressWarnings("unused") final int index) {
+            return NilObject.SINGLETON;
+        }
+
+        @Specialization(guards = "index == RECEIVER")
+        protected static final Object doReceiver(final ContextObject context, @SuppressWarnings("unused") final int index) {
+            return context.getReceiver();
+        }
+
+        @Specialization(guards = {"index >= TEMP_FRAME_START", "codeObject == context.getBlockOrMethod()"}, //
+                        limit = "2" /** thisContext and sender */
+        )
+        protected static final Object doTempCached(final ContextObject context, @SuppressWarnings("unused") final int index,
+                        @SuppressWarnings("unused") @Cached(value = "context.getBlockOrMethod()", allowUncached = true) final CompiledCodeObject codeObject,
+                        @Cached(value = "create(codeObject)", allowUncached = true) final FrameStackReadNode readNode) {
+            final Object value = readNode.execute(context.getTruffleFrame(), index - CONTEXT.TEMP_FRAME_START);
+            return NilObject.nullToNil(value);
+        }
+
+        @Specialization(guards = "index >= TEMP_FRAME_START")
+        protected static final Object doTemp(final ContextObject context, final int index) {
+            return context.atTemp(index - CONTEXT.TEMP_FRAME_START);
+        }
     }
 
     @ExportMessage
-    public void atput0(final int index, final Object value,
-                    @Cached final ContextObjectWriteNode writeNode) {
-        writeNode.execute(this, index, value);
+    @ImportStatic(CONTEXT.class)
+    public abstract static class Atput0 {
+        @Specialization(guards = "index == SENDER_OR_NIL")
+        protected static final void doSender(final ContextObject context, @SuppressWarnings("unused") final int index, final ContextObject value) {
+            context.setSender(value);
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = "index == SENDER_OR_NIL")
+        protected static final void doSender(final ContextObject context, final int index, final NilObject value) {
+            context.removeSender();
+        }
+
+        @Specialization(guards = {"index == INSTRUCTION_POINTER"})
+        protected static final void doInstructionPointer(final ContextObject context, @SuppressWarnings("unused") final int index, final long value) {
+            /**
+             * TODO: Adjust control flow when pc of active context is changed. For this, an
+             * exception could be used to unwind Truffle frames until the target frame is found.
+             * However, this exception should only be thrown when the context object is actually
+             * active. So it might need to be necessary to extend ContextObjects with an `isActive`
+             * field to avoid the use of iterateFrames.
+             */
+            context.setInstructionPointer((int) value);
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"index == INSTRUCTION_POINTER"})
+        protected static final void doInstructionPointerTerminated(final ContextObject context, final int index, final NilObject value) {
+            context.setInstructionPointer(-1);
+        }
+
+        @Specialization(guards = "index == STACKPOINTER")
+        protected static final void doStackPointer(final ContextObject context, @SuppressWarnings("unused") final int index, final long value) {
+            context.setStackPointer((int) value);
+        }
+
+        @Specialization(guards = "index == METHOD")
+        protected static final void doMethod(final ContextObject context, @SuppressWarnings("unused") final int index, final CompiledMethodObject value) {
+            context.setMethod(value);
+        }
+
+        @Specialization(guards = {"index == CLOSURE_OR_NIL"})
+        protected static final void doClosure(final ContextObject context, @SuppressWarnings("unused") final int index, final BlockClosureObject value) {
+            context.setClosure(value);
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"index == CLOSURE_OR_NIL"})
+        protected static final void doClosure(final ContextObject context, final int index, final NilObject value) {
+            context.setClosure(null);
+        }
+
+        @Specialization(guards = "index == RECEIVER")
+        protected static final void doReceiver(final ContextObject context, @SuppressWarnings("unused") final int index, final Object value) {
+            context.setReceiver(value);
+        }
+
+        @Specialization(guards = {"index >= TEMP_FRAME_START", "context.getBlockOrMethod() == codeObject"}, //
+                        limit = "2"/** thisContext and sender */
+        )
+        protected static final void doTempCached(final ContextObject context, final int index, final Object value,
+                        @SuppressWarnings("unused") @Cached(value = "context.getBlockOrMethod()", allowUncached = true) final CompiledCodeObject codeObject,
+                        @Cached(value = "create(codeObject)", allowUncached = true) final FrameStackWriteNode writeNode) {
+            final int stackIndex = index - CONTEXT.TEMP_FRAME_START;
+            FrameAccess.setArgumentIfInRange(context.getTruffleFrame(), stackIndex, value);
+            writeNode.execute(context.getTruffleFrame(), stackIndex, value);
+        }
+
+        @Specialization(guards = "index >= TEMP_FRAME_START")
+        protected static final void doTemp(final ContextObject context, final int index, final Object value) {
+            context.atTempPut(index - CONTEXT.TEMP_FRAME_START, value);
+        }
     }
 
     @ExportMessage
