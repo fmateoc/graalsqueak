@@ -4,6 +4,7 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import com.oracle.truffle.api.profiles.ConditionProfile;
@@ -16,7 +17,7 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.MESSAGE;
 import de.hpi.swa.graal.squeak.model.PointersObject;
-import de.hpi.swa.graal.squeak.nodes.LookupClassNodes.LookupClassNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
@@ -63,13 +64,13 @@ public abstract class DispatchSendNode extends AbstractNodeWithImage {
         return dispatchNode.executeDispatch(frame, doesNotUnderstandMethod, new Object[]{rcvrAndArgs[0], message}, contextOrMarker);
     }
 
-    @Specialization(guards = {"!isCompiledMethodObject(targetObject)"})
+    @Specialization(guards = {"!isCompiledMethodObject(targetObject)"}, limit = "1")
     protected final Object doObjectAsMethod(final VirtualFrame frame, final NativeObject selector, final Object targetObject, @SuppressWarnings("unused") final ClassObject rcvrClass,
                     final Object[] rcvrAndArgs, final Object contextOrMarker,
-                    @Cached final LookupClassNode lookupClassNode,
+                    @CachedLibrary("targetObject") final SqueakObjectLibrary objectLibrary,
                     @Cached("createBinaryProfile()") final ConditionProfile isDoesNotUnderstandProfile) {
         final Object[] arguments = ArrayUtils.allButFirst(rcvrAndArgs);
-        final ClassObject targetClass = lookupClassNode.executeLookup(image, targetObject);
+        final ClassObject targetClass = objectLibrary.squeakClass(targetObject);
         final Object newLookupResult = getLookupNode().executeLookup(targetClass, image.runWithInSelector);
         if (isDoesNotUnderstandProfile.profile(newLookupResult == null)) {
             final Object doesNotUnderstandMethod = getLookupNode().executeLookup(targetClass, image.doesNotUnderstand);

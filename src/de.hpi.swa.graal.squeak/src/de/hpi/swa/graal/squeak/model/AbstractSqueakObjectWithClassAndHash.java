@@ -269,6 +269,11 @@ public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSquea
     }
 
     @ExportMessage
+    public final ClassObject squeakClass() {
+        return getSqueakClass();
+    }
+
+    @ExportMessage
     public final long squeakHash() {
         return getSqueakHash();
     }

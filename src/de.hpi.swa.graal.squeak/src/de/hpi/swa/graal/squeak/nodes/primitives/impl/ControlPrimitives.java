@@ -41,7 +41,6 @@ import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.DispatchEagerlyNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
 import de.hpi.swa.graal.squeak.nodes.InheritsFromNode;
-import de.hpi.swa.graal.squeak.nodes.LookupClassNodes.LookupClassNode;
 import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
@@ -116,29 +115,20 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
 
     private abstract static class AbstractPerformPrimitiveNode extends AbstractPrimitiveNode {
         @Child protected LookupMethodNode lookupMethodNode = LookupMethodNode.create();
-        @Child protected LookupClassNode lookupClassNode;
         @Child private DispatchSendNode dispatchSendNode;
 
         protected AbstractPerformPrimitiveNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        protected final Object dispatch(final VirtualFrame frame, final NativeObject selector, final Object[] rcvrAndArgs) {
-            return dispatch(frame, selector, lookupClass(rcvrAndArgs[0]), rcvrAndArgs);
+        protected final Object dispatch(final VirtualFrame frame, final SqueakObjectLibrary objectLibrary, final NativeObject selector, final Object[] rcvrAndArgs) {
+            return dispatch(frame, selector, objectLibrary.squeakClass(rcvrAndArgs[0]), rcvrAndArgs);
         }
 
         protected final Object dispatch(final VirtualFrame frame, final NativeObject selector, final ClassObject rcvrClass, final Object[] rcvrAndArgs) {
             final Object lookupResult = lookupMethodNode.executeLookup(rcvrClass, selector);
             final Object contextOrMarker = getContextOrMarker(frame);
             return getDispatchSendNode().executeSend(frame, selector, lookupResult, rcvrClass, rcvrAndArgs, contextOrMarker);
-        }
-
-        protected final ClassObject lookupClass(final Object object) {
-            if (lookupClassNode == null) {
-                CompilerDirectives.transferToInterpreterAndInvalidate();
-                lookupClassNode = insert(LookupClassNode.create());
-            }
-            return lookupClassNode.executeLookup(method.image, object);
         }
 
         private DispatchSendNode getDispatchSendNode() {
@@ -159,44 +149,50 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @SuppressWarnings("unused")
-        @Specialization
+        @Specialization(limit = "1")
         protected final Object perform(final VirtualFrame frame, final Object receiver, final NativeObject selector, final NotProvided object1, final NotProvided object2, final NotProvided object3,
-                        final NotProvided object4, final NotProvided object5) {
-            return dispatch(frame, selector, new Object[]{receiver});
+                        final NotProvided object4, final NotProvided object5,
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+            return dispatch(frame, objectLibrary, selector, new Object[]{receiver});
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"!isNotProvided(object1)"})
+        @Specialization(guards = {"!isNotProvided(object1)"}, limit = "1")
         protected final Object perform(final VirtualFrame frame, final Object receiver, final NativeObject selector, final Object object1, final NotProvided object2, final NotProvided object3,
-                        final NotProvided object4, final NotProvided object5) {
-            return dispatch(frame, selector, new Object[]{receiver, object1});
+                        final NotProvided object4, final NotProvided object5,
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+            return dispatch(frame, objectLibrary, selector, new Object[]{receiver, object1});
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"!isNotProvided(object1)", "!isNotProvided(object2)"})
+        @Specialization(guards = {"!isNotProvided(object1)", "!isNotProvided(object2)"}, limit = "1")
         protected final Object perform(final VirtualFrame frame, final Object receiver, final NativeObject selector, final Object object1, final Object object2, final NotProvided object3,
-                        final NotProvided object4, final NotProvided object5) {
-            return dispatch(frame, selector, new Object[]{receiver, object1, object2});
+                        final NotProvided object4, final NotProvided object5,
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+            return dispatch(frame, objectLibrary, selector, new Object[]{receiver, object1, object2});
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"!isNotProvided(object1)", "!isNotProvided(object2)", "!isNotProvided(object3)"})
+        @Specialization(guards = {"!isNotProvided(object1)", "!isNotProvided(object2)", "!isNotProvided(object3)"}, limit = "1")
         protected final Object perform(final VirtualFrame frame, final Object receiver, final NativeObject selector, final Object object1, final Object object2, final Object object3,
-                        final NotProvided object4, final NotProvided object5) {
-            return dispatch(frame, selector, new Object[]{receiver, object1, object2, object3});
+                        final NotProvided object4, final NotProvided object5,
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+            return dispatch(frame, objectLibrary, selector, new Object[]{receiver, object1, object2, object3});
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"!isNotProvided(object1)", "!isNotProvided(object2)", "!isNotProvided(object3)", "!isNotProvided(object4)"})
+        @Specialization(guards = {"!isNotProvided(object1)", "!isNotProvided(object2)", "!isNotProvided(object3)", "!isNotProvided(object4)"}, limit = "1")
         protected final Object perform(final VirtualFrame frame, final Object receiver, final NativeObject selector, final Object object1, final Object object2, final Object object3,
-                        final Object object4, final NotProvided object5) {
-            return dispatch(frame, selector, new Object[]{receiver, object1, object2, object3, object4});
+                        final Object object4, final NotProvided object5,
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+            return dispatch(frame, objectLibrary, selector, new Object[]{receiver, object1, object2, object3, object4});
         }
 
-        @Specialization(guards = {"!isNotProvided(object1)", "!isNotProvided(object2)", "!isNotProvided(object3)", "!isNotProvided(object4)", "!isNotProvided(object5)"})
+        @Specialization(guards = {"!isNotProvided(object1)", "!isNotProvided(object2)", "!isNotProvided(object3)", "!isNotProvided(object4)", "!isNotProvided(object5)"}, limit = "1")
         protected final Object perform(final VirtualFrame frame, final Object receiver, final NativeObject selector, final Object object1, final Object object2, final Object object3,
-                        final Object object4, final Object object5) {
-            return dispatch(frame, selector, new Object[]{receiver, object1, object2, object3, object4, object5});
+                        final Object object4, final Object object5,
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+            return dispatch(frame, objectLibrary, selector, new Object[]{receiver, object1, object2, object3, object4, object5});
         }
     }
 
@@ -209,9 +205,10 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization
-        protected Object perform(final VirtualFrame frame, final Object receiver, final NativeObject selector, final ArrayObject arguments) {
-            return dispatch(frame, selector, getObjectArrayNode.executeWithFirst(arguments, receiver));
+        @Specialization(limit = "1")
+        protected Object perform(final VirtualFrame frame, final Object receiver, final NativeObject selector, final ArrayObject arguments,
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+            return dispatch(frame, objectLibrary, selector, getObjectArrayNode.executeWithFirst(arguments, receiver));
         }
     }
 
@@ -452,15 +449,15 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected final ClassObject doClass(final Object receiver, @SuppressWarnings("unused") final NotProvided object,
-                        @Shared("lookupNode") @Cached final LookupClassNode lookupNode) {
-            return lookupNode.executeLookup(method.image, receiver);
+        protected static final ClassObject doClass(final Object receiver, @SuppressWarnings("unused") final NotProvided object,
+                        @CachedLibrary(limit = "1") final SqueakObjectLibrary objectLibrary) {
+            return objectLibrary.squeakClass(receiver);
         }
 
-        @Specialization(guards = "!isNotProvided(object)")
-        protected final ClassObject doClass(@SuppressWarnings("unused") final Object receiver, final Object object,
-                        @Shared("lookupNode") @Cached final LookupClassNode lookupNode) {
-            return lookupNode.executeLookup(method.image, object);
+        @Specialization(guards = "!isNotProvided(target)")
+        protected static final ClassObject doClass(@SuppressWarnings("unused") final Object receiver, final Object target,
+                        @CachedLibrary(limit = "1") final SqueakObjectLibrary objectLibrary) {
+            return objectLibrary.squeakClass(target);
         }
     }
 

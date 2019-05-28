@@ -1,9 +1,12 @@
 package de.hpi.swa.graal.squeak.model;
 
+import com.oracle.truffle.api.dsl.CachedContext;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
+import de.hpi.swa.graal.squeak.SqueakLanguage;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
+import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 
 @ExportLibrary(SqueakObjectLibrary.class)
@@ -54,6 +57,12 @@ public final class CharacterObject extends AbstractSqueakObject {
     @ExportMessage
     public CharacterObject shallowCopy() {
         return new CharacterObject(value);
+    }
+
+    @SuppressWarnings("static-method")
+    @ExportMessage
+    public ClassObject squeakClass(@CachedContext(SqueakLanguage.class) final SqueakImageContext image) {
+        return image.characterClass;
     }
 
     @ExportMessage

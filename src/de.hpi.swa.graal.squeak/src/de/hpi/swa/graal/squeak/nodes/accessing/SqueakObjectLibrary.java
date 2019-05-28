@@ -7,11 +7,13 @@ import com.oracle.truffle.api.library.Library;
 import com.oracle.truffle.api.library.LibraryFactory;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
+import de.hpi.swa.graal.squeak.model.ClassObject;
 
 @DefaultExport(DefaultBooleanExports.class)
 @DefaultExport(DefaultCharaterExports.class)
 @DefaultExport(DefaultDoubleExports.class)
 @DefaultExport(DefaultLongExports.class)
+@DefaultExport(DefaultTruffleObjectExports.class)
 @GenerateLibrary
 public abstract class SqueakObjectLibrary extends Library {
     private static final LibraryFactory<SqueakObjectLibrary> FACTORY = LibraryFactory.resolve(SqueakObjectLibrary.class);
@@ -43,6 +45,8 @@ public abstract class SqueakObjectLibrary extends Library {
     public Object shallowCopy(final Object receiver) {
         throw SqueakException.create("shallowCopy not supported by", receiver);
     }
+
+    public abstract ClassObject squeakClass(Object receiver);
 
     public abstract long squeakHash(Object receiver);
 
