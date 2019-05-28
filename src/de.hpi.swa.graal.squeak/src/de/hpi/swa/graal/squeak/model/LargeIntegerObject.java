@@ -560,6 +560,21 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
         setNativeAt0(index, (long) value);
     }
 
+    @ExportMessage
+    public static final class ChangeClassOfTo {
+        @Specialization(guards = {"argument.isBytes()"})
+        protected static boolean doChangeClassOfTo(final LargeIntegerObject receiver, final ClassObject argument) {
+            receiver.setSqueakClass(argument);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static boolean doFail(final LargeIntegerObject receiver, final ClassObject argument) {
+            return false;
+        }
+    }
+
     @SuppressWarnings("static-method")
     @ExportMessage
     public int instsize() {

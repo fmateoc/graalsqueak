@@ -96,24 +96,6 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         }
     }
 
-    @ExportMessage
-    public static class Become {
-        @Specialization(guards = "receiver != other")
-        protected static final boolean doBecome(final ArrayObject receiver, final ArrayObject other) {
-            receiver.becomeOtherClass(other);
-            final Object otherStorage = other.storage;
-            other.setStorage(receiver.storage);
-            receiver.setStorage(otherStorage);
-            return true;
-        }
-
-        @SuppressWarnings("unused")
-        @Fallback
-        protected static final boolean doFail(final ArrayObject receiver, final Object other) {
-            return false;
-        }
-    }
-
     public int getBooleanLength() {
         return getBooleanStorage().length;
     }
@@ -559,6 +541,39 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
+    public static final class Become {
+        @Specialization(guards = "receiver != other")
+        protected static boolean doBecome(final ArrayObject receiver, final ArrayObject other) {
+            receiver.becomeOtherClass(other);
+            final Object otherStorage = other.storage;
+            other.setStorage(receiver.storage);
+            receiver.setStorage(otherStorage);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static boolean doFail(final ArrayObject receiver, final Object other) {
+            return false;
+        }
+    }
+
+    @ExportMessage
+    public static final class ChangeClassOfTo {
+        @Specialization(guards = {"receiver.getSqueakClass().getFormat() == argument.getFormat()"})
+        protected static boolean doChangeClassOfTo(final ArrayObject receiver, final ClassObject argument) {
+            receiver.setSqueakClass(argument);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static boolean doFail(final ArrayObject receiver, final ClassObject argument) {
+            return false;
+        }
+    }
+
+    @ExportMessage
     public int instsize() {
         return getSqueakClass().getBasicInstanceSize();
     }
@@ -621,40 +636,13 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
             return true;
         }
 
-        @Specialization(guards = {"inBounds(rcvr.instsize(), objectLibrary.size(rcvr), start, stop, repl.instsize(), repl.size(), replStart)"})
-        protected static final boolean doArrayObjectPointers(final ArrayObject rcvr, final int start, final int stop, final PointersObject repl, final int replStart,
-                        @CachedLibrary("rcvr") final SqueakObjectLibrary objectLibrary) {
-            final int repOff = replStart - start;
-            for (int i = start - 1; i < stop; i++) {
-                objectLibrary.atput0(rcvr, i, repl.at0(repOff + i));
-            }
-            return true;
-        }
-
-        @Specialization(guards = {"inBounds(rcvr.instsize(), rcvrLib.size(rcvr), start, stop, repl.instsize(), repl.size(), replStart)"})
-        protected static final boolean doArrayObjectWeakPointers(final ArrayObject rcvr, final int start, final int stop, final WeakPointersObject repl, final int replStart,
+        @Specialization(guards = {"!isArrayObject(repl)", "inBounds(rcvr.instsize(), rcvrLib.size(rcvr), start, stop, replLib.instsize(repl), replLib.size(repl), replStart)"})
+        protected static final boolean doArrayGeneric(final ArrayObject rcvr, final int start, final int stop, final Object repl, final int replStart,
                         @CachedLibrary("rcvr") final SqueakObjectLibrary rcvrLib,
                         @CachedLibrary(limit = "3") final SqueakObjectLibrary replLib) {
             final int repOff = replStart - start;
             for (int i = start - 1; i < stop; i++) {
                 rcvrLib.atput0(rcvr, i, replLib.at0(repl, repOff + i));
-            }
-            return true;
-        }
-
-        @Specialization(guards = {"rcvr.isObjectType()", "inBounds(rcvr.instsize(), rcvr.getObjectLength(), start, stop, repl.instsize(), repl.size(), replStart)"})
-        protected static final boolean doArrayOfObjectsPointers(final ArrayObject rcvr, final int start, final int stop, final PointersObject repl, final int replStart) {
-            System.arraycopy(repl.getPointers(), replStart - 1, rcvr.getObjectStorage(), start - 1, 1 + stop - start);
-            return true;
-        }
-
-        @Specialization(guards = {"rcvr.isObjectType()", "inBounds(rcvr.instsize(), rcvr.getObjectLength(), start, stop, repl.instsize(), repl.size(), replStart)"}, limit = "1")
-        protected static final boolean doArrayOfObjectsWeakPointers(final ArrayObject rcvr, final int start, final int stop, final WeakPointersObject repl, final int replStart,
-                        @CachedLibrary("repl") final SqueakObjectLibrary replLib) {
-            final int repOff = replStart - start;
-            final Object[] rcvrValues = rcvr.getObjectStorage();
-            for (int i = start - 1; i < stop; i++) {
-                rcvrValues[i] = replLib.at0(repl, repOff + i);
             }
             return true;
         }

@@ -280,6 +280,21 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHa
         }
     }
 
+    @ExportMessage
+    public static final class ChangeClassOfTo {
+        @Specialization(guards = {"receiver.getSqueakClass().getFormat() == argument.getFormat()"})
+        protected static boolean doChangeClassOfTo(final BlockClosureObject receiver, final ClassObject argument) {
+            receiver.setSqueakClass(argument);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static boolean doFail(final BlockClosureObject receiver, final ClassObject argument) {
+            return false;
+        }
+    }
+
     @SuppressWarnings("static-method")
     @ExportMessage
     public int instsize() {

@@ -32,8 +32,12 @@ public abstract class SqueakObjectLibrary extends Library {
         throw SqueakException.create("atput0 not supported by", receiver, "at", index, "with", value);
     }
 
-    public boolean become(final Object left, final Object right) {
-        throw SqueakException.create("become not supported by", left, "and", right);
+    public boolean become(final Object receiver, final Object other) {
+        throw SqueakException.create("become not supported by", receiver, "and", other);
+    }
+
+    public boolean changeClassOfTo(final Object receiver, final ClassObject targetClass) {
+        throw SqueakException.create("changeClassOfTo not supported by", receiver, "and", targetClass);
     }
 
     public byte[] nativeBytes(final Object receiver) {

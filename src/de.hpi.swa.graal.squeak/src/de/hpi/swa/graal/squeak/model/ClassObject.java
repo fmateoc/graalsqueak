@@ -612,6 +612,21 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
+    public static final class ChangeClassOfTo {
+        @Specialization(guards = {"receiver.getSqueakClass().getFormat() == argument.getFormat()"})
+        protected static boolean doChangeClassOfTo(final ClassObject receiver, final ClassObject argument) {
+            receiver.setSqueakClass(argument);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static boolean doFail(final ClassObject receiver, final ClassObject argument) {
+            return false;
+        }
+    }
+
+    @ExportMessage
     public int instsize() {
         return getSqueakClass().getBasicInstanceSize();
     }

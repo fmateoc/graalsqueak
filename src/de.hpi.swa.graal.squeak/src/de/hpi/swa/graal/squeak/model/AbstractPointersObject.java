@@ -2,6 +2,8 @@ package de.hpi.swa.graal.squeak.model;
 
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.dsl.Fallback;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
@@ -44,6 +46,21 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         // TODO: find out if invalidation should be avoided by copying values if pointers != null
         CompilerDirectives.transferToInterpreterAndInvalidate();
         this.pointers = pointers;
+    }
+
+    @ExportMessage
+    public static final class ChangeClassOfTo {
+        @Specialization(guards = {"receiver.getSqueakClass().getFormat() == argument.getFormat()"})
+        protected static boolean doChangeClassOfTo(final AbstractPointersObject receiver, final ClassObject argument) {
+            receiver.setSqueakClass(argument);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static boolean doFail(final AbstractPointersObject receiver, final ClassObject argument) {
+            return false;
+        }
     }
 
     @ExportMessage

@@ -24,7 +24,6 @@ import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakQuit;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
-import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithClassAndHash;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.BooleanObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
@@ -43,7 +42,6 @@ import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
 import de.hpi.swa.graal.squeak.nodes.InheritsFromNode;
 import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectToObjectArrayCopyNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectChangeClassOfToNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.SendBytecodes.AbstractSendNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.CreateEagerArgumentsNode;
@@ -508,18 +506,22 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
     @NodeInfo(cost = NodeCost.NONE)
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 115)
-    protected abstract static class PrimChangeClassNode extends AbstractPrimitiveNode implements BinaryPrimitive {
+    protected abstract static class PrimChangeClassNode extends AbstractPrimitiveNode implements BinaryPrimitiveWithoutFallback {
 
         protected PrimChangeClassNode(final CompiledMethodObject method) {
             super(method);
         }
 
         @Specialization
-        protected static final AbstractSqueakObject doPrimChangeClass(final AbstractSqueakObjectWithClassAndHash receiver, final AbstractSqueakObjectWithClassAndHash argument,
-                        @Cached final SqueakObjectChangeClassOfToNode changeClassOfToNode) {
-            return changeClassOfToNode.execute(receiver, argument.getSqueakClass());
+        protected static final Object doPrimChangeClass(final Object receiver, final Object argument,
+                        @CachedLibrary(limit = "1") final SqueakObjectLibrary receiverLib,
+                        @CachedLibrary(limit = "1") final SqueakObjectLibrary argumentLib) {
+            if (receiverLib.changeClassOfTo(receiver, argumentLib.squeakClass(argument))) {
+                return receiver;
+            } else {
+                throw new PrimitiveFailed();
+            }
         }
-
     }
 
     @GenerateNodeFactory
@@ -680,10 +682,13 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected static final ClassObject doPrimAdoptInstance(final ClassObject receiver, final AbstractSqueakObjectWithClassAndHash argument,
-                        @Cached final SqueakObjectChangeClassOfToNode changeClassOfToNode) {
-            changeClassOfToNode.execute(argument, receiver);
-            return receiver;
+        protected static final ClassObject doPrimAdoptInstance(final ClassObject receiver, final Object argument,
+                        @CachedLibrary(limit = "1") final SqueakObjectLibrary argumentLib) {
+            if (argumentLib.changeClassOfTo(argument, receiver)) {
+                return receiver;
+            } else {
+                throw new PrimitiveFailed();
+            }
         }
     }
 

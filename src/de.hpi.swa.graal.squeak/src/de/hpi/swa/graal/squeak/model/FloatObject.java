@@ -1,6 +1,7 @@
 package de.hpi.swa.graal.squeak.model;
 
 import com.oracle.truffle.api.CompilerAsserts;
+import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.GenerateUncached;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
@@ -136,15 +137,30 @@ public final class FloatObject extends AbstractSqueakObjectWithClassAndHash {
 
     @ExportMessage
     @ImportStatic(NativeObject.class)
-    public static class Atput0 {
+    public static final class Atput0 {
         @Specialization(guards = {"index == 0", "value >= 0", "value <= INTEGER_MAX"})
-        protected static final void doFloatHigh(final FloatObject obj, @SuppressWarnings("unused") final int index, final long value) {
+        protected static void doFloatHigh(final FloatObject obj, @SuppressWarnings("unused") final int index, final long value) {
             obj.setHigh(value);
         }
 
         @Specialization(guards = {"index == 1", "value >= 0", "value <= INTEGER_MAX"})
-        protected static final void doFloatLow(final FloatObject obj, @SuppressWarnings("unused") final int index, final long value) {
+        protected static void doFloatLow(final FloatObject obj, @SuppressWarnings("unused") final int index, final long value) {
             obj.setLow(value);
+        }
+    }
+
+    @ExportMessage
+    public static final class ChangeClassOfTo {
+        @Specialization(guards = {"argument.isWords()"})
+        protected static boolean doChangeClassOfTo(final FloatObject receiver, final ClassObject argument) {
+            receiver.setSqueakClass(argument);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static boolean doFail(final FloatObject receiver, final ClassObject argument) {
+            return false;
         }
     }
 

@@ -11,6 +11,7 @@ import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
+import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
@@ -461,6 +462,53 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         @SuppressWarnings("unused")
         @Fallback
         protected static final boolean doFail(final NativeObject receiver, final Object other) {
+            return false;
+        }
+    }
+
+    @ExportMessage
+    public static class ChangeClassOfTo {
+        @Specialization(guards = "receiver.hasSameFormat(argument)")
+        protected static final boolean doNative(final NativeObject receiver, final ClassObject argument) {
+            receiver.setSqueakClass(argument);
+            return true;
+        }
+
+        @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isBytes()"})
+        protected static final boolean doNativeConvertToBytes(final NativeObject receiver, final ClassObject argument,
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+            receiver.setSqueakClass(argument);
+            receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
+            return true;
+        }
+
+        @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isShorts()"})
+        protected static final boolean doNativeConvertToShorts(final NativeObject receiver, final ClassObject argument,
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+            receiver.setSqueakClass(argument);
+            receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
+            return true;
+        }
+
+        @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isWords()"})
+        protected static final boolean doNativeConvertToInts(final NativeObject receiver, final ClassObject argument,
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+            receiver.setSqueakClass(argument);
+            receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
+            return true;
+        }
+
+        @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isLongs()"})
+        protected static final boolean doNativeConvertToLongs(final NativeObject receiver, final ClassObject argument,
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+            receiver.setSqueakClass(argument);
+            receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final NativeObject receiver, final ClassObject argument) {
             return false;
         }
     }

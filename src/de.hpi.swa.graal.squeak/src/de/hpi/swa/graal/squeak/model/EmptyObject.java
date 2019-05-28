@@ -43,16 +43,31 @@ public final class EmptyObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
-    public static class Become {
+    public static final class Become {
         @Specialization(guards = "receiver != other")
-        protected static final boolean doBecome(final EmptyObject receiver, final EmptyObject other) {
+        protected static boolean doBecome(final EmptyObject receiver, final EmptyObject other) {
             receiver.becomeOtherClass(other);
             return true;
         }
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doFail(final EmptyObject receiver, final Object other) {
+        protected static boolean doFail(final EmptyObject receiver, final Object other) {
+            return false;
+        }
+    }
+
+    @ExportMessage
+    public static final class ChangeClassOfTo {
+        @Specialization(guards = {"receiver.getSqueakClass().getFormat() == argument.getFormat()"})
+        protected static boolean doChangeClassOfTo(final EmptyObject receiver, final ClassObject argument) {
+            receiver.setSqueakClass(argument);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static boolean doFail(final EmptyObject receiver, final ClassObject argument) {
             return false;
         }
     }

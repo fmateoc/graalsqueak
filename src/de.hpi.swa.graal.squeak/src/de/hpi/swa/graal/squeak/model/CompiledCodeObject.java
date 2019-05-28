@@ -12,6 +12,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
+import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.utilities.CyclicAssumption;
@@ -20,10 +21,12 @@ import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.nodes.EnterCodeNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 import de.hpi.swa.graal.squeak.util.CompiledCodeObjectPrinter;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
+@ExportLibrary(SqueakObjectLibrary.class)
 public abstract class CompiledCodeObject extends AbstractSqueakObjectWithClassAndHash {
     @CompilationFinal(dimensions = 1) private static final int[] HEADER_SPLIT_PATTERN = new int[]{15, 1, 1, 1, 6, 4, 2, 1};
 
@@ -269,28 +272,6 @@ public abstract class CompiledCodeObject extends AbstractSqueakObjectWithClassAn
         }
     }
 
-    @ExportMessage
-    public static class Become {
-        @Specialization(guards = "receiver != other")
-        protected static final boolean doBecome(final CompiledCodeObject receiver, final CompiledCodeObject other) {
-            receiver.becomeOtherClass(other);
-            CompilerDirectives.transferToInterpreterAndInvalidate();
-            final Object[] literals2 = other.literals;
-            final byte[] bytes2 = other.bytes;
-            other.setLiteralsAndBytes(receiver.literals, receiver.bytes);
-            receiver.setLiteralsAndBytes(literals2, bytes2);
-            other.callTargetStable.invalidate();
-            receiver.callTargetStable.invalidate();
-            return true;
-        }
-
-        @SuppressWarnings("unused")
-        @Fallback
-        protected static final boolean doFail(final CompiledCodeObject receiver, final Object other) {
-            return false;
-        }
-    }
-
     public final int getBytecodeOffset() {
         return (1 + numLiterals) * image.flags.wordSize(); // header plus numLiterals
     }
@@ -348,5 +329,42 @@ public abstract class CompiledCodeObject extends AbstractSqueakObjectWithClassAn
 
     public static final long makeHeader(final int numArgs, final int numTemps, final int numLiterals, final boolean hasPrimitive, final boolean needsLargeFrame) {
         return (numArgs & 0x0F) << 24 | (numTemps & 0x3F) << 18 | numLiterals & 0x7FFF | (needsLargeFrame ? 0x20000 : 0) | (hasPrimitive ? 0x10000 : 0);
+    }
+
+    @ExportMessage
+    public static class Become {
+        @Specialization(guards = "receiver != other")
+        protected static final boolean doBecome(final CompiledCodeObject receiver, final CompiledCodeObject other) {
+            receiver.becomeOtherClass(other);
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            final Object[] literals2 = other.literals;
+            final byte[] bytes2 = other.bytes;
+            other.setLiteralsAndBytes(receiver.literals, receiver.bytes);
+            receiver.setLiteralsAndBytes(literals2, bytes2);
+            other.callTargetStable.invalidate();
+            receiver.callTargetStable.invalidate();
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final CompiledCodeObject receiver, final Object other) {
+            return false;
+        }
+    }
+
+    @ExportMessage
+    public static final class ChangeClassOfTo {
+        @Specialization(guards = {"receiver.getSqueakClass().getFormat() == argument.getFormat()"})
+        protected static boolean doChangeClassOfTo(final CompiledCodeObject receiver, final ClassObject argument) {
+            receiver.setSqueakClass(argument);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static boolean doFail(final CompiledCodeObject receiver, final ClassObject argument) {
+            return false;
+        }
     }
 }
