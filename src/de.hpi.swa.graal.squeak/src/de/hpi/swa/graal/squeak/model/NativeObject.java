@@ -335,6 +335,12 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         protected static final boolean doNativeLongsLargeInteger(@SuppressWarnings("unused") final NativeObject obj, final LargeIntegerObject value) {
             return value.isZeroOrPositive() && value.lessThanOneShiftedBy64();
         }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doOtherwiseFalse(final NativeObject obj, final Object value) {
+            return false;
+        }
     }
 
     @ExportMessage
