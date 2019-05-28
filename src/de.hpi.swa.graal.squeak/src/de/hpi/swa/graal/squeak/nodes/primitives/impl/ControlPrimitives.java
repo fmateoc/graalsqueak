@@ -42,8 +42,6 @@ import de.hpi.swa.graal.squeak.nodes.DispatchEagerlyNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
 import de.hpi.swa.graal.squeak.nodes.InheritsFromNode;
 import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectToObjectArrayCopyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectChangeClassOfToNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
@@ -871,28 +869,28 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
     @SqueakPrimitive(indices = 188)
     protected abstract static class PrimExecuteMethodArgsArrayNode extends AbstractPerformPrimitiveNode implements QuaternaryPrimitive {
         @Child private DispatchEagerlyNode dispatchNode = DispatchEagerlyNode.create();
-        @Child private ArrayObjectSizeNode sizeNode = ArrayObjectSizeNode.create();
-        @Child private ArrayObjectReadNode readNode = ArrayObjectReadNode.create();
 
         protected PrimExecuteMethodArgsArrayNode(final CompiledMethodObject method) {
             super(method);
         }
 
         /** Deprecated since Kernel-eem.1204. Kept for backward compatibility. */
-        @Specialization
+        @Specialization(limit = "1")
         protected final Object doExecute(final VirtualFrame frame, final Object receiver, final ArrayObject argArray, final CompiledMethodObject methodObject,
-                        @SuppressWarnings("unused") final NotProvided notProvided) {
-            return doExecute(frame, null, receiver, argArray, methodObject);
+                        @SuppressWarnings("unused") final NotProvided notProvided,
+                        @CachedLibrary("argArray") final SqueakObjectLibrary objectLibrary) {
+            return doExecute(frame, null, receiver, argArray, methodObject, objectLibrary);
         }
 
-        @Specialization
+        @Specialization(limit = "1")
         protected final Object doExecute(final VirtualFrame frame, @SuppressWarnings("unused") final ClassObject compiledMethodClass, final Object receiver, final ArrayObject argArray,
-                        final CompiledMethodObject methodObject) {
-            final int numArgs = sizeNode.execute(argArray);
+                        final CompiledMethodObject methodObject,
+                        @CachedLibrary("argArray") final SqueakObjectLibrary objectLibrary) {
+            final int numArgs = objectLibrary.size(argArray);
             final Object[] dispatchRcvrAndArgs = new Object[1 + numArgs];
             dispatchRcvrAndArgs[0] = receiver;
             for (int i = 0; i < numArgs; i++) {
-                dispatchRcvrAndArgs[1 + i] = readNode.execute(argArray, i);
+                dispatchRcvrAndArgs[1 + i] = objectLibrary.at0(argArray, i);
             }
             final Object thisContext = getContextOrMarker(frame);
             return dispatchNode.executeDispatch(frame, methodObject, dispatchRcvrAndArgs, thisContext);

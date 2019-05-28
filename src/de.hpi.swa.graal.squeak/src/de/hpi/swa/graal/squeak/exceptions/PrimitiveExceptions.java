@@ -9,13 +9,13 @@ public final class PrimitiveExceptions {
 
     protected static class AbstractPrimitiveFailed extends ControlFlowException {
         private static final long serialVersionUID = 1L;
-        private final long reasonCode;
+        private final int reasonCode;
 
-        protected AbstractPrimitiveFailed(final long reasonCode) {
+        protected AbstractPrimitiveFailed(final int reasonCode) {
             this.reasonCode = reasonCode;
         }
 
-        public final long getReasonCode() {
+        public final int getReasonCode() {
             return reasonCode;
         }
     }
@@ -47,7 +47,7 @@ public final class PrimitiveExceptions {
             this(ERROR_TABLE.GENERIC_ERROR);
         }
 
-        public PrimitiveFailed(final long reasonCode) {
+        public PrimitiveFailed(final int reasonCode) {
             super(reasonCode);
         }
 
@@ -56,7 +56,7 @@ public final class PrimitiveExceptions {
             throw new PrimitiveFailed();
         }
 
-        public static PrimitiveFailed andTransferToInterpreter(final long reason) {
+        public static PrimitiveFailed andTransferToInterpreter(final int reason) {
             CompilerDirectives.transferToInterpreter();
             throw new PrimitiveFailed(reason);
         }
@@ -65,7 +65,7 @@ public final class PrimitiveExceptions {
     public static final class SimulationPrimitiveFailed extends AbstractPrimitiveFailed {
         private static final long serialVersionUID = 1L;
 
-        public SimulationPrimitiveFailed(final long reasonCode) {
+        public SimulationPrimitiveFailed(final int reasonCode) {
             super(reasonCode);
         }
     }

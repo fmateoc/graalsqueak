@@ -8,6 +8,7 @@ import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.library.CachedLibrary;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
@@ -17,8 +18,8 @@ import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.FORM;
 import de.hpi.swa.graal.squeak.model.PointersObject;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectToObjectArrayCopyNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.BinaryPrimitive;
@@ -74,11 +75,11 @@ public final class BitBltPlugin extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"startIndex >= 1", "stopIndex > 0", "aString.isByteType()", "aString.getByteLength() > 0",
-                        "stopIndex <= aString.getByteLength()", "!glyphMap.isLongType() || !xTable.isLongType()", "sizeNode.execute(glyphMap) == 256"}, limit = "1")
+                        "stopIndex <= aString.getByteLength()", "!glyphMap.isLongType() || !xTable.isLongType()", "glyphMapLib.size(glyphMap) == 256"}, limit = "1")
         @TruffleBoundary(transferToInterpreterOnException = false)
         protected static final Object doDisplayGeneric(final PointersObject receiver, final NativeObject aString, final long startIndex, final long stopIndex,
                         final ArrayObject glyphMap, final ArrayObject xTable, final long kernDelta,
-                        @SuppressWarnings("unused") @Cached final ArrayObjectSizeNode sizeNode,
+                        @SuppressWarnings("unused") @CachedLibrary("glyphMap") final SqueakObjectLibrary glyphMapLib,
                         @Cached final ArrayObjectToObjectArrayCopyNode toObjectArrayNode) {
             BitBlt.resetSuccessFlag();
             final long[] glyphMapValues = toLongArray(toObjectArrayNode.execute(glyphMap));

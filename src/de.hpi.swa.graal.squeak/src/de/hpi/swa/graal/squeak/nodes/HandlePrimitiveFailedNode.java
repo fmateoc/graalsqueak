@@ -3,13 +3,13 @@ package de.hpi.swa.graal.squeak.nodes;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackWriteNode;
 
 @NodeInfo(cost = NodeCost.NONE)
@@ -30,18 +30,17 @@ public abstract class HandlePrimitiveFailedNode extends AbstractNodeWithCode {
      * symbol into the corresponding temporary variable. See
      * StackInterpreter>>#getErrorObjectFromPrimFailCode for more information.
      */
-    @Specialization(guards = {"followedByExtendedStore(code)", "e.getReasonCode() < sizeNode.execute(code.image.primitiveErrorTable)"}, limit = "1")
+    @Specialization(guards = {"followedByExtendedStore(code)", "e.getReasonCode() < objectLibrary.size(code.image.primitiveErrorTable)"})
     protected final void doHandleWithLookup(final VirtualFrame frame, final PrimitiveFailed e,
-                    @SuppressWarnings("unused") @Cached final ArrayObjectSizeNode sizeNode,
                     @Cached("create(code)") final FrameStackWriteNode pushNode,
-                    @Cached final ArrayObjectReadNode readNode) {
-        pushNode.executePush(frame, readNode.execute(code.image.primitiveErrorTable, e.getReasonCode()));
+                    @CachedLibrary("code.image.primitiveErrorTable") final SqueakObjectLibrary objectLibrary) {
+        pushNode.executePush(frame, objectLibrary.at0(code.image.primitiveErrorTable, e.getReasonCode()));
     }
 
-    @Specialization(guards = {"followedByExtendedStore(code)", "e.getReasonCode() >= sizeNode.execute(code.image.primitiveErrorTable)"}, limit = "1")
+    @Specialization(guards = {"followedByExtendedStore(code)", "e.getReasonCode() >= objectLibrary.size(code.image.primitiveErrorTable)"})
     protected static final void doHandleRawValue(final VirtualFrame frame, final PrimitiveFailed e,
-                    @SuppressWarnings("unused") @Cached final ArrayObjectSizeNode sizeNode,
-                    @Cached("create(code)") final FrameStackWriteNode pushNode) {
+                    @Cached("create(code)") final FrameStackWriteNode pushNode,
+                    @SuppressWarnings("unused") @CachedLibrary("code.image.primitiveErrorTable") final SqueakObjectLibrary objectLibrary) {
         pushNode.executePush(frame, e.getReasonCode());
     }
 

@@ -8,6 +8,7 @@ import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
+import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
@@ -33,9 +34,6 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.FORM;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.accessing.WeakPointersObjectNodes.WeakPointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.WeakPointersObjectNodes.WeakPointersObjectWriteNode;
@@ -291,58 +289,60 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
         }
     }
 
+    @ImportStatic(CHARACTER_SCANNER.class)
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 103)
     protected abstract static class PrimScanCharactersNode extends AbstractPrimitiveNode implements SeptenaryPrimitive {
-        private static final long END_OF_RUN = 257 - 1;
-        private static final long CROSSED_X = 258 - 1;
-
-        @Child private ArrayObjectReadNode readNode = ArrayObjectReadNode.create();
-        @Child protected ArrayObjectSizeNode sizeNode = ArrayObjectSizeNode.create();
+        private static final int END_OF_RUN = 257 - 1;
+        private static final int CROSSED_X = 258 - 1;
 
         protected PrimScanCharactersNode(final CompiledMethodObject method) {
             super(method);
         }
 
         @Specialization(guards = {"startIndex > 0", "stopIndex > 0", "sourceString.isByteType()", "stopIndex <= sourceString.getByteLength()", "receiver.size() >= 4",
-                        "sizeNode.execute(stops) >= 258", "hasCorrectSlots(receiver)"})
-        protected final Object doScan(final PointersObject receiver, final long startIndex, final long stopIndex, final NativeObject sourceString, final long rightX,
-                        final ArrayObject stops, final long kernData) {
+                        "stopsLib.size(stops) >= 258", "hasCorrectSlots(receiver, scanMapLib)"}, limit = "1")
+        protected static final Object doScan(final PointersObject receiver, final long startIndex, final long stopIndex, final NativeObject sourceString, final long rightX,
+                        final ArrayObject stops, final long kernData,
+                        @CachedLibrary("receiver.at0(XTABLE)") final SqueakObjectLibrary scanXTableLib,
+                        @CachedLibrary("receiver.at0(MAP)") final SqueakObjectLibrary scanMapLib,
+                        @CachedLibrary("stops") final SqueakObjectLibrary stopsLib) {
             final ArrayObject scanXTable = (ArrayObject) receiver.at0(CHARACTER_SCANNER.XTABLE);
             final ArrayObject scanMap = (ArrayObject) receiver.at0(CHARACTER_SCANNER.MAP);
+            final int scanMapSize = scanMapLib.size(scanMap);
             final byte[] sourceBytes = sourceString.getByteStorage();
 
-            final int maxGlyph = sizeNode.execute(scanXTable) - 2;
+            final int maxGlyph = scanXTableLib.size(scanXTable) - 2;
             long scanDestX = (long) receiver.at0(CHARACTER_SCANNER.DEST_X);
             long scanLastIndex = startIndex;
             while (scanLastIndex <= stopIndex) {
-                final long ascii = sourceBytes[(int) (scanLastIndex - 1)] & 0xFF;
-                final Object stopReason = readNode.execute(stops, ascii);
+                final int ascii = sourceBytes[(int) (scanLastIndex - 1)] & 0xFF;
+                final Object stopReason = stopsLib.at0(stops, ascii);
                 if (stopReason != NilObject.SINGLETON) {
                     storeStateInReceiver(receiver, scanDestX, scanLastIndex);
                     return stopReason;
                 }
-                if (ascii < 0 || sizeNode.execute(scanMap) <= ascii) {
+                if (ascii < 0 || scanMapSize <= ascii) {
                     throw PrimitiveFailed.andTransferToInterpreter();
                 }
-                final long glyphIndex = (long) readNode.execute(scanMap, ascii);
+                final int glyphIndex = (int) (long) scanMapLib.at0(scanMap, ascii);
                 if (glyphIndex < 0 || glyphIndex > maxGlyph) {
                     throw PrimitiveFailed.andTransferToInterpreter();
                 }
                 final long sourceX1;
                 final long sourceX2;
-                sourceX1 = (long) readNode.execute(scanXTable, glyphIndex);
-                sourceX2 = (long) readNode.execute(scanXTable, glyphIndex + 1);
+                sourceX1 = (long) scanXTableLib.at0(scanXTable, glyphIndex);
+                sourceX2 = (long) scanXTableLib.at0(scanXTable, glyphIndex + 1);
                 final long nextDestX = scanDestX + sourceX2 - sourceX1;
                 if (nextDestX > rightX) {
                     storeStateInReceiver(receiver, scanDestX, scanLastIndex);
-                    return readNode.execute(stops, CROSSED_X);
+                    return stopsLib.at0(stops, CROSSED_X);
                 }
                 scanDestX = nextDestX + kernData;
                 scanLastIndex++;
             }
             storeStateInReceiver(receiver, scanDestX, stopIndex);
-            return readNode.execute(stops, END_OF_RUN);
+            return stopsLib.at0(stops, END_OF_RUN);
         }
 
         private static void storeStateInReceiver(final PointersObject receiver, final long scanDestX, final long scanLastIndex) {
@@ -350,10 +350,10 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
             receiver.atput0(CHARACTER_SCANNER.LAST_INDEX, scanLastIndex);
         }
 
-        protected final boolean hasCorrectSlots(final PointersObject receiver) {
+        protected static final boolean hasCorrectSlots(final PointersObject receiver, final SqueakObjectLibrary scanMapLib) {
             final Object scanMap = receiver.at0(CHARACTER_SCANNER.MAP);
             return receiver.at0(CHARACTER_SCANNER.DEST_X) instanceof Long && receiver.at0(CHARACTER_SCANNER.XTABLE) instanceof ArrayObject &&
-                            scanMap instanceof ArrayObject && sizeNode.execute((ArrayObject) scanMap) == 256;
+                            scanMap instanceof ArrayObject && scanMapLib.size(scanMap) == 256;
         }
     }
 
@@ -493,25 +493,23 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
             return rcvr;
         }
 
-        @Specialization(guards = {"inBounds(rcvr.instsize(), sizeNode.execute(rcvr), start, stop, repl.instsize(), repl.size(), replStart)"}, limit = "1")
+        @Specialization(guards = {"inBounds(rcvr.instsize(), objectLibrary.size(rcvr), start, stop, repl.instsize(), repl.size(), replStart)"}, limit = "1")
         protected static final ArrayObject doArrayObjectPointers(final ArrayObject rcvr, final long start, final long stop, final PointersObject repl, final long replStart,
-                        @SuppressWarnings("unused") @Shared("arraySizeNode") @Cached final ArrayObjectSizeNode sizeNode,
-                        @Shared("arrayWriteNode") @Cached final ArrayObjectWriteNode writeNode) {
+                        @CachedLibrary("rcvr") final SqueakObjectLibrary objectLibrary) {
             final int repOff = (int) (replStart - start);
             for (int i = (int) (start - 1); i < stop; i++) {
-                writeNode.execute(rcvr, i, repl.at0(repOff + i));
+                objectLibrary.atput0(rcvr, i, repl.at0(repOff + i));
             }
             return rcvr;
         }
 
-        @Specialization(guards = {"inBounds(rcvr.instsize(), sizeNode.execute(rcvr), start, stop, repl.instsize(), repl.size(), replStart)"}, limit = "1")
+        @Specialization(guards = {"inBounds(rcvr.instsize(), objectLibrary.size(rcvr), start, stop, repl.instsize(), repl.size(), replStart)"}, limit = "1")
         protected static final ArrayObject doArrayObjectWeakPointers(final ArrayObject rcvr, final long start, final long stop, final WeakPointersObject repl, final long replStart,
                         @Shared("weakPointersReadNode") @Cached final WeakPointersObjectReadNode readNode,
-                        @SuppressWarnings("unused") @Shared("arraySizeNode") @Cached final ArrayObjectSizeNode sizeNode,
-                        @Shared("arrayWriteNode") @Cached final ArrayObjectWriteNode writeNode) {
+                        @CachedLibrary("rcvr") final SqueakObjectLibrary objectLibrary) {
             final long repOff = replStart - start;
             for (int i = (int) (start - 1); i < stop; i++) {
-                writeNode.execute(rcvr, i, readNode.executeRead(repl, repOff + i));
+                objectLibrary.atput0(rcvr, i, readNode.executeRead(repl, repOff + i));
             }
             return rcvr;
         }

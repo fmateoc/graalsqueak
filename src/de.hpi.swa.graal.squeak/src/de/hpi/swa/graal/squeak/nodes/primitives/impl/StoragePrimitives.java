@@ -37,8 +37,6 @@ import de.hpi.swa.graal.squeak.model.NotProvided;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.ERROR_TABLE;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.NewObjectNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectTraceableToObjectArrayNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectBecomeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
@@ -448,24 +446,24 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 128)
     protected abstract static class PrimArrayBecomeNode extends AbstractPrimitiveNode implements BinaryPrimitive {
-        @Child protected ArrayObjectSizeNode sizeNode = ArrayObjectSizeNode.create();
         @Child private SqueakObjectBecomeNode becomeNode = SqueakObjectBecomeNode.create();
-        @Child private ArrayObjectReadNode readNode = ArrayObjectReadNode.create();
         private final BranchProfile failProfile = BranchProfile.create();
 
         protected PrimArrayBecomeNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        @Specialization(guards = {"sizeNode.execute(receiver) == sizeNode.execute(other)"})
-        protected final ArrayObject doBecome(final ArrayObject receiver, final ArrayObject other) {
-            final int receiverSize = sizeNode.execute(receiver);
+        @Specialization(guards = {"receiverLib.size(receiver) == otherLib.size(other)"}, limit = "1")
+        protected final ArrayObject doBecome(final ArrayObject receiver, final ArrayObject other,
+                        @CachedLibrary("receiver") final SqueakObjectLibrary receiverLib,
+                        @CachedLibrary("other") final SqueakObjectLibrary otherLib) {
+            final int receiverSize = receiverLib.size(receiver);
             int numBecomes = 0;
             final Object[] lefts = new Object[receiverSize];
             final Object[] rights = new Object[receiverSize];
             for (int i = 0; i < receiverSize; i++) {
-                final Object left = readNode.execute(receiver, i);
-                final Object right = readNode.execute(other, i);
+                final Object left = receiverLib.at0(receiver, i);
+                final Object right = otherLib.at0(other, i);
                 if (becomeNode.execute(left, right)) {
                     lefts[numBecomes] = left;
                     rights[numBecomes] = right;
@@ -481,9 +479,11 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
             return receiver;
         }
 
-        @Specialization(guards = {"sizeNode.execute(receiver) != sizeNode.execute(other)"})
+        @Specialization(guards = {"receiverLib.size(receiver) != otherLib.size(other)"}, limit = "1")
         @SuppressWarnings("unused")
-        protected static final ArrayObject doBadSize(final ArrayObject receiver, final ArrayObject other) {
+        protected static final ArrayObject doBadSize(final ArrayObject receiver, final ArrayObject other,
+                        @CachedLibrary("receiver") final SqueakObjectLibrary receiverLib,
+                        @CachedLibrary("other") final SqueakObjectLibrary otherLib) {
             throw new PrimitiveFailed(ERROR_TABLE.BAD_ARGUMENT);
         }
 

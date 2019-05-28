@@ -24,7 +24,7 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS_SCHEDULER;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.ExecuteTopLevelContextNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 
 public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
     private static final int SQUEAK_TIMEOUT_SECONDS = 60 * 2;
@@ -57,7 +57,7 @@ public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
 
     private static void patchImageForTesting() {
         final ArrayObject lists = (ArrayObject) image.getScheduler().at0(PROCESS_SCHEDULER.PROCESS_LISTS);
-        final PointersObject priority10List = (PointersObject) ArrayObjectReadNode.getUncached().execute(lists, PRIORITY_10_LIST_INDEX);
+        final PointersObject priority10List = (PointersObject) SqueakObjectLibrary.getUncached().at0(lists, PRIORITY_10_LIST_INDEX);
         final Object firstLink = priority10List.at0(LINKED_LIST.FIRST_LINK);
         final Object lastLink = priority10List.at0(LINKED_LIST.LAST_LINK);
         assert firstLink != NilObject.SINGLETON && firstLink == lastLink : "Unexpected idleProcess state";

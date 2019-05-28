@@ -19,7 +19,7 @@ import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT_TAG;
-import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
@@ -485,11 +485,11 @@ public final class SqueakImageReader {
 
     private void fillInSmallFloatClass() {
         final ArrayObject classTableFirstPage = (ArrayObject) getChunk(hiddenRootsChunk.getWords()[0]).asObject();
-        final ArrayObjectReadNode arrayReadNode = ArrayObjectReadNode.getUncached();
-        assert arrayReadNode.execute(classTableFirstPage, SPECIAL_OBJECT_TAG.SMALL_INTEGER) == image.smallIntegerClass;
-        assert arrayReadNode.execute(classTableFirstPage, SPECIAL_OBJECT_TAG.CHARACTER) == image.characterClass;
+        final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getUncached();
+        assert objectLibrary.at0(classTableFirstPage, SPECIAL_OBJECT_TAG.SMALL_INTEGER) == image.smallIntegerClass;
+        assert objectLibrary.at0(classTableFirstPage, SPECIAL_OBJECT_TAG.CHARACTER) == image.characterClass;
         if (image.flags.is64bit()) {
-            final Object smallFloatClassOrNil = arrayReadNode.execute(classTableFirstPage, SPECIAL_OBJECT_TAG.SMALL_FLOAT);
+            final Object smallFloatClassOrNil = objectLibrary.at0(classTableFirstPage, SPECIAL_OBJECT_TAG.SMALL_FLOAT);
             image.setSmallFloat((ClassObject) smallFloatClassOrNil);
         } else {
             assert image.smallFloatClass != null : "smallFloatClass was not found when filling in objects of a 32bit image.";
