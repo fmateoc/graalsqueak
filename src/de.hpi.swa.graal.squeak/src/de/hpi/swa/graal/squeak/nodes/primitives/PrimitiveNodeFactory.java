@@ -9,6 +9,7 @@ import org.graalvm.collections.UnmodifiableEconomicMap;
 
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.NodeFactory;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
@@ -168,6 +169,7 @@ public final class PrimitiveNodeFactory {
         return primitiveNode;
     }
 
+    @TruffleBoundary
     private void fillPrimitiveTable(final AbstractPrimitiveFactoryHolder[] primitiveFactories) {
         for (final AbstractPrimitiveFactoryHolder primitiveFactory : primitiveFactories) {
             final List<? extends NodeFactory<? extends AbstractPrimitiveNode>> nodeFactories = primitiveFactory.getFactories();
