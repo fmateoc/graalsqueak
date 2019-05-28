@@ -626,18 +626,7 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         }
 
         @Specialization(guards = {"!rcvr.hasSameStorageType(repl)", "inBounds(rcvrLib.instsize(rcvr), rcvrLib.size(rcvr), start, stop, replLib.instsize(repl), replLib.size(repl), replStart)"})
-        protected static final boolean doArraysWithDifferenStorageTypes(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart,
-                        @CachedLibrary("rcvr") final SqueakObjectLibrary rcvrLib,
-                        @CachedLibrary(limit = "3") final SqueakObjectLibrary replLib) {
-            final int repOff = replStart - start;
-            for (int i = start - 1; i < stop; i++) {
-                rcvrLib.atput0(rcvr, i, replLib.at0(repl, repOff + i));
-            }
-            return true;
-        }
-
-        @Specialization(guards = {"!isArrayObject(repl)", "inBounds(rcvr.instsize(), rcvrLib.size(rcvr), start, stop, replLib.instsize(repl), replLib.size(repl), replStart)"})
-        protected static final boolean doArrayGeneric(final ArrayObject rcvr, final int start, final int stop, final Object repl, final int replStart,
+        protected static boolean doArraysWithDifferenStorageTypes(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart,
                         @CachedLibrary("rcvr") final SqueakObjectLibrary rcvrLib,
                         @CachedLibrary(limit = "3") final SqueakObjectLibrary replLib) {
             final int repOff = replStart - start;
