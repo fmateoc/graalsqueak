@@ -9,6 +9,7 @@ import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.interop.ArityException;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
@@ -27,9 +28,6 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.CLASS_DESCRIPTION;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.METACLASS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.METHOD_DICT;
 import de.hpi.swa.graal.squeak.nodes.NewObjectNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ClassObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ClassObjectShallowCopyNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ClassObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
@@ -505,15 +503,100 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
-    public Object at0(final int index,
-                    @Cached final ClassObjectReadNode readNode) {
-        return readNode.execute(this, index);
+    public static class At0 {
+        @Specialization(guards = "isSuperclassIndex(index)")
+        protected static final AbstractSqueakObject doClassSuperclass(final ClassObject obj, @SuppressWarnings("unused") final int index) {
+            return obj.getSuperclass();
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"isMethodDictIndex(index)", "squeakClass == cachedSqueakClass"}, assumptions = {"cachedSqueakClass.getMethodDictStable()"}, limit = "3")
+        protected static final PointersObject doClassMethodDictConstant(final ClassObject squeakClass, final int index,
+                        @Cached("squeakClass") final ClassObject cachedSqueakClass,
+                        @Cached("squeakClass.getMethodDict()") final PointersObject cachedMethodDict) {
+            return cachedMethodDict;
+        }
+
+        @Specialization(guards = {"isMethodDictIndex(index)"}, replaces = "doClassMethodDictConstant")
+        protected static final PointersObject doClassMethodDict(final ClassObject obj, @SuppressWarnings("unused") final int index) {
+            return obj.getMethodDict();
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"isFormatIndex(index)", "squeakClass == cachedSqueakClass"}, assumptions = {"cachedSqueakClass.getClassFormatStable()"}, limit = "3")
+        protected static final long doClassFormatConstant(final ClassObject squeakClass, final int index,
+                        @Cached("squeakClass") final ClassObject cachedSqueakClass,
+                        @Cached("squeakClass.getFormat()") final long cachedFormat) {
+            return cachedFormat;
+        }
+
+        @Specialization(guards = {"isFormatIndex(index)"}, replaces = "doClassFormatConstant")
+        protected static final long doClassFormat(final ClassObject obj, @SuppressWarnings("unused") final int index) {
+            return obj.getFormat();
+        }
+
+        @Specialization(guards = "isInstanceVariablesIndex(index)")
+        protected static final AbstractSqueakObject doClassInstanceVariables(final ClassObject obj, @SuppressWarnings("unused") final int index) {
+            return obj.getInstanceVariables();
+        }
+
+        @Specialization(guards = "isOrganizationIndex(index)")
+        protected static final AbstractSqueakObject doClassOrganization(final ClassObject obj, @SuppressWarnings("unused") final int index) {
+            return obj.getOrganization();
+        }
+
+        @Specialization(guards = "isOtherIndex(index)")
+        protected static final Object doClass(final ClassObject obj, final int index) {
+            return obj.getOtherPointer(index);
+        }
     }
 
     @ExportMessage
-    public void atput0(final int index, final Object value,
-                    @Cached final ClassObjectWriteNode writeNode) {
-        writeNode.execute(this, index, value);
+    public static class Atput0 {
+        @Specialization(guards = "isSuperclassIndex(index)")
+        protected static final void doClassSuperclass(final ClassObject obj, @SuppressWarnings("unused") final int index, final ClassObject value) {
+            obj.setSuperclass(value);
+        }
+
+        @Specialization(guards = "isSuperclassIndex(index)")
+        protected static final void doClassSuperclass(final ClassObject obj, @SuppressWarnings("unused") final int index, @SuppressWarnings("unused") final NilObject value) {
+            obj.setSuperclass(null);
+        }
+
+        @Specialization(guards = "isMethodDictIndex(index)")
+        protected static final void doClassMethodDict(final ClassObject obj, @SuppressWarnings("unused") final int index, final PointersObject value) {
+            obj.setMethodDict(value);
+        }
+
+        @Specialization(guards = "isFormatIndex(index)")
+        protected static final void doClassFormat(final ClassObject obj, @SuppressWarnings("unused") final int index, final long value) {
+            obj.setFormat(value);
+        }
+
+        @Specialization(guards = "isInstanceVariablesIndex(index)")
+        protected static final void doClassInstanceVariables(final ClassObject obj, @SuppressWarnings("unused") final int index, final ArrayObject value) {
+            obj.setInstanceVariables(value);
+        }
+
+        @Specialization(guards = "isInstanceVariablesIndex(index)")
+        protected static final void doClassInstanceVariables(final ClassObject obj, @SuppressWarnings("unused") final int index, @SuppressWarnings("unused") final NilObject value) {
+            obj.setInstanceVariables(null);
+        }
+
+        @Specialization(guards = "isOrganizationIndex(index)")
+        protected static final void doClassOrganization(final ClassObject obj, @SuppressWarnings("unused") final int index, final PointersObject value) {
+            obj.setOrganization(value);
+        }
+
+        @Specialization(guards = "isOrganizationIndex(index)")
+        protected static final void doClassOrganization(final ClassObject obj, @SuppressWarnings("unused") final int index, @SuppressWarnings("unused") final NilObject value) {
+            obj.setOrganization(null);
+        }
+
+        @Specialization(guards = "isOtherIndex(index)")
+        protected static final void doClass(final ClassObject obj, final int index, final Object value) {
+            obj.setOtherPointer(index, value);
+        }
     }
 
     @ExportMessage
@@ -527,7 +610,16 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
-    public ClassObject shallowCopy(@Cached final ClassObjectShallowCopyNode copyNode) {
-        return copyNode.execute(this);
+    public static class ShallowCopy {
+        @Specialization(guards = "!receiver.hasInstanceVariables()")
+        protected static final ClassObject doClassNoInstanceVariables(final ClassObject receiver) {
+            return receiver.shallowCopyWithInstVars(null);
+        }
+
+        @Specialization(guards = "receiver.hasInstanceVariables()", limit = "1")
+        protected static final ClassObject doClass(final ClassObject receiver,
+                        @CachedLibrary("receiver.getInstanceVariablesOrNull()") final SqueakObjectLibrary objectLibrary) {
+            return receiver.shallowCopyWithInstVars((ArrayObject) objectLibrary.shallowCopy(receiver.getInstanceVariablesOrNull()));
+        }
     }
 }
