@@ -1,9 +1,8 @@
 package de.hpi.swa.graal.squeak.nodes.accessing;
 
-import com.oracle.truffle.api.dsl.Cached;
-import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.library.CachedLibrary;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
@@ -13,7 +12,6 @@ import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeGetBytesNode;
 
 /** This node should only be used in primitive nodes as it may throw a PrimitiveFailed exception. */
 public abstract class SqueakObjectChangeClassOfToNode extends AbstractNode {
@@ -26,35 +24,35 @@ public abstract class SqueakObjectChangeClassOfToNode extends AbstractNode {
         return receiver;
     }
 
-    @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isBytes()"})
+    @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isBytes()"}, limit = "1")
     protected static final NativeObject doNativeConvertToBytes(final NativeObject receiver, final ClassObject argument,
-                    @Shared("getBytesNode") @Cached final NativeGetBytesNode getBytesNode) {
+                    @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
         receiver.setSqueakClass(argument);
-        receiver.convertToBytesStorage(getBytesNode.execute(receiver));
+        receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
         return receiver;
     }
 
-    @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isShorts()"})
+    @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isShorts()"}, limit = "1")
     protected static final NativeObject doNativeConvertToShorts(final NativeObject receiver, final ClassObject argument,
-                    @Shared("getBytesNode") @Cached final NativeGetBytesNode getBytesNode) {
+                    @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
         receiver.setSqueakClass(argument);
-        receiver.convertToBytesStorage(getBytesNode.execute(receiver));
+        receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
         return receiver;
     }
 
-    @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isWords()"})
+    @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isWords()"}, limit = "1")
     protected static final NativeObject doNativeConvertToInts(final NativeObject receiver, final ClassObject argument,
-                    @Shared("getBytesNode") @Cached final NativeGetBytesNode getBytesNode) {
+                    @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
         receiver.setSqueakClass(argument);
-        receiver.convertToBytesStorage(getBytesNode.execute(receiver));
+        receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
         return receiver;
     }
 
-    @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isLongs()"})
+    @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isLongs()"}, limit = "1")
     protected static final NativeObject doNativeConvertToLongs(final NativeObject receiver, final ClassObject argument,
-                    @Shared("getBytesNode") @Cached final NativeGetBytesNode getBytesNode) {
+                    @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
         receiver.setSqueakClass(argument);
-        receiver.convertToBytesStorage(getBytesNode.execute(receiver));
+        receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
         return receiver;
     }
 

@@ -452,6 +452,29 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         }
     }
 
+    @ExportMessage
+    public static class NativeBytes {
+        @Specialization(guards = "obj.isByteType()")
+        protected static final byte[] doNativeBytes(final NativeObject obj) {
+            return obj.getByteStorage();
+        }
+
+        @Specialization(guards = "obj.isShortType()")
+        protected static final byte[] doNativeShorts(final NativeObject obj) {
+            return ArrayConversionUtils.bytesFromShortsReversed(obj.getShortStorage());
+        }
+
+        @Specialization(guards = "obj.isIntType()")
+        protected static final byte[] doNativeInts(final NativeObject obj) {
+            return ArrayConversionUtils.bytesFromIntsReversed(obj.getIntStorage());
+        }
+
+        @Specialization(guards = "obj.isLongType()")
+        protected static final byte[] doNativeLongs(final NativeObject obj) {
+            return ArrayConversionUtils.bytesFromLongsReversed(obj.getLongStorage());
+        }
+    }
+
     @SuppressWarnings("static-method")
     @ExportMessage
     public int instsize() {

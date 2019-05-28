@@ -34,6 +34,10 @@ public abstract class SqueakObjectLibrary extends Library {
 
     // public abstract boolean become(Object left, Object right);
 
+    public byte[] nativeBytes(final Object receiver) {
+        throw SqueakException.create("nativeBytes not supported by", receiver);
+    }
+
     public int instsize(@SuppressWarnings("unused") final Object receiver) {
         return 0;
     }
