@@ -3,9 +3,13 @@ package de.hpi.swa.graal.squeak.model;
 import java.util.Arrays;
 
 import com.oracle.truffle.api.CompilerAsserts;
+import com.oracle.truffle.api.dsl.Fallback;
+import com.oracle.truffle.api.dsl.ImportStatic;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
+import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 
 @ExportLibrary(SqueakObjectLibrary.class)
@@ -86,6 +90,25 @@ public final class CompiledBlockObject extends CompiledCodeObject {
     @ExportMessage
     public int instsize() {
         return 0;
+    }
+
+    @ImportStatic(SqueakGuards.class)
+    @ExportMessage
+    public static class ReplaceFromToWithStartingAt {
+        @Specialization(guards = "inBounds(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)")
+        protected static final boolean doBlock(final CompiledBlockObject rcvr, final int start, final int stop, final CompiledBlockObject repl, final int replStart) {
+            final int repOff = replStart - start;
+            for (int i = start - 1; i < stop; i++) {
+                rcvr.atput0(i, repl.at0(repOff + i));
+            }
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final CompiledBlockObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
+            return false;
+        }
     }
 
     @ExportMessage

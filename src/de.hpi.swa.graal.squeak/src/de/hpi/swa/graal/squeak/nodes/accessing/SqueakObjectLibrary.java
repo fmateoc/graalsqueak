@@ -42,6 +42,10 @@ public abstract class SqueakObjectLibrary extends Library {
         return 0;
     }
 
+    public boolean replaceFromToWithStartingAt(final Object receiver, final int start, final int stop, final Object repl, final int replStart) {
+        throw SqueakException.create("replaceFromToWithStartingAt not supported by", receiver, "with", start, stop, repl, replStart);
+    }
+
     public int size(@SuppressWarnings("unused") final Object receiver) {
         return 0;
     }

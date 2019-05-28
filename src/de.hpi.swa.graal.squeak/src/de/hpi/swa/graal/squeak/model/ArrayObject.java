@@ -6,8 +6,10 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.TruffleLogger;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Cached.Exclusive;
+import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 import com.oracle.truffle.api.profiles.BranchProfile;
@@ -548,6 +550,109 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
     @ExportMessage
     public int instsize() {
         return getSqueakClass().getBasicInstanceSize();
+    }
+
+    @ImportStatic(SqueakGuards.class)
+    @ExportMessage
+    public static class ReplaceFromToWithStartingAt {
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"rcvr.isEmptyType()", "repl.isEmptyType()", "inBounds(rcvr.instsize(), rcvr.getEmptyLength(), start, stop, repl.instsize(), repl.getEmptyLength(), replStart)"})
+        protected static final boolean doEmptyArrays(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
+            return true; // Nothing to do.
+        }
+
+        @Specialization(guards = {"rcvr.isBooleanType()", "repl.isBooleanType()",
+                        "inBounds(rcvr.instsize(), rcvr.getBooleanLength(), start, stop, repl.instsize(), repl.getBooleanLength(), replStart)"})
+        protected static final boolean doArraysOfBooleans(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
+            System.arraycopy(repl.getBooleanStorage(), replStart - 1, rcvr.getBooleanStorage(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @Specialization(guards = {"rcvr.isCharType()", "repl.isCharType()", "inBounds(rcvr.instsize(), rcvr.getCharLength(), start, stop, repl.instsize(), repl.getCharLength(), replStart)"})
+        protected static final boolean doArraysOfChars(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
+            System.arraycopy(repl.getCharStorage(), replStart - 1, rcvr.getCharStorage(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @Specialization(guards = {"rcvr.isLongType()", "repl.isLongType()", "inBounds(rcvr.instsize(), rcvr.getLongLength(), start, stop, repl.instsize(), repl.getLongLength(), replStart)"})
+        protected static final boolean doArraysOfLongs(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
+            System.arraycopy(repl.getLongStorage(), replStart - 1, rcvr.getLongStorage(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @Specialization(guards = {"rcvr.isDoubleType()", "repl.isDoubleType()", "inBounds(rcvr.instsize(), rcvr.getDoubleLength(), start, stop, repl.instsize(), repl.getDoubleLength(), replStart)"})
+        protected static final boolean doArraysOfDoubles(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
+            System.arraycopy(repl.getDoubleStorage(), replStart - 1, rcvr.getDoubleStorage(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @Specialization(guards = {"rcvr.isNativeObjectType()", "repl.isNativeObjectType()",
+                        "inBounds(rcvr.instsize(), rcvr.getNativeObjectLength(), start, stop, repl.instsize(), repl.getNativeObjectLength(), replStart)"})
+        protected static final boolean doArraysOfNatives(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
+            System.arraycopy(repl.getNativeObjectStorage(), replStart - 1, rcvr.getNativeObjectStorage(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @Specialization(guards = {"rcvr.isObjectType()", "repl.isObjectType()", "inBounds(rcvr.instsize(), rcvr.getObjectLength(), start, stop, repl.instsize(), repl.getObjectLength(), replStart)"})
+        protected static final boolean doArraysOfObjects(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
+            System.arraycopy(repl.getObjectStorage(), replStart - 1, rcvr.getObjectStorage(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @Specialization(guards = {"!rcvr.hasSameStorageType(repl)", "inBounds(rcvrLib.instsize(rcvr), rcvrLib.size(rcvr), start, stop, replLib.instsize(repl), replLib.size(repl), replStart)"})
+        protected static final boolean doArraysWithDifferenStorageTypes(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart,
+                        @CachedLibrary("rcvr") final SqueakObjectLibrary rcvrLib,
+                        @CachedLibrary(limit = "3") final SqueakObjectLibrary replLib) {
+            final int repOff = replStart - start;
+            for (int i = start - 1; i < stop; i++) {
+                rcvrLib.atput0(rcvr, i, replLib.at0(repl, repOff + i));
+            }
+            return true;
+        }
+
+        @Specialization(guards = {"inBounds(rcvr.instsize(), objectLibrary.size(rcvr), start, stop, repl.instsize(), repl.size(), replStart)"})
+        protected static final boolean doArrayObjectPointers(final ArrayObject rcvr, final int start, final int stop, final PointersObject repl, final int replStart,
+                        @CachedLibrary("rcvr") final SqueakObjectLibrary objectLibrary) {
+            final int repOff = replStart - start;
+            for (int i = start - 1; i < stop; i++) {
+                objectLibrary.atput0(rcvr, i, repl.at0(repOff + i));
+            }
+            return true;
+        }
+
+        @Specialization(guards = {"inBounds(rcvr.instsize(), rcvrLib.size(rcvr), start, stop, repl.instsize(), repl.size(), replStart)"})
+        protected static final boolean doArrayObjectWeakPointers(final ArrayObject rcvr, final int start, final int stop, final WeakPointersObject repl, final int replStart,
+                        @CachedLibrary("rcvr") final SqueakObjectLibrary rcvrLib,
+                        @CachedLibrary(limit = "3") final SqueakObjectLibrary replLib) {
+            final int repOff = replStart - start;
+            for (int i = start - 1; i < stop; i++) {
+                rcvrLib.atput0(rcvr, i, replLib.at0(repl, repOff + i));
+            }
+            return true;
+        }
+
+        @Specialization(guards = {"rcvr.isObjectType()", "inBounds(rcvr.instsize(), rcvr.getObjectLength(), start, stop, repl.instsize(), repl.size(), replStart)"})
+        protected static final boolean doArrayOfObjectsPointers(final ArrayObject rcvr, final int start, final int stop, final PointersObject repl, final int replStart) {
+            System.arraycopy(repl.getPointers(), replStart - 1, rcvr.getObjectStorage(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @Specialization(guards = {"rcvr.isObjectType()", "inBounds(rcvr.instsize(), rcvr.getObjectLength(), start, stop, repl.instsize(), repl.size(), replStart)"}, limit = "1")
+        protected static final boolean doArrayOfObjectsWeakPointers(final ArrayObject rcvr, final int start, final int stop, final WeakPointersObject repl, final int replStart,
+                        @CachedLibrary("repl") final SqueakObjectLibrary replLib) {
+            final int repOff = replStart - start;
+            final Object[] rcvrValues = rcvr.getObjectStorage();
+            for (int i = start - 1; i < stop; i++) {
+                rcvrValues[i] = replLib.at0(repl, repOff + i);
+            }
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final ArrayObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
+            return false;
+        }
     }
 
     @ExportMessage

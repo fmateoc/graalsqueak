@@ -1,6 +1,10 @@
 package de.hpi.swa.graal.squeak.model;
 
 import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Fallback;
+import com.oracle.truffle.api.dsl.ImportStatic;
+import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
@@ -9,6 +13,7 @@ import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.LINKED_LIST;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
+import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.accessing.UpdateSqueakObjectHashNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
@@ -114,6 +119,32 @@ public final class PointersObject extends AbstractPointersObject {
                     updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
                 }
             }
+        }
+    }
+
+    @ImportStatic(SqueakGuards.class)
+    @ExportMessage
+    public static class ReplaceFromToWithStartingAt {
+        @Specialization(guards = "inBounds(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)")
+        protected static final boolean doPointers(final PointersObject rcvr, final int start, final int stop, final PointersObject repl, final int replStart) {
+            System.arraycopy(repl.getPointers(), replStart - 1, rcvr.getPointers(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @Specialization(guards = "inBounds(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)", limit = "1")
+        protected static final boolean doPointersWeakPointers(final PointersObject rcvr, final int start, final int stop, final WeakPointersObject repl, final int replStart,
+                        @CachedLibrary("repl") final SqueakObjectLibrary replLib) {
+            final int repOff = replStart - start;
+            for (int i = start - 1; i < stop; i++) {
+                rcvr.atput0(i, replLib.at0(repl, repOff + i));
+            }
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final PointersObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
+            return false;
         }
     }
 

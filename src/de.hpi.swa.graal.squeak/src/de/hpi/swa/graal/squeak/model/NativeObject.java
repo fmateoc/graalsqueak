@@ -6,6 +6,7 @@ import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.interop.InteropLibrary;
@@ -16,6 +17,7 @@ import com.oracle.truffle.api.library.ExportMessage;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
+import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
 
@@ -479,6 +481,46 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
     @ExportMessage
     public int instsize() {
         return 0;
+    }
+
+    @ImportStatic(SqueakGuards.class)
+    @ExportMessage
+    public static class ReplaceFromToWithStartingAt {
+        @Specialization(guards = {"rcvr.isByteType()", "repl.isByteType()", "inBounds(rcvr.instsize(), rcvr.getByteLength(), start, stop, repl.instsize(), repl.getByteLength(), replStart)"})
+        protected static final boolean doNativeBytes(final NativeObject rcvr, final int start, final int stop, final NativeObject repl, final int replStart) {
+            System.arraycopy(repl.getByteStorage(), replStart - 1, rcvr.getByteStorage(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @Specialization(guards = {"rcvr.isShortType()", "repl.isShortType()", "inBounds(rcvr.instsize(), rcvr.getShortLength(), start, stop, repl.instsize(), repl.getShortLength(), replStart)"})
+        protected static final boolean doNativeShorts(final NativeObject rcvr, final int start, final int stop, final NativeObject repl, final int replStart) {
+            System.arraycopy(repl.getShortStorage(), replStart - 1, rcvr.getShortStorage(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @Specialization(guards = {"rcvr.isIntType()", "repl.isIntType()", "inBounds(rcvr.instsize(), rcvr.getIntLength(), start, stop, repl.instsize(), repl.getIntLength(), replStart)"})
+        protected static final boolean doNativeInts(final NativeObject rcvr, final int start, final int stop, final NativeObject repl, final int replStart) {
+            System.arraycopy(repl.getIntStorage(), replStart - 1, rcvr.getIntStorage(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @Specialization(guards = {"rcvr.isLongType()", "repl.isLongType()", "inBounds(rcvr.instsize(), rcvr.getLongLength(), start, stop, repl.instsize(), repl.getLongLength(), replStart)"})
+        protected static final boolean doNativeLongs(final NativeObject rcvr, final int start, final int stop, final NativeObject repl, final int replStart) {
+            System.arraycopy(repl.getLongStorage(), replStart - 1, rcvr.getLongStorage(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @Specialization(guards = {"rcvr.isByteType()", "inBounds(rcvr.instsize(), rcvr.getByteLength(), start, stop, repl.instsize(), repl.size(), replStart)"})
+        protected static final boolean doNativeLargeInteger(final NativeObject rcvr, final int start, final int stop, final LargeIntegerObject repl, final int replStart) {
+            System.arraycopy(repl.getBytes(), replStart - 1, rcvr.getByteStorage(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final NativeObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
+            return false;
+        }
     }
 
     @ExportMessage

@@ -7,6 +7,9 @@ import java.util.Arrays;
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.dsl.Fallback;
+import com.oracle.truffle.api.dsl.ImportStatic;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
 import com.oracle.truffle.api.library.ExportLibrary;
@@ -14,6 +17,7 @@ import com.oracle.truffle.api.library.ExportMessage;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
+import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
@@ -560,6 +564,64 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
     @ExportMessage
     public int instsize() {
         return 0;
+    }
+
+    @ImportStatic(SqueakGuards.class)
+    @ExportMessage
+    public static class ReplaceFromToWithStartingAt {
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"inBoundsEntirely(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)"})
+        protected static final boolean doEntireLargeInteger(final LargeIntegerObject rcvr, final int start, final int stop, final LargeIntegerObject repl, final int replStart) {
+            rcvr.replaceInternalValue(repl);
+            return true;
+        }
+
+        @Specialization(guards = {"!inBoundsEntirely(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)",
+                        "inBounds(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)"})
+        protected static final boolean doLargeInteger(final LargeIntegerObject rcvr, final int start, final int stop, final LargeIntegerObject repl, final int replStart) {
+            rcvr.setBytes(repl, replStart - 1, start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"inBoundsEntirely(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)"})
+        protected static final boolean doLargeIntegerFloatEntirely(final LargeIntegerObject rcvr, final int start, final int stop, final FloatObject repl, final int replStart) {
+            rcvr.setBytes(repl.getBytes());
+            return true;
+        }
+
+        @Specialization(guards = {"inBounds(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)",
+                        "!inBoundsEntirely(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)"})
+        protected static final boolean doLargeIntegerFloat(final LargeIntegerObject rcvr, final int start, final int stop, final FloatObject repl, final int replStart) {
+            System.arraycopy(repl.getBytes(), replStart - 1, rcvr.getBytes(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"repl.isByteType()", "inBoundsEntirely(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.getByteLength(), replStart)"})
+        protected static final boolean doLargeIntegerNativeEntirely(final LargeIntegerObject rcvr, final int start, final int stop, final NativeObject repl, final int replStart) {
+            rcvr.setBytes(repl.getByteStorage());
+            return true;
+        }
+
+        @Specialization(guards = {"repl.isByteType()", "inBounds(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.getByteLength(), replStart)",
+                        "!inBoundsEntirely(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.getByteLength(), replStart)"})
+        protected static final boolean doLargeIntegerNative(final LargeIntegerObject rcvr, final int start, final int stop, final NativeObject repl, final int replStart) {
+            rcvr.setBytes(repl.getByteStorage(), replStart - 1, start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final LargeIntegerObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
+            return false;
+        }
+
+        protected static final boolean inBoundsEntirely(final int rcvrInstSize, final int rcvrSize, final long start, final long stop, final int replInstSize, final int replSize,
+                        final long replStart) {
+            // Specialization for Integer>>copy:to:
+            return start == 1 && replStart == 1 && stop == replSize + replInstSize && stop == rcvrSize + rcvrInstSize;
+        }
     }
 
     @ExportMessage

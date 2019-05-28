@@ -1,18 +1,22 @@
 package de.hpi.swa.graal.squeak.model;
 
+import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Fallback;
+import com.oracle.truffle.api.dsl.ImportStatic;
+import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
+import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.accessing.UpdateSqueakObjectHashNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.WeakPointersObjectNodes.WeakPointersObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.WeakPointersObjectNodes.WeakPointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
 @ExportLibrary(SqueakObjectLibrary.class)
@@ -36,9 +40,9 @@ public final class WeakPointersObject extends AbstractPointersObject {
         final Object[] pointersValues = chunk.getPointers();
         final int length = pointersValues.length;
         setPointers(new Object[length]);
-        final WeakPointersObjectWriteNode writeNode = WeakPointersObjectWriteNode.getUncached();
+        final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getUncached();
         for (int i = 0; i < length; i++) {
-            writeNode.execute(this, i, pointersValues[i]);
+            objectLibrary.atput0(this, i, pointersValues[i]);
         }
     }
 
@@ -53,15 +57,27 @@ public final class WeakPointersObject extends AbstractPointersObject {
     }
 
     @ExportMessage
-    public Object at0(final int index,
-                    @Cached final WeakPointersObjectReadNode readNode) {
-        return readNode.executeRead(this, index);
+    public Object at0(final int index) {
+        final Object value = getPointer(index);
+        if (value instanceof WeakReference<?>) {
+            return NilObject.nullToNil(((Reference<?>) value).get());
+        } else {
+            return value;
+        }
     }
 
     @ExportMessage
-    public void atput0(final int index, final Object value,
-                    @Cached final WeakPointersObjectWriteNode writeNode) {
-        writeNode.execute(this, index, value);
+    public static class Atput0 {
+        @Specialization(guards = "pointers.getSqueakClass().getBasicInstanceSize() <= index")
+        protected static final void doWeakInVariablePart(final WeakPointersObject pointers, final int index, final AbstractSqueakObject value) {
+            pointers.setWeakPointer(index, value);
+        }
+
+        @Fallback
+        protected static final void doNonWeak(final WeakPointersObject pointers, final int index, final Object value) {
+            pointers.setPointer(index, value);
+        }
+
     }
 
     // @ExportMessage
@@ -90,6 +106,43 @@ public final class WeakPointersObject extends AbstractPointersObject {
                     updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
                 }
             }
+        }
+    }
+
+    @ImportStatic(SqueakGuards.class)
+    @ExportMessage
+    public static class ReplaceFromToWithStartingAt {
+        @Specialization(guards = "inBounds(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)")
+        protected static final boolean doWeakPointers(final WeakPointersObject rcvr, final int start, final int stop, final WeakPointersObject repl, final int replStart) {
+            System.arraycopy(repl.getPointers(), replStart - 1, rcvr.getPointers(), start - 1, 1 + stop - start);
+            return true;
+        }
+
+        @Specialization(guards = "inBounds(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)")
+        protected static final boolean doWeakPointersPointers(final WeakPointersObject rcvr, final int start, final int stop, final PointersObject repl, final int replStart,
+                        @CachedLibrary("rcvr") final SqueakObjectLibrary rcvrLib) {
+            final int repOff = replStart - start;
+            for (int i = start - 1; i < stop; i++) {
+                rcvrLib.atput0(rcvr, i, repl.at0(repOff + i));
+            }
+            return true;
+        }
+
+        @Specialization(guards = "inBounds(rcvr.instsize(), rcvr.size(), start, stop, replLib.instsize(repl), replLib.size(repl), replStart)")
+        protected static final boolean doWeakPointersArray(final WeakPointersObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart,
+                        @CachedLibrary("rcvr") final SqueakObjectLibrary rcvrLib,
+                        @CachedLibrary(limit = "3") final SqueakObjectLibrary replLib) {
+            final int repOff = replStart - start;
+            for (int i = start - 1; i < stop; i++) {
+                rcvrLib.atput0(rcvr, i, replLib.at0(repl, repOff + i));
+            }
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Fallback
+        protected static final boolean doFail(final WeakPointersObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
+            return false;
         }
     }
 

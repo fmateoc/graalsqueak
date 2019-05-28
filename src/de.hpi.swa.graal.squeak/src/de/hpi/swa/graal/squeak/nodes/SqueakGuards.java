@@ -33,6 +33,10 @@ public final class SqueakGuards {
         return Integer.MIN_VALUE <= value && value <= Integer.MAX_VALUE;
     }
 
+    public static boolean inBounds(final int rcvrInstSize, final int rcvrSize, final long start, final long stop, final int replInstSize, final int replSize, final long replStart) {
+        return start >= 1 && start - 1 <= stop && stop + rcvrInstSize <= rcvrSize && replStart >= 1 && stop - start + replStart + replInstSize <= replSize;
+    }
+
     public static boolean inBounds0(final long index, final int size) {
         return 0 <= index && index < size;
     }
