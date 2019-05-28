@@ -2,7 +2,6 @@ package de.hpi.swa.graal.squeak.nodes.primitives.impl;
 
 import java.util.List;
 
-import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.ImportStatic;
@@ -19,7 +18,6 @@ import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
-import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeAcceptsValueNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectLibrary;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
@@ -73,35 +71,12 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 61)
     protected abstract static class PrimBasicAtPutNode extends AbstractBasicAtOrAtPutNode implements QuaternaryPrimitive {
-        @Child private NativeAcceptsValueNode nativeAcceptsValueNode;
-
         protected PrimBasicAtPutNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        @Specialization(guards = {"inBounds1(index, objectLibrary.size(receiver))", "getNativeAcceptsValueNode().execute(receiver, value)"}, limit = "1")
-        protected static final char doNativeChar(final NativeObject receiver, final long index, final char value, @SuppressWarnings("unused") final NotProvided notProvided,
-                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
-            objectLibrary.atput0(receiver, (int) index - 1, value);
-            return value;
-        }
-
-        @Specialization(guards = {"inBounds1(index, objectLibrary.size(receiver))", "getNativeAcceptsValueNode().execute(receiver, value)"}, limit = "1")
-        protected static final Object doNativeChar(final NativeObject receiver, final long index, final CharacterObject value, @SuppressWarnings("unused") final NotProvided notProvided,
-                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
-            objectLibrary.atput0(receiver, (int) index - 1, value);
-            return value;
-        }
-
-        @Specialization(guards = {"inBounds1(index, objectLibrary.size(receiver))", "getNativeAcceptsValueNode().execute(receiver, value)"}, limit = "1")
-        protected static final long doNativeLong(final NativeObject receiver, final long index, final long value, @SuppressWarnings("unused") final NotProvided notProvided,
-                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
-            objectLibrary.atput0(receiver, (int) index - 1, value);
-            return value;
-        }
-
-        @Specialization(guards = {"inBounds1(index, objectLibrary.size(receiver))", "getNativeAcceptsValueNode().execute(receiver, value)"}, limit = "1")
-        protected static final Object doNativeLargeInteger(final NativeObject receiver, final long index, final LargeIntegerObject value, @SuppressWarnings("unused") final NotProvided notProvided,
+        @Specialization(guards = {"inBounds1(index, objectLibrary.size(receiver))", "objectLibrary.acceptsValue(receiver, value)"}, limit = "1")
+        protected static final Object doNative(final NativeObject receiver, final long index, final Object value, @SuppressWarnings("unused") final NotProvided notProvided,
                         @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
             objectLibrary.atput0(receiver, (int) index - 1, value);
             return value;
@@ -145,29 +120,8 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
          * Context>>#object:basicAt:put:
          */
 
-        @Specialization(guards = {"inBounds1(index, objectLibrary.size(target))", "getNativeAcceptsValueNode().execute(target, value)"}, limit = "1")
-        protected char doNativeChar(@SuppressWarnings("unused") final Object receiver, final NativeObject target, final long index, final char value,
-                        @CachedLibrary("target") final SqueakObjectLibrary objectLibrary) {
-            objectLibrary.atput0(target, (int) index - 1, value);
-            return value;
-        }
-
-        @Specialization(guards = {"inBounds1(index, objectLibrary.size(target))", "getNativeAcceptsValueNode().execute(target, value)"}, limit = "1")
-        protected CharacterObject doNativeChar(@SuppressWarnings("unused") final Object receiver, final NativeObject target, final long index, final CharacterObject value,
-                        @CachedLibrary("target") final SqueakObjectLibrary objectLibrary) {
-            objectLibrary.atput0(target, (int) index - 1, value);
-            return value;
-        }
-
-        @Specialization(guards = {"inBounds1(index, objectLibrary.size(target))", "getNativeAcceptsValueNode().execute(target, value)"}, limit = "1")
-        protected long doNativeLong(@SuppressWarnings("unused") final Object receiver, final NativeObject target, final long index, final long value,
-                        @CachedLibrary("target") final SqueakObjectLibrary objectLibrary) {
-            objectLibrary.atput0(target, (int) index - 1, value);
-            return value;
-        }
-
-        @Specialization(guards = {"inBounds1(index, objectLibrary.size(target))", "getNativeAcceptsValueNode().execute(target, value)"}, limit = "1")
-        protected Object doNativeLargeInteger(@SuppressWarnings("unused") final Object receiver, final NativeObject target, final long index, final LargeIntegerObject value,
+        @Specialization(guards = {"inBounds1(index, objectLibrary.size(target))", "objectLibrary.acceptsValue(target, value)"}, limit = "1")
+        protected Object doNative(@SuppressWarnings("unused") final Object receiver, final NativeObject target, final long index, final Object value,
                         @CachedLibrary("target") final SqueakObjectLibrary objectLibrary) {
             objectLibrary.atput0(target, (int) index - 1, value);
             return value;
@@ -205,17 +159,6 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
                         @Shared("objectLibrary") @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
             objectLibrary.atput0(target, (int) index - 1 + objectLibrary.instsize(target), value);
             return value;
-        }
-
-        protected final NativeAcceptsValueNode getNativeAcceptsValueNode() {
-            /**
-             * Could use @Shared for this node as its used in guards, the annotator did not like it.
-             */
-            if (nativeAcceptsValueNode == null) {
-                CompilerDirectives.transferToInterpreterAndInvalidate();
-                nativeAcceptsValueNode = insert(NativeAcceptsValueNode.create());
-            }
-            return nativeAcceptsValueNode;
         }
     }
 
@@ -260,31 +203,15 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 64)
     protected abstract static class PrimStringAtPutNode extends AbstractPrimitiveNode implements TernaryPrimitive {
-        @Child protected NativeAcceptsValueNode acceptsValueNode = NativeAcceptsValueNode.create();
-
         protected PrimStringAtPutNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        @Specialization(guards = {"inBounds1(index, objectLibrary.size(receiver))", "acceptsValueNode.execute(receiver, value)"}, limit = "1")
-        protected static final char doNativeObject(final NativeObject receiver, final long index, final char value,
+        @Specialization(guards = {"inBounds1(index, objectLibrary.size(receiver))", "objectLibrary.acceptsValue(receiver, value)"}, limit = "1")
+        protected static final Object doNativeObject(final NativeObject receiver, final long index, final Object value,
                         @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
             objectLibrary.atput0(receiver, (int) index - 1, value);
             return value;
-        }
-
-        @Specialization(guards = {"inBounds1(index, objectLibrary.size(receiver))", "acceptsValueNode.execute(receiver, value)"}, limit = "1")
-        protected static final CharacterObject doNativeObject(final NativeObject receiver, final long index, final CharacterObject value,
-                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
-            objectLibrary.atput0(receiver, (int) index - 1, value.getValue());
-            return value;
-        }
-
-        @Specialization(guards = {"inBounds1(index, objectLibrary.size(receiver))", "acceptsValueNode.execute(receiver, value)"}, limit = "1")
-        protected static final Object doNativeObject(final NativeObject receiver, final long index, final long value,
-                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
-            objectLibrary.atput0(receiver, (int) index - 1, value);
-            return CharacterObject.valueOf((int) value);
         }
     }
 

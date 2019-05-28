@@ -266,6 +266,82 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
+    public abstract static class AcceptsValue {
+        @Specialization(guards = "obj.isByteType()")
+        protected static final boolean doNativeBytes(@SuppressWarnings("unused") final NativeObject obj, final char value) {
+            return value <= NativeObject.BYTE_MAX;
+        }
+
+        @Specialization(guards = "obj.isShortType()")
+        protected static final boolean doNativeShorts(@SuppressWarnings("unused") final NativeObject obj, final char value) {
+            return value <= NativeObject.SHORT_MAX;
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = "obj.isIntType() || obj.isLongType()")
+        protected static final boolean doNativeInts(final NativeObject obj, final char value) {
+            return true;
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = "obj.isByteType()")
+        protected static final boolean doNativeBytes(final NativeObject obj, final CharacterObject value) {
+            return false; // Value of CharacterObjects is always larger than `Character.MAX_VALUE`.
+        }
+
+        @Specialization(guards = "obj.isShortType()")
+        protected static final boolean doNativeShorts(@SuppressWarnings("unused") final NativeObject obj, final CharacterObject value) {
+            return value.getValue() <= NativeObject.SHORT_MAX;
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = "obj.isIntType() || obj.isLongType()")
+        protected static final boolean doNativeInts(final NativeObject obj, final CharacterObject value) {
+            return true;
+        }
+
+        @Specialization(guards = "obj.isByteType()")
+        protected static final boolean doNativeBytes(@SuppressWarnings("unused") final NativeObject obj, final long value) {
+            return 0 <= value && value <= NativeObject.BYTE_MAX;
+        }
+
+        @Specialization(guards = "obj.isShortType()")
+        protected static final boolean doNativeShorts(@SuppressWarnings("unused") final NativeObject obj, final long value) {
+            return 0 <= value && value <= NativeObject.SHORT_MAX;
+        }
+
+        @Specialization(guards = "obj.isIntType()")
+        protected static final boolean doNativeInts(@SuppressWarnings("unused") final NativeObject obj, final long value) {
+            return 0 <= value && value <= NativeObject.INTEGER_MAX;
+        }
+
+        @Specialization(guards = "obj.isLongType()")
+        protected static final boolean doNativeLongs(@SuppressWarnings("unused") final NativeObject obj, final long value) {
+            return 0 <= value;
+        }
+
+        @Specialization(guards = {"obj.isByteType()"})
+        protected static final boolean doNativeBytesLargeInteger(@SuppressWarnings("unused") final NativeObject obj, final LargeIntegerObject value) {
+            return value.inRange(0, NativeObject.BYTE_MAX);
+        }
+
+        @Specialization(guards = {"obj.isShortType()"})
+        protected static final boolean doNativeShortsLargeInteger(@SuppressWarnings("unused") final NativeObject obj, final LargeIntegerObject value) {
+            return value.inRange(0, NativeObject.SHORT_MAX);
+        }
+
+        @Specialization(guards = {"obj.isIntType()"})
+        protected static final boolean doNativeIntsLargeInteger(@SuppressWarnings("unused") final NativeObject obj, final LargeIntegerObject value) {
+            return value.inRange(0, NativeObject.INTEGER_MAX);
+        }
+
+        @Specialization(guards = {"obj.isLongType()"})
+        protected static final boolean doNativeLongsLargeInteger(@SuppressWarnings("unused") final NativeObject obj, final LargeIntegerObject value) {
+            return value.isZeroOrPositive() && value.lessThanOneShiftedBy64();
+        }
+    }
+
+    @ExportMessage
     public abstract static class At0 {
         @Specialization(guards = "obj.isByteType()")
         protected static final long doNativeBytes(final NativeObject obj, final int index) {

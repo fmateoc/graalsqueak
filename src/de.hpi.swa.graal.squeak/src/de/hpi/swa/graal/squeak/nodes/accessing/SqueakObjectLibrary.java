@@ -16,6 +16,10 @@ import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 public abstract class SqueakObjectLibrary extends Library {
     private static final LibraryFactory<SqueakObjectLibrary> FACTORY = LibraryFactory.resolve(SqueakObjectLibrary.class);
 
+    public boolean acceptsValue(final Object receiver, final Object value) {
+        throw SqueakException.create("acceptsValue not supported by", receiver, "with", value);
+    }
+
     @Abstract(ifExported = "atput0")
     public Object at0(final Object receiver, final int index) {
         throw SqueakException.create("at0 not supported by", receiver, "at", index);
@@ -28,17 +32,14 @@ public abstract class SqueakObjectLibrary extends Library {
 
     // public abstract boolean become(Object left, Object right);
 
-    @Abstract(ifExported = "size")
     public int instsize(@SuppressWarnings("unused") final Object receiver) {
         return 0;
     }
 
-    @Abstract(ifExported = "instsize")
     public int size(@SuppressWarnings("unused") final Object receiver) {
         return 0;
     }
 
-    @Abstract(ifExported = "at0")
     public Object shallowCopy(final Object receiver) {
         throw SqueakException.create("shallowCopy not supported by", receiver);
     }
