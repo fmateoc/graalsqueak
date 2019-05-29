@@ -444,15 +444,15 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization
+        @Specialization(guards = "objectLibrary.accepts(receiver)", limit = "3")
         protected static final ClassObject doClass(final Object receiver, @SuppressWarnings("unused") final NotProvided object,
-                        @CachedLibrary(limit = "1") final SqueakObjectLibrary objectLibrary) {
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
             return objectLibrary.squeakClass(receiver);
         }
 
-        @Specialization(guards = "!isNotProvided(target)")
+        @Specialization(guards = {"objectLibrary.accepts(receiver)", "!isNotProvided(target)"}, limit = "3")
         protected static final ClassObject doClass(@SuppressWarnings("unused") final Object receiver, final Object target,
-                        @CachedLibrary(limit = "1") final SqueakObjectLibrary objectLibrary) {
+                        @CachedLibrary("target") final SqueakObjectLibrary objectLibrary) {
             return objectLibrary.squeakClass(target);
         }
     }

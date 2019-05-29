@@ -67,6 +67,10 @@ public abstract class SqueakObjectLibrary extends Library {
         return FACTORY.getUncached();
     }
 
+    public static SqueakObjectLibrary getUncached(final Object receiver) {
+        return FACTORY.getUncached(receiver);
+    }
+
     public static LibraryFactory<SqueakObjectLibrary> getFactory() {
         return FACTORY;
     }

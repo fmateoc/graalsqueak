@@ -10,7 +10,6 @@ import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.library.CachedLibrary;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
-import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithClassAndHash;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.CharacterObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
@@ -169,9 +168,9 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
             super(method);
         }
 
-        @Specialization(guards = "receiver.getSqueakClass().isVariable()")
-        protected static final long doObject(final AbstractSqueakObjectWithClassAndHash receiver, @SuppressWarnings("unused") final NotProvided notProvided,
-                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+        @Specialization(guards = {"objectLibrary.accepts(receiver)", "objectLibrary.squeakClass(receiver).isVariable()"}, limit = "3")
+        protected static final long doObject(final Object receiver, @SuppressWarnings("unused") final NotProvided notProvided,
+                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
             return objectLibrary.size(receiver) - objectLibrary.instsize(receiver);
         }
 
@@ -179,9 +178,9 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
          * Context>>#objectSize:
          */
 
-        @Specialization(guards = "target.getSqueakClass().isVariable()")
-        protected static final long doObject(@SuppressWarnings("unused") final Object receiver, final AbstractSqueakObjectWithClassAndHash target,
-                        @CachedLibrary(limit = "3") final SqueakObjectLibrary objectLibrary) {
+        @Specialization(guards = {"objectLibrary.accepts(target)", "objectLibrary.squeakClass(target).isVariable()"}, limit = "3")
+        protected static final long doObject(@SuppressWarnings("unused") final Object receiver, final Object target,
+                        @CachedLibrary("target") final SqueakObjectLibrary objectLibrary) {
             return objectLibrary.size(target) - objectLibrary.instsize(target);
         }
     }

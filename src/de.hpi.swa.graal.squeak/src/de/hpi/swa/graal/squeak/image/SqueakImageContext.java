@@ -366,11 +366,11 @@ public final class SqueakImageContext {
     }
 
     public Object getSpecialObject(final int index) {
-        return SqueakObjectLibrary.getUncached().at0(specialObjectsArray, index);
+        return specialObjectsArray.getObjectStorage()[index];
     }
 
     public void setSpecialObject(final int index, final Object value) {
-        SqueakObjectLibrary.getUncached().atput0(specialObjectsArray, index, value);
+        specialObjectsArray.getObjectStorage()[index] = value;
     }
 
     public void setSemaphore(final int index, final AbstractSqueakObject semaphore) {

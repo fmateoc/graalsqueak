@@ -89,7 +89,7 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         final int valuesLength = pointers.length;
         storage = valuesLength;
         if (valuesLength > 0) {
-            final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getUncached();
+            final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getUncached(this);
             for (int i = 0; i < pointers.length; i++) {
                 objectLibrary.atput0(this, i, pointers[i]);
             }

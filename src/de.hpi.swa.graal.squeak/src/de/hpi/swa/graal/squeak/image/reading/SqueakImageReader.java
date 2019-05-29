@@ -485,7 +485,7 @@ public final class SqueakImageReader {
 
     private void fillInSmallFloatClass() {
         final ArrayObject classTableFirstPage = (ArrayObject) getChunk(hiddenRootsChunk.getWords()[0]).asObject();
-        final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getUncached();
+        final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getUncached(classTableFirstPage);
         assert objectLibrary.at0(classTableFirstPage, SPECIAL_OBJECT_TAG.SMALL_INTEGER) == image.smallIntegerClass;
         assert objectLibrary.at0(classTableFirstPage, SPECIAL_OBJECT_TAG.CHARACTER) == image.characterClass;
         if (image.flags.is64bit()) {

@@ -40,7 +40,7 @@ public final class WeakPointersObject extends AbstractPointersObject {
         final Object[] pointersValues = chunk.getPointers();
         final int length = pointersValues.length;
         setPointers(new Object[length]);
-        final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getUncached();
+        final SqueakObjectLibrary objectLibrary = SqueakObjectLibrary.getUncached(this);
         for (int i = 0; i < length; i++) {
             objectLibrary.atput0(this, i, pointersValues[i]);
         }
