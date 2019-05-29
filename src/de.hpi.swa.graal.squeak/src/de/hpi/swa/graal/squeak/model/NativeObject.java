@@ -6,14 +6,17 @@ import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.dsl.Fallback;
+import com.oracle.truffle.api.dsl.GenerateUncached;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.interop.InteropLibrary;
 import com.oracle.truffle.api.interop.UnsupportedMessageException;
-import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
+import com.oracle.truffle.api.nodes.Node;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
@@ -482,33 +485,33 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
 
         @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isBytes()"})
         protected static boolean doNativeConvertToBytes(final NativeObject receiver, final ClassObject argument,
-                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+                        @Shared("nativeBytesNode") @Cached final NativeBytesNode nativeBytesNode) {
             receiver.setSqueakClass(argument);
-            receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
+            receiver.convertToBytesStorage(nativeBytesNode.execute(receiver));
             return true;
         }
 
         @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isShorts()"})
         protected static boolean doNativeConvertToShorts(final NativeObject receiver, final ClassObject argument,
-                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+                        @Shared("nativeBytesNode") @Cached final NativeBytesNode nativeBytesNode) {
             receiver.setSqueakClass(argument);
-            receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
+            receiver.convertToBytesStorage(nativeBytesNode.execute(receiver));
             return true;
         }
 
         @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isWords()"})
         protected static boolean doNativeConvertToInts(final NativeObject receiver, final ClassObject argument,
-                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+                        @Shared("nativeBytesNode") @Cached final NativeBytesNode nativeBytesNode) {
             receiver.setSqueakClass(argument);
-            receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
+            receiver.convertToBytesStorage(nativeBytesNode.execute(receiver));
             return true;
         }
 
         @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isLongs()"})
         protected static boolean doNativeConvertToLongs(final NativeObject receiver, final ClassObject argument,
-                        @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
+                        @Shared("nativeBytesNode") @Cached final NativeBytesNode nativeBytesNode) {
             receiver.setSqueakClass(argument);
-            receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
+            receiver.convertToBytesStorage(nativeBytesNode.execute(receiver));
             return true;
         }
 
@@ -519,8 +522,10 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         }
     }
 
-    @ExportMessage
-    protected static final class NativeBytes {
+    @GenerateUncached
+    protected abstract static class NativeBytesNode extends Node {
+        protected abstract byte[] execute(NativeObject obj);
+
         @Specialization(guards = "obj.isByteType()")
         protected static byte[] doNativeBytes(final NativeObject obj) {
             return obj.getByteStorage();

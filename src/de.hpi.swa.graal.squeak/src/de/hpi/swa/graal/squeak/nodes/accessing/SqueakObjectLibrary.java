@@ -40,10 +40,6 @@ public abstract class SqueakObjectLibrary extends Library {
         throw SqueakException.create("changeClassOfTo not supported by", receiver, "and", targetClass);
     }
 
-    public byte[] nativeBytes(final Object receiver) {
-        throw SqueakException.create("nativeBytes not supported by", receiver);
-    }
-
     public int instsize(@SuppressWarnings("unused") final Object receiver) {
         return 0;
     }
