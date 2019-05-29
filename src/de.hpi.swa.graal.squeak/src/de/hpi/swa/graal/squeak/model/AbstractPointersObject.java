@@ -49,7 +49,7 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
     }
 
     @ExportMessage
-    public static final class ChangeClassOfTo {
+    protected static final class ChangeClassOfTo {
         @Specialization(guards = {"receiver.getSqueakClass().getFormat() == argument.getFormat()"})
         protected static boolean doChangeClassOfTo(final AbstractPointersObject receiver, final ClassObject argument) {
             receiver.setSqueakClass(argument);

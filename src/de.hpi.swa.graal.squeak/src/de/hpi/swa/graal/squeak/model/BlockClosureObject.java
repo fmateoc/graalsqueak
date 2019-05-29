@@ -216,56 +216,56 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHa
 
     @ExportMessage
     @ImportStatic(BLOCK_CLOSURE.class)
-    public abstract static class At0 {
+    protected static final class At0 {
         @Specialization(guards = "index == OUTER_CONTEXT")
-        protected static final AbstractSqueakObject doClosureOuterContext(final BlockClosureObject closure, @SuppressWarnings("unused") final int index) {
+        protected static AbstractSqueakObject doClosureOuterContext(final BlockClosureObject closure, @SuppressWarnings("unused") final int index) {
             return closure.getOuterContext();
         }
 
         @Specialization(guards = "index == START_PC")
-        protected static final long doClosureStartPC(final BlockClosureObject closure, @SuppressWarnings("unused") final int index) {
+        protected static long doClosureStartPC(final BlockClosureObject closure, @SuppressWarnings("unused") final int index) {
             return closure.getStartPC();
         }
 
         @Specialization(guards = "index == ARGUMENT_COUNT")
-        protected static final long doClosureArgumentCount(final BlockClosureObject closure, @SuppressWarnings("unused") final int index) {
+        protected static long doClosureArgumentCount(final BlockClosureObject closure, @SuppressWarnings("unused") final int index) {
             return closure.getNumArgs();
         }
 
         @Specialization(guards = "index > ARGUMENT_COUNT")
-        protected static final Object doClosureCopiedValues(final BlockClosureObject closure, final int index) {
+        protected static Object doClosureCopiedValues(final BlockClosureObject closure, final int index) {
             return closure.getCopiedAt0(index);
         }
     }
 
     @ExportMessage
     @ImportStatic(BLOCK_CLOSURE.class)
-    public abstract static class Atput0 {
+    protected static final class Atput0 {
         @Specialization(guards = "index == OUTER_CONTEXT")
-        protected static final void doClosureOuterContext(final BlockClosureObject closure, @SuppressWarnings("unused") final int index, final ContextObject value) {
+        protected static void doClosureOuterContext(final BlockClosureObject closure, @SuppressWarnings("unused") final int index, final ContextObject value) {
             closure.setOuterContext(value);
         }
 
         @Specialization(guards = "index == START_PC")
-        protected static final void doClosureStartPC(final BlockClosureObject closure, @SuppressWarnings("unused") final int index, final long value) {
+        protected static void doClosureStartPC(final BlockClosureObject closure, @SuppressWarnings("unused") final int index, final long value) {
             closure.setStartPC((int) value);
         }
 
         @Specialization(guards = "index == ARGUMENT_COUNT")
-        protected static final void doClosureArgumentCount(final BlockClosureObject closure, @SuppressWarnings("unused") final int index, final long value) {
+        protected static void doClosureArgumentCount(final BlockClosureObject closure, @SuppressWarnings("unused") final int index, final long value) {
             closure.setNumArgs((int) value);
         }
 
         @Specialization(guards = "index > ARGUMENT_COUNT")
-        protected static final void doClosureCopiedValues(final BlockClosureObject closure, final int index, final Object value) {
+        protected static void doClosureCopiedValues(final BlockClosureObject closure, final int index, final Object value) {
             closure.setCopiedAt0(index, value);
         }
     }
 
     @ExportMessage
-    public static class Become {
+    protected static final class Become {
         @Specialization(guards = "receiver != other")
-        protected static final boolean doBecome(final BlockClosureObject receiver, final BlockClosureObject other) {
+        protected static boolean doBecome(final BlockClosureObject receiver, final BlockClosureObject other) {
             receiver.becomeOtherClass(other);
             final Object[] otherCopied = other.copied;
             other.setCopied(receiver.copied);
@@ -275,13 +275,13 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHa
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doFail(final BlockClosureObject receiver, final Object other) {
+        protected static boolean doFail(final BlockClosureObject receiver, final Object other) {
             return false;
         }
     }
 
     @ExportMessage
-    public static final class ChangeClassOfTo {
+    protected static final class ChangeClassOfTo {
         @Specialization(guards = {"receiver.getSqueakClass().getFormat() == argument.getFormat()"})
         protected static boolean doChangeClassOfTo(final BlockClosureObject receiver, final ClassObject argument) {
             receiver.setSqueakClass(argument);
@@ -317,12 +317,12 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithClassAndHa
 
     @SuppressWarnings("static-method")
     @ExportMessage
-    public boolean isExecutable() {
+    protected boolean isExecutable() {
         return true;
     }
 
     @ExportMessage
-    public Object execute(final Object[] arguments,
+    protected Object execute(final Object[] arguments,
                     @Shared("wrapNode") @Cached final WrapToSqueakNode wrapNode) throws ArityException {
         if (getNumArgs() == arguments.length) {
             final Object[] frameArguments = FrameAccess.newClosureArguments(this, NilObject.SINGLETON, wrapNode.executeObjects(arguments));

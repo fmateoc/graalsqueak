@@ -123,21 +123,21 @@ public final class FloatObject extends AbstractSqueakObjectWithClassAndHash {
      */
 
     @ExportMessage
-    public static class At0 {
+    protected static final class At0 {
         @Specialization(guards = "index == 0")
-        protected static final long doFloatHigh(final FloatObject obj, @SuppressWarnings("unused") final int index) {
+        protected static long doFloatHigh(final FloatObject obj, @SuppressWarnings("unused") final int index) {
             return obj.getHigh();
         }
 
         @Specialization(guards = "index == 1")
-        protected static final long doFloatLow(final FloatObject obj, @SuppressWarnings("unused") final int index) {
+        protected static long doFloatLow(final FloatObject obj, @SuppressWarnings("unused") final int index) {
             return obj.getLow();
         }
     }
 
     @ExportMessage
     @ImportStatic(NativeObject.class)
-    public static final class Atput0 {
+    protected static final class Atput0 {
         @Specialization(guards = {"index == 0", "value >= 0", "value <= INTEGER_MAX"})
         protected static void doFloatHigh(final FloatObject obj, @SuppressWarnings("unused") final int index, final long value) {
             obj.setHigh(value);
@@ -150,7 +150,7 @@ public final class FloatObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
-    public static final class ChangeClassOfTo {
+    protected static final class ChangeClassOfTo {
         @Specialization(guards = {"argument.isWords()"})
         protected static boolean doChangeClassOfTo(final FloatObject receiver, final ClassObject argument) {
             receiver.setSqueakClass(argument);

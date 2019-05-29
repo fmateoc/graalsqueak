@@ -511,51 +511,51 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
 
     @ExportMessage
     @ImportStatic(CONTEXT.class)
-    public abstract static class At0 {
+    protected static final class At0 {
         @Specialization(guards = "index == SENDER_OR_NIL")
-        protected static final Object doSender(final ContextObject context, @SuppressWarnings("unused") final int index) {
+        protected static Object doSender(final ContextObject context, @SuppressWarnings("unused") final int index) {
             return context.getSender();
         }
 
         @Specialization(guards = {"index == INSTRUCTION_POINTER", "context.getInstructionPointer() >= 0"})
-        protected static final long doInstructionPointer(final ContextObject context, @SuppressWarnings("unused") final int index) {
+        protected static long doInstructionPointer(final ContextObject context, @SuppressWarnings("unused") final int index) {
             return context.getInstructionPointer(); // Must return a long.
         }
 
         @Specialization(guards = {"index == INSTRUCTION_POINTER", "context.getInstructionPointer() < 0"})
-        protected static final NilObject doInstructionPointerTerminated(@SuppressWarnings("unused") final ContextObject context, @SuppressWarnings("unused") final int index) {
+        protected static NilObject doInstructionPointerTerminated(@SuppressWarnings("unused") final ContextObject context, @SuppressWarnings("unused") final int index) {
             return NilObject.SINGLETON;
         }
 
         @Specialization(guards = "index == STACKPOINTER")
-        protected static final long doStackPointer(final ContextObject context, @SuppressWarnings("unused") final int index) {
+        protected static long doStackPointer(final ContextObject context, @SuppressWarnings("unused") final int index) {
             return context.getStackPointer(); // Must return a long.
         }
 
         @Specialization(guards = "index == METHOD")
-        protected static final CompiledMethodObject doMethod(final ContextObject context, @SuppressWarnings("unused") final int index) {
+        protected static CompiledMethodObject doMethod(final ContextObject context, @SuppressWarnings("unused") final int index) {
             return context.getMethod();
         }
 
         @Specialization(guards = {"index == CLOSURE_OR_NIL", "context.getClosure() != null"})
-        protected static final BlockClosureObject doClosure(final ContextObject context, @SuppressWarnings("unused") final int index) {
+        protected static BlockClosureObject doClosure(final ContextObject context, @SuppressWarnings("unused") final int index) {
             return context.getClosure();
         }
 
         @Specialization(guards = {"index == CLOSURE_OR_NIL", "context.getClosure() == null"})
-        protected static final NilObject doClosureNil(@SuppressWarnings("unused") final ContextObject context, @SuppressWarnings("unused") final int index) {
+        protected static NilObject doClosureNil(@SuppressWarnings("unused") final ContextObject context, @SuppressWarnings("unused") final int index) {
             return NilObject.SINGLETON;
         }
 
         @Specialization(guards = "index == RECEIVER")
-        protected static final Object doReceiver(final ContextObject context, @SuppressWarnings("unused") final int index) {
+        protected static Object doReceiver(final ContextObject context, @SuppressWarnings("unused") final int index) {
             return context.getReceiver();
         }
 
         @Specialization(guards = {"index >= TEMP_FRAME_START", "codeObject == context.getBlockOrMethod()"}, //
                         limit = "2" /** thisContext and sender */
         )
-        protected static final Object doTempCached(final ContextObject context, @SuppressWarnings("unused") final int index,
+        protected static Object doTempCached(final ContextObject context, @SuppressWarnings("unused") final int index,
                         @SuppressWarnings("unused") @Cached(value = "context.getBlockOrMethod()", allowUncached = true) final CompiledCodeObject codeObject,
                         @Cached(value = "create(codeObject)", allowUncached = true) final FrameStackReadNode readNode) {
             final Object value = readNode.execute(context.getTruffleFrame(), index - CONTEXT.TEMP_FRAME_START);
@@ -563,27 +563,27 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
         }
 
         @Specialization(guards = "index >= TEMP_FRAME_START")
-        protected static final Object doTemp(final ContextObject context, final int index) {
+        protected static Object doTemp(final ContextObject context, final int index) {
             return context.atTemp(index - CONTEXT.TEMP_FRAME_START);
         }
     }
 
     @ExportMessage
     @ImportStatic(CONTEXT.class)
-    public abstract static class Atput0 {
+    protected static final class Atput0 {
         @Specialization(guards = "index == SENDER_OR_NIL")
-        protected static final void doSender(final ContextObject context, @SuppressWarnings("unused") final int index, final ContextObject value) {
+        protected static void doSender(final ContextObject context, @SuppressWarnings("unused") final int index, final ContextObject value) {
             context.setSender(value);
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = "index == SENDER_OR_NIL")
-        protected static final void doSender(final ContextObject context, final int index, final NilObject value) {
+        protected static void doSender(final ContextObject context, final int index, final NilObject value) {
             context.removeSender();
         }
 
         @Specialization(guards = {"index == INSTRUCTION_POINTER"})
-        protected static final void doInstructionPointer(final ContextObject context, @SuppressWarnings("unused") final int index, final long value) {
+        protected static void doInstructionPointer(final ContextObject context, @SuppressWarnings("unused") final int index, final long value) {
             /**
              * TODO: Adjust control flow when pc of active context is changed. For this, an
              * exception could be used to unwind Truffle frames until the target frame is found.
@@ -596,40 +596,40 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"index == INSTRUCTION_POINTER"})
-        protected static final void doInstructionPointerTerminated(final ContextObject context, final int index, final NilObject value) {
+        protected static void doInstructionPointerTerminated(final ContextObject context, final int index, final NilObject value) {
             context.setInstructionPointer(-1);
         }
 
         @Specialization(guards = "index == STACKPOINTER")
-        protected static final void doStackPointer(final ContextObject context, @SuppressWarnings("unused") final int index, final long value) {
+        protected static void doStackPointer(final ContextObject context, @SuppressWarnings("unused") final int index, final long value) {
             context.setStackPointer((int) value);
         }
 
         @Specialization(guards = "index == METHOD")
-        protected static final void doMethod(final ContextObject context, @SuppressWarnings("unused") final int index, final CompiledMethodObject value) {
+        protected static void doMethod(final ContextObject context, @SuppressWarnings("unused") final int index, final CompiledMethodObject value) {
             context.setMethod(value);
         }
 
         @Specialization(guards = {"index == CLOSURE_OR_NIL"})
-        protected static final void doClosure(final ContextObject context, @SuppressWarnings("unused") final int index, final BlockClosureObject value) {
+        protected static void doClosure(final ContextObject context, @SuppressWarnings("unused") final int index, final BlockClosureObject value) {
             context.setClosure(value);
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"index == CLOSURE_OR_NIL"})
-        protected static final void doClosure(final ContextObject context, final int index, final NilObject value) {
+        protected static void doClosure(final ContextObject context, final int index, final NilObject value) {
             context.setClosure(null);
         }
 
         @Specialization(guards = "index == RECEIVER")
-        protected static final void doReceiver(final ContextObject context, @SuppressWarnings("unused") final int index, final Object value) {
+        protected static void doReceiver(final ContextObject context, @SuppressWarnings("unused") final int index, final Object value) {
             context.setReceiver(value);
         }
 
         @Specialization(guards = {"index >= TEMP_FRAME_START", "context.getBlockOrMethod() == codeObject"}, //
                         limit = "2"/** thisContext and sender */
         )
-        protected static final void doTempCached(final ContextObject context, final int index, final Object value,
+        protected static void doTempCached(final ContextObject context, final int index, final Object value,
                         @SuppressWarnings("unused") @Cached(value = "context.getBlockOrMethod()", allowUncached = true) final CompiledCodeObject codeObject,
                         @Cached(value = "create(codeObject)", allowUncached = true) final FrameStackWriteNode writeNode) {
             final int stackIndex = index - CONTEXT.TEMP_FRAME_START;
@@ -638,15 +638,15 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
         }
 
         @Specialization(guards = "index >= TEMP_FRAME_START")
-        protected static final void doTemp(final ContextObject context, final int index, final Object value) {
+        protected static void doTemp(final ContextObject context, final int index, final Object value) {
             context.atTempPut(index - CONTEXT.TEMP_FRAME_START, value);
         }
     }
 
     @ExportMessage
-    public static class Become {
+    protected static final class Become {
         @Specialization(guards = "receiver != other")
-        protected static final boolean doBecome(final ContextObject receiver, final ContextObject other) {
+        protected static boolean doBecome(final ContextObject receiver, final ContextObject other) {
             receiver.becomeOtherClass(other);
             final MaterializedFrame otherTruffleFrame = other.truffleFrame;
             final int otherSize = other.size;
@@ -659,7 +659,7 @@ public final class ContextObject extends AbstractSqueakObjectWithClassAndHash {
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doFail(final ContextObject receiver, final Object other) {
+        protected static boolean doFail(final ContextObject receiver, final Object other) {
             return false;
         }
     }

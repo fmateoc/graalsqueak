@@ -332,9 +332,9 @@ public abstract class CompiledCodeObject extends AbstractSqueakObjectWithClassAn
     }
 
     @ExportMessage
-    public static class Become {
+    protected static final class Become {
         @Specialization(guards = "receiver != other")
-        protected static final boolean doBecome(final CompiledCodeObject receiver, final CompiledCodeObject other) {
+        protected static boolean doBecome(final CompiledCodeObject receiver, final CompiledCodeObject other) {
             receiver.becomeOtherClass(other);
             CompilerDirectives.transferToInterpreterAndInvalidate();
             final Object[] literals2 = other.literals;
@@ -348,13 +348,13 @@ public abstract class CompiledCodeObject extends AbstractSqueakObjectWithClassAn
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doFail(final CompiledCodeObject receiver, final Object other) {
+        protected static boolean doFail(final CompiledCodeObject receiver, final Object other) {
             return false;
         }
     }
 
     @ExportMessage
-    public static final class ChangeClassOfTo {
+    protected static final class ChangeClassOfTo {
         @Specialization(guards = {"receiver.getSqueakClass().getFormat() == argument.getFormat()"})
         protected static boolean doChangeClassOfTo(final CompiledCodeObject receiver, final ClassObject argument) {
             receiver.setSqueakClass(argument);

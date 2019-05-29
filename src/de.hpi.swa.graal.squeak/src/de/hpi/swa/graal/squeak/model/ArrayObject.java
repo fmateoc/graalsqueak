@@ -312,16 +312,16 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
-    public static class At0 {
+    protected static final class At0 {
         @SuppressWarnings("unused")
         @Specialization(guards = {"obj.isEmptyType()"})
-        protected static final NilObject doEmptyArray(final ArrayObject obj, final int index) {
+        protected static NilObject doEmptyArray(final ArrayObject obj, final int index) {
             assert 0 <= index && index < obj.getEmptyLength();
             return NilObject.SINGLETON;
         }
 
         @Specialization(guards = "obj.isBooleanType()")
-        protected static final Object doArrayOfBooleans(final ArrayObject obj, final int index) {
+        protected static Object doArrayOfBooleans(final ArrayObject obj, final int index) {
             final byte value = obj.getBooleanStorage()[index];
             if (value == ArrayObject.BOOLEAN_FALSE_TAG) {
                 return BooleanObject.FALSE;
@@ -334,30 +334,30 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         }
 
         @Specialization(guards = "obj.isCharType()")
-        protected static final Object doArrayOfChars(final ArrayObject obj, final int index) {
+        protected static Object doArrayOfChars(final ArrayObject obj, final int index) {
             final char value = obj.getCharStorage()[index];
             return value == ArrayObject.CHAR_NIL_TAG ? NilObject.SINGLETON : value;
         }
 
         @Specialization(guards = "obj.isLongType()")
-        protected static final Object doArrayOfLongs(final ArrayObject obj, final int index) {
+        protected static Object doArrayOfLongs(final ArrayObject obj, final int index) {
             final long value = obj.getLongStorage()[index];
             return value == ArrayObject.LONG_NIL_TAG ? NilObject.SINGLETON : value;
         }
 
         @Specialization(guards = "obj.isDoubleType()")
-        protected static final Object doArrayOfDoubles(final ArrayObject obj, final int index) {
+        protected static Object doArrayOfDoubles(final ArrayObject obj, final int index) {
             final double value = obj.getDoubleStorage()[index];
             return Double.doubleToRawLongBits(value) == ArrayObject.DOUBLE_NIL_TAG_LONG ? NilObject.SINGLETON : value;
         }
 
         @Specialization(guards = "obj.isNativeObjectType()")
-        protected static final AbstractSqueakObject doArrayOfNativeObjects(final ArrayObject obj, final int index) {
+        protected static AbstractSqueakObject doArrayOfNativeObjects(final ArrayObject obj, final int index) {
             return NilObject.nullToNil(obj.getNativeObjectStorage()[index]);
         }
 
         @Specialization(guards = "obj.isObjectType()")
-        protected static final Object doArrayOfObjects(final ArrayObject obj, final int index) {
+        protected static Object doArrayOfObjects(final ArrayObject obj, final int index) {
             assert obj.getObjectStorage()[index] != null;
             return obj.getObjectStorage()[index];
         }
@@ -365,31 +365,31 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
 
     @ImportStatic(SqueakGuards.class)
     @ExportMessage
-    public static class Atput0 {
+    protected static final class Atput0 {
         @SuppressWarnings("unused")
         @Specialization(guards = {"obj.isEmptyType()"})
-        protected static final void doEmptyArray(final ArrayObject obj, final int index, final NilObject value) {
+        protected static void doEmptyArray(final ArrayObject obj, final int index, final NilObject value) {
             assert index < obj.getEmptyLength();
             // Nothing to do.
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"obj.isEmptyType()"})
-        protected static final void doEmptyArray(final ArrayObject obj, final int index, final NativeObject value) {
+        protected static void doEmptyArray(final ArrayObject obj, final int index, final NativeObject value) {
             obj.transitionFromEmptyToNatives();
             doArrayOfNativeObjects(obj, index, value);
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"obj.isEmptyType()"})
-        protected static final void doEmptyArrayToBoolean(final ArrayObject obj, final int index, final boolean value) {
+        protected static void doEmptyArrayToBoolean(final ArrayObject obj, final int index, final boolean value) {
             obj.transitionFromEmptyToBooleans();
             doArrayOfBooleans(obj, index, value);
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"obj.isEmptyType()"})
-        protected static final void doEmptyArrayToChar(final ArrayObject obj, final int index, final char value,
+        protected static void doEmptyArrayToChar(final ArrayObject obj, final int index, final char value,
                         @Exclusive @Cached final BranchProfile nilTagProfile) {
             if (ArrayObject.isCharNilTag(value)) {
                 nilTagProfile.enter();
@@ -402,7 +402,7 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"obj.isEmptyType()"})
-        protected static final void doEmptyArrayToLong(final ArrayObject obj, final int index, final long value,
+        protected static void doEmptyArrayToLong(final ArrayObject obj, final int index, final long value,
                         @Exclusive @Cached final BranchProfile nilTagProfile) {
             if (ArrayObject.isLongNilTag(value)) {
                 nilTagProfile.enter();
@@ -415,7 +415,7 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"obj.isEmptyType()"})
-        protected static final void doEmptyArrayToDouble(final ArrayObject obj, final int index, final double value,
+        protected static void doEmptyArrayToDouble(final ArrayObject obj, final int index, final double value,
                         @Exclusive @Cached final BranchProfile nilTagProfile) {
             if (ArrayObject.isDoubleNilTag(value)) {
                 nilTagProfile.enter();
@@ -428,120 +428,120 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"obj.isEmptyType()", "!isBoolean(value)", "!isCharacter(value)", "!isLong(value)", "!isDouble(value)", "!isNativeObject(value)"})
-        protected static final void doEmptyArrayToObject(final ArrayObject obj, final int index, final Object value) {
+        protected static void doEmptyArrayToObject(final ArrayObject obj, final int index, final Object value) {
             obj.transitionFromEmptyToObjects();
             doArrayOfObjects(obj, index, value);
         }
 
         @Specialization(guards = "obj.isBooleanType()")
-        protected static final void doArrayOfBooleans(final ArrayObject obj, final int index, final boolean value) {
+        protected static void doArrayOfBooleans(final ArrayObject obj, final int index, final boolean value) {
             obj.getBooleanStorage()[index] = value ? ArrayObject.BOOLEAN_TRUE_TAG : ArrayObject.BOOLEAN_FALSE_TAG;
         }
 
         @Specialization(guards = "obj.isBooleanType()")
-        protected static final void doArrayOfBooleans(final ArrayObject obj, final int index, @SuppressWarnings("unused") final NilObject value) {
+        protected static void doArrayOfBooleans(final ArrayObject obj, final int index, @SuppressWarnings("unused") final NilObject value) {
             obj.getBooleanStorage()[index] = ArrayObject.BOOLEAN_NIL_TAG;
         }
 
         @Specialization(guards = {"obj.isBooleanType()", "!isBoolean(value)", "!isNil(value)"})
-        protected static final void doArrayOfBooleans(final ArrayObject obj, final int index, final Object value) {
+        protected static void doArrayOfBooleans(final ArrayObject obj, final int index, final Object value) {
             obj.transitionFromBooleansToObjects();
             doArrayOfObjects(obj, index, value);
         }
 
         @Specialization(guards = {"obj.isCharType()", "!isCharNilTag(value)"})
-        protected static final void doArrayOfChars(final ArrayObject obj, final int index, final char value) {
+        protected static void doArrayOfChars(final ArrayObject obj, final int index, final char value) {
             obj.getCharStorage()[index] = value;
         }
 
         @Specialization(guards = {"obj.isCharType()", "isCharNilTag(value)"})
-        protected static final void doArrayOfCharsNilTagClash(final ArrayObject obj, final int index, final char value) {
+        protected static void doArrayOfCharsNilTagClash(final ArrayObject obj, final int index, final char value) {
             /** `value` happens to be char nil tag, need to despecialize to be able store it. */
             obj.transitionFromCharsToObjects();
             doArrayOfObjects(obj, index, value);
         }
 
         @Specialization(guards = "obj.isCharType()")
-        protected static final void doArrayOfChars(final ArrayObject obj, final int index, @SuppressWarnings("unused") final NilObject value) {
+        protected static void doArrayOfChars(final ArrayObject obj, final int index, @SuppressWarnings("unused") final NilObject value) {
             obj.getCharStorage()[index] = ArrayObject.CHAR_NIL_TAG;
         }
 
         @Specialization(guards = {"obj.isCharType()", "!isCharacter(value)", "!isNil(value)"})
-        protected static final void doArrayOfChars(final ArrayObject obj, final int index, final Object value) {
+        protected static void doArrayOfChars(final ArrayObject obj, final int index, final Object value) {
             obj.transitionFromCharsToObjects();
             doArrayOfObjects(obj, index, value);
         }
 
         @Specialization(guards = {"obj.isLongType()", "!isLongNilTag(value)"})
-        protected static final void doArrayOfLongs(final ArrayObject obj, final int index, final long value) {
+        protected static void doArrayOfLongs(final ArrayObject obj, final int index, final long value) {
             obj.getLongStorage()[index] = value;
         }
 
         @Specialization(guards = {"obj.isLongType()", "isLongNilTag(value)"})
-        protected static final void doArrayOfLongsNilTagClash(final ArrayObject obj, final int index, final long value) {
+        protected static void doArrayOfLongsNilTagClash(final ArrayObject obj, final int index, final long value) {
             /** `value` happens to be long nil tag, need to despecialize to be able store it. */
             obj.transitionFromLongsToObjects();
             doArrayOfObjects(obj, index, value);
         }
 
         @Specialization(guards = "obj.isLongType()")
-        protected static final void doArrayOfLongs(final ArrayObject obj, final int index, @SuppressWarnings("unused") final NilObject value) {
+        protected static void doArrayOfLongs(final ArrayObject obj, final int index, @SuppressWarnings("unused") final NilObject value) {
             obj.getLongStorage()[index] = ArrayObject.LONG_NIL_TAG;
         }
 
         @Specialization(guards = {"obj.isLongType()", "!isLong(value)", "!isNil(value)"})
-        protected static final void doArrayOfLongs(final ArrayObject obj, final int index, final Object value) {
+        protected static void doArrayOfLongs(final ArrayObject obj, final int index, final Object value) {
             obj.transitionFromLongsToObjects();
             doArrayOfObjects(obj, index, value);
         }
 
         @Specialization(guards = {"obj.isDoubleType()", "!isDoubleNilTag(value)"})
-        protected static final void doArrayOfDoubles(final ArrayObject obj, final int index, final double value) {
+        protected static void doArrayOfDoubles(final ArrayObject obj, final int index, final double value) {
             obj.getDoubleStorage()[index] = value;
         }
 
         @Specialization(guards = {"obj.isDoubleType()", "isDoubleNilTag(value)"})
-        protected static final void doArrayOfDoublesNilTagClash(final ArrayObject obj, final int index, final double value) {
+        protected static void doArrayOfDoublesNilTagClash(final ArrayObject obj, final int index, final double value) {
             // `value` happens to be double nil tag, need to despecialize to be able store it.
             obj.transitionFromDoublesToObjects();
             doArrayOfObjects(obj, index, value);
         }
 
         @Specialization(guards = "obj.isDoubleType()")
-        protected static final void doArrayOfDoubles(final ArrayObject obj, final int index, @SuppressWarnings("unused") final NilObject value) {
+        protected static void doArrayOfDoubles(final ArrayObject obj, final int index, @SuppressWarnings("unused") final NilObject value) {
             obj.getDoubleStorage()[index] = ArrayObject.DOUBLE_NIL_TAG;
         }
 
         @Specialization(guards = {"obj.isDoubleType()", "!isDouble(value)", "!isNil(value)"})
-        protected static final void doArrayOfDoubles(final ArrayObject obj, final int index, final Object value) {
+        protected static void doArrayOfDoubles(final ArrayObject obj, final int index, final Object value) {
             obj.transitionFromDoublesToObjects();
             doArrayOfObjects(obj, index, value);
         }
 
         @Specialization(guards = "obj.isNativeObjectType()")
-        protected static final void doArrayOfNativeObjects(final ArrayObject obj, final int index, final NativeObject value) {
+        protected static void doArrayOfNativeObjects(final ArrayObject obj, final int index, final NativeObject value) {
             obj.getNativeObjectStorage()[index] = value;
         }
 
         @Specialization(guards = "obj.isNativeObjectType()")
-        protected static final void doArrayOfNativeObjects(final ArrayObject obj, final int index, @SuppressWarnings("unused") final NilObject value) {
+        protected static void doArrayOfNativeObjects(final ArrayObject obj, final int index, @SuppressWarnings("unused") final NilObject value) {
             obj.getNativeObjectStorage()[index] = ArrayObject.NATIVE_OBJECT_NIL_TAG;
         }
 
         @Specialization(guards = {"obj.isNativeObjectType()", "!isNativeObject(value)", "!isNil(value)"})
-        protected static final void doArrayOfNativeObjects(final ArrayObject obj, final int index, final Object value) {
+        protected static void doArrayOfNativeObjects(final ArrayObject obj, final int index, final Object value) {
             obj.transitionFromNativesToObjects();
             doArrayOfObjects(obj, index, value);
         }
 
         @Specialization(guards = "obj.isObjectType()")
-        protected static final void doArrayOfObjects(final ArrayObject obj, final int index, final Object value) {
+        protected static void doArrayOfObjects(final ArrayObject obj, final int index, final Object value) {
             obj.getObjectStorage()[index] = value;
         }
     }
 
     @ExportMessage
-    public static final class Become {
+    protected static final class Become {
         @Specialization(guards = "receiver != other")
         protected static boolean doBecome(final ArrayObject receiver, final ArrayObject other) {
             receiver.becomeOtherClass(other);
@@ -559,7 +559,7 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
-    public static final class ChangeClassOfTo {
+    protected static final class ChangeClassOfTo {
         @Specialization(guards = {"receiver.getSqueakClass().getFormat() == argument.getFormat()"})
         protected static boolean doChangeClassOfTo(final ArrayObject receiver, final ClassObject argument) {
             receiver.setSqueakClass(argument);
@@ -580,47 +580,47 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
 
     @ImportStatic(SqueakGuards.class)
     @ExportMessage
-    public static class ReplaceFromToWithStartingAt {
+    protected static final class ReplaceFromToWithStartingAt {
         @SuppressWarnings("unused")
         @Specialization(guards = {"rcvr.isEmptyType()", "repl.isEmptyType()", "inBounds(rcvr.instsize(), rcvr.getEmptyLength(), start, stop, repl.instsize(), repl.getEmptyLength(), replStart)"})
-        protected static final boolean doEmptyArrays(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
+        protected static boolean doEmptyArrays(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
             return true; // Nothing to do.
         }
 
         @Specialization(guards = {"rcvr.isBooleanType()", "repl.isBooleanType()",
                         "inBounds(rcvr.instsize(), rcvr.getBooleanLength(), start, stop, repl.instsize(), repl.getBooleanLength(), replStart)"})
-        protected static final boolean doArraysOfBooleans(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
+        protected static boolean doArraysOfBooleans(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
             System.arraycopy(repl.getBooleanStorage(), replStart - 1, rcvr.getBooleanStorage(), start - 1, 1 + stop - start);
             return true;
         }
 
         @Specialization(guards = {"rcvr.isCharType()", "repl.isCharType()", "inBounds(rcvr.instsize(), rcvr.getCharLength(), start, stop, repl.instsize(), repl.getCharLength(), replStart)"})
-        protected static final boolean doArraysOfChars(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
+        protected static boolean doArraysOfChars(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
             System.arraycopy(repl.getCharStorage(), replStart - 1, rcvr.getCharStorage(), start - 1, 1 + stop - start);
             return true;
         }
 
         @Specialization(guards = {"rcvr.isLongType()", "repl.isLongType()", "inBounds(rcvr.instsize(), rcvr.getLongLength(), start, stop, repl.instsize(), repl.getLongLength(), replStart)"})
-        protected static final boolean doArraysOfLongs(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
+        protected static boolean doArraysOfLongs(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
             System.arraycopy(repl.getLongStorage(), replStart - 1, rcvr.getLongStorage(), start - 1, 1 + stop - start);
             return true;
         }
 
         @Specialization(guards = {"rcvr.isDoubleType()", "repl.isDoubleType()", "inBounds(rcvr.instsize(), rcvr.getDoubleLength(), start, stop, repl.instsize(), repl.getDoubleLength(), replStart)"})
-        protected static final boolean doArraysOfDoubles(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
+        protected static boolean doArraysOfDoubles(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
             System.arraycopy(repl.getDoubleStorage(), replStart - 1, rcvr.getDoubleStorage(), start - 1, 1 + stop - start);
             return true;
         }
 
         @Specialization(guards = {"rcvr.isNativeObjectType()", "repl.isNativeObjectType()",
                         "inBounds(rcvr.instsize(), rcvr.getNativeObjectLength(), start, stop, repl.instsize(), repl.getNativeObjectLength(), replStart)"})
-        protected static final boolean doArraysOfNatives(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
+        protected static boolean doArraysOfNatives(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
             System.arraycopy(repl.getNativeObjectStorage(), replStart - 1, rcvr.getNativeObjectStorage(), start - 1, 1 + stop - start);
             return true;
         }
 
         @Specialization(guards = {"rcvr.isObjectType()", "repl.isObjectType()", "inBounds(rcvr.instsize(), rcvr.getObjectLength(), start, stop, repl.instsize(), repl.getObjectLength(), replStart)"})
-        protected static final boolean doArraysOfObjects(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
+        protected static boolean doArraysOfObjects(final ArrayObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart) {
             System.arraycopy(repl.getObjectStorage(), replStart - 1, rcvr.getObjectStorage(), start - 1, 1 + stop - start);
             return true;
         }
@@ -638,83 +638,83 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doFail(final ArrayObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
+        protected static boolean doFail(final ArrayObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
             return false;
         }
     }
 
     @ExportMessage
-    public static class Size {
+    protected static final class Size {
         @Specialization(guards = "obj.isEmptyType()")
-        protected static final int doEmptyArrayObject(final ArrayObject obj) {
+        protected static int doEmptyArrayObject(final ArrayObject obj) {
             return obj.getEmptyStorage();
         }
 
         @Specialization(guards = "obj.isBooleanType()")
-        protected static final int doArrayObjectOfBooleans(final ArrayObject obj) {
+        protected static int doArrayObjectOfBooleans(final ArrayObject obj) {
             return obj.getBooleanLength();
         }
 
         @Specialization(guards = "obj.isCharType()")
-        protected static final int doArrayObjectOfChars(final ArrayObject obj) {
+        protected static int doArrayObjectOfChars(final ArrayObject obj) {
             return obj.getCharLength();
         }
 
         @Specialization(guards = "obj.isLongType()")
-        protected static final int doArrayObjectOfLongs(final ArrayObject obj) {
+        protected static int doArrayObjectOfLongs(final ArrayObject obj) {
             return obj.getLongLength();
         }
 
         @Specialization(guards = "obj.isDoubleType()")
-        protected static final int doArrayObjectOfDoubles(final ArrayObject obj) {
+        protected static int doArrayObjectOfDoubles(final ArrayObject obj) {
             return obj.getDoubleLength();
         }
 
         @Specialization(guards = "obj.isNativeObjectType()")
-        protected static final int doArrayObjectOfNatives(final ArrayObject obj) {
+        protected static int doArrayObjectOfNatives(final ArrayObject obj) {
             return obj.getNativeObjectLength();
         }
 
         @Specialization(guards = "obj.isObjectType()")
-        protected static final int doArrayObjectOfObjects(final ArrayObject obj) {
+        protected static int doArrayObjectOfObjects(final ArrayObject obj) {
             return obj.getObjectLength();
         }
     }
 
     @ExportMessage
-    public static class ShallowCopy {
+    protected static final class ShallowCopy {
         @Specialization(guards = "obj.isEmptyType()")
-        protected static final ArrayObject doEmptyArray(final ArrayObject obj) {
+        protected static ArrayObject doEmptyArray(final ArrayObject obj) {
             return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getEmptyStorage());
         }
 
         @Specialization(guards = "obj.isBooleanType()")
-        protected static final ArrayObject doArrayOfBooleans(final ArrayObject obj) {
+        protected static ArrayObject doArrayOfBooleans(final ArrayObject obj) {
             return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getBooleanStorage().clone());
         }
 
         @Specialization(guards = "obj.isCharType()")
-        protected static final ArrayObject doArrayOfChars(final ArrayObject obj) {
+        protected static ArrayObject doArrayOfChars(final ArrayObject obj) {
             return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getCharStorage().clone());
         }
 
         @Specialization(guards = "obj.isLongType()")
-        protected static final ArrayObject doArrayOfLongs(final ArrayObject obj) {
+        protected static ArrayObject doArrayOfLongs(final ArrayObject obj) {
             return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getLongStorage().clone());
         }
 
         @Specialization(guards = "obj.isDoubleType()")
-        protected static final ArrayObject doArrayOfDoubles(final ArrayObject obj) {
+        protected static ArrayObject doArrayOfDoubles(final ArrayObject obj) {
             return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getDoubleStorage().clone());
         }
 
         @Specialization(guards = "obj.isNativeObjectType()")
-        protected static final ArrayObject doArrayOfNatives(final ArrayObject obj) {
+        protected static ArrayObject doArrayOfNatives(final ArrayObject obj) {
             return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getNativeObjectStorage().clone());
         }
 
         @Specialization(guards = "obj.isObjectType()")
-        protected static final ArrayObject doArrayOfObjects(final ArrayObject obj) {
+        protected static ArrayObject doArrayOfObjects(final ArrayObject obj) {
             return ArrayObject.createWithStorage(obj.image, obj.getSqueakClass(), obj.getObjectStorage().clone());
         }
     }

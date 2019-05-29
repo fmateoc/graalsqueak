@@ -67,14 +67,14 @@ public final class WeakPointersObject extends AbstractPointersObject {
     }
 
     @ExportMessage
-    public static class Atput0 {
+    protected static final class Atput0 {
         @Specialization(guards = "pointers.getSqueakClass().getBasicInstanceSize() <= index")
-        protected static final void doWeakInVariablePart(final WeakPointersObject pointers, final int index, final AbstractSqueakObject value) {
+        protected static void doWeakInVariablePart(final WeakPointersObject pointers, final int index, final AbstractSqueakObject value) {
             pointers.setWeakPointer(index, value);
         }
 
         @Fallback
-        protected static final void doNonWeak(final WeakPointersObject pointers, final int index, final Object value) {
+        protected static void doNonWeak(final WeakPointersObject pointers, final int index, final Object value) {
             pointers.setPointer(index, value);
         }
 
@@ -98,15 +98,15 @@ public final class WeakPointersObject extends AbstractPointersObject {
 
     @ImportStatic(SqueakGuards.class)
     @ExportMessage
-    public static class ReplaceFromToWithStartingAt {
+    protected static final class ReplaceFromToWithStartingAt {
         @Specialization(guards = "inBounds(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)")
-        protected static final boolean doWeakPointers(final WeakPointersObject rcvr, final int start, final int stop, final WeakPointersObject repl, final int replStart) {
+        protected static boolean doWeakPointers(final WeakPointersObject rcvr, final int start, final int stop, final WeakPointersObject repl, final int replStart) {
             System.arraycopy(repl.getPointers(), replStart - 1, rcvr.getPointers(), start - 1, 1 + stop - start);
             return true;
         }
 
         @Specialization(guards = "inBounds(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)")
-        protected static final boolean doWeakPointersPointers(final WeakPointersObject rcvr, final int start, final int stop, final PointersObject repl, final int replStart,
+        protected static boolean doWeakPointersPointers(final WeakPointersObject rcvr, final int start, final int stop, final PointersObject repl, final int replStart,
                         @CachedLibrary("rcvr") final SqueakObjectLibrary rcvrLib) {
             final int repOff = replStart - start;
             for (int i = start - 1; i < stop; i++) {
@@ -116,7 +116,7 @@ public final class WeakPointersObject extends AbstractPointersObject {
         }
 
         @Specialization(guards = "inBounds(rcvr.instsize(), rcvr.size(), start, stop, replLib.instsize(repl), replLib.size(repl), replStart)")
-        protected static final boolean doWeakPointersArray(final WeakPointersObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart,
+        protected static boolean doWeakPointersArray(final WeakPointersObject rcvr, final int start, final int stop, final ArrayObject repl, final int replStart,
                         @CachedLibrary("rcvr") final SqueakObjectLibrary rcvrLib,
                         @CachedLibrary(limit = "3") final SqueakObjectLibrary replLib) {
             final int repOff = replStart - start;
@@ -128,7 +128,7 @@ public final class WeakPointersObject extends AbstractPointersObject {
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doFail(final WeakPointersObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
+        protected static boolean doFail(final WeakPointersObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
             return false;
         }
     }

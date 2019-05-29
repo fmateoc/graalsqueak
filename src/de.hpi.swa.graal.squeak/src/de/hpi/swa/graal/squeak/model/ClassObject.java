@@ -474,106 +474,106 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
-    public static class At0 {
+    protected static final class At0 {
         @Specialization(guards = "isSuperclassIndex(index)")
-        protected static final AbstractSqueakObject doClassSuperclass(final ClassObject obj, @SuppressWarnings("unused") final int index) {
+        protected static AbstractSqueakObject doClassSuperclass(final ClassObject obj, @SuppressWarnings("unused") final int index) {
             return obj.getSuperclass();
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"isMethodDictIndex(index)", "squeakClass == cachedSqueakClass"}, assumptions = {"cachedSqueakClass.getMethodDictStable()"}, limit = "3")
-        protected static final PointersObject doClassMethodDictConstant(final ClassObject squeakClass, final int index,
+        protected static PointersObject doClassMethodDictConstant(final ClassObject squeakClass, final int index,
                         @Cached("squeakClass") final ClassObject cachedSqueakClass,
                         @Cached("squeakClass.getMethodDict()") final PointersObject cachedMethodDict) {
             return cachedMethodDict;
         }
 
         @Specialization(guards = {"isMethodDictIndex(index)"}, replaces = "doClassMethodDictConstant")
-        protected static final PointersObject doClassMethodDict(final ClassObject obj, @SuppressWarnings("unused") final int index) {
+        protected static PointersObject doClassMethodDict(final ClassObject obj, @SuppressWarnings("unused") final int index) {
             return obj.getMethodDict();
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"isFormatIndex(index)", "squeakClass == cachedSqueakClass"}, assumptions = {"cachedSqueakClass.getClassFormatStable()"}, limit = "3")
-        protected static final long doClassFormatConstant(final ClassObject squeakClass, final int index,
+        protected static long doClassFormatConstant(final ClassObject squeakClass, final int index,
                         @Cached("squeakClass") final ClassObject cachedSqueakClass,
                         @Cached("squeakClass.getFormat()") final long cachedFormat) {
             return cachedFormat;
         }
 
         @Specialization(guards = {"isFormatIndex(index)"}, replaces = "doClassFormatConstant")
-        protected static final long doClassFormat(final ClassObject obj, @SuppressWarnings("unused") final int index) {
+        protected static long doClassFormat(final ClassObject obj, @SuppressWarnings("unused") final int index) {
             return obj.getFormat();
         }
 
         @Specialization(guards = "isInstanceVariablesIndex(index)")
-        protected static final AbstractSqueakObject doClassInstanceVariables(final ClassObject obj, @SuppressWarnings("unused") final int index) {
+        protected static AbstractSqueakObject doClassInstanceVariables(final ClassObject obj, @SuppressWarnings("unused") final int index) {
             return obj.getInstanceVariables();
         }
 
         @Specialization(guards = "isOrganizationIndex(index)")
-        protected static final AbstractSqueakObject doClassOrganization(final ClassObject obj, @SuppressWarnings("unused") final int index) {
+        protected static AbstractSqueakObject doClassOrganization(final ClassObject obj, @SuppressWarnings("unused") final int index) {
             return obj.getOrganization();
         }
 
         @Specialization(guards = "isOtherIndex(index)")
-        protected static final Object doClass(final ClassObject obj, final int index) {
+        protected static Object doClass(final ClassObject obj, final int index) {
             return obj.getOtherPointer(index);
         }
     }
 
     @ExportMessage
-    public static class Atput0 {
+    protected static final class Atput0 {
         @Specialization(guards = "isSuperclassIndex(index)")
-        protected static final void doClassSuperclass(final ClassObject obj, @SuppressWarnings("unused") final int index, final ClassObject value) {
+        protected static void doClassSuperclass(final ClassObject obj, @SuppressWarnings("unused") final int index, final ClassObject value) {
             obj.setSuperclass(value);
         }
 
         @Specialization(guards = "isSuperclassIndex(index)")
-        protected static final void doClassSuperclass(final ClassObject obj, @SuppressWarnings("unused") final int index, @SuppressWarnings("unused") final NilObject value) {
+        protected static void doClassSuperclass(final ClassObject obj, @SuppressWarnings("unused") final int index, @SuppressWarnings("unused") final NilObject value) {
             obj.setSuperclass(null);
         }
 
         @Specialization(guards = "isMethodDictIndex(index)")
-        protected static final void doClassMethodDict(final ClassObject obj, @SuppressWarnings("unused") final int index, final PointersObject value) {
+        protected static void doClassMethodDict(final ClassObject obj, @SuppressWarnings("unused") final int index, final PointersObject value) {
             obj.setMethodDict(value);
         }
 
         @Specialization(guards = "isFormatIndex(index)")
-        protected static final void doClassFormat(final ClassObject obj, @SuppressWarnings("unused") final int index, final long value) {
+        protected static void doClassFormat(final ClassObject obj, @SuppressWarnings("unused") final int index, final long value) {
             obj.setFormat(value);
         }
 
         @Specialization(guards = "isInstanceVariablesIndex(index)")
-        protected static final void doClassInstanceVariables(final ClassObject obj, @SuppressWarnings("unused") final int index, final ArrayObject value) {
+        protected static void doClassInstanceVariables(final ClassObject obj, @SuppressWarnings("unused") final int index, final ArrayObject value) {
             obj.setInstanceVariables(value);
         }
 
         @Specialization(guards = "isInstanceVariablesIndex(index)")
-        protected static final void doClassInstanceVariables(final ClassObject obj, @SuppressWarnings("unused") final int index, @SuppressWarnings("unused") final NilObject value) {
+        protected static void doClassInstanceVariables(final ClassObject obj, @SuppressWarnings("unused") final int index, @SuppressWarnings("unused") final NilObject value) {
             obj.setInstanceVariables(null);
         }
 
         @Specialization(guards = "isOrganizationIndex(index)")
-        protected static final void doClassOrganization(final ClassObject obj, @SuppressWarnings("unused") final int index, final PointersObject value) {
+        protected static void doClassOrganization(final ClassObject obj, @SuppressWarnings("unused") final int index, final PointersObject value) {
             obj.setOrganization(value);
         }
 
         @Specialization(guards = "isOrganizationIndex(index)")
-        protected static final void doClassOrganization(final ClassObject obj, @SuppressWarnings("unused") final int index, @SuppressWarnings("unused") final NilObject value) {
+        protected static void doClassOrganization(final ClassObject obj, @SuppressWarnings("unused") final int index, @SuppressWarnings("unused") final NilObject value) {
             obj.setOrganization(null);
         }
 
         @Specialization(guards = "isOtherIndex(index)")
-        protected static final void doClass(final ClassObject obj, final int index, final Object value) {
+        protected static void doClass(final ClassObject obj, final int index, final Object value) {
             obj.setOtherPointer(index, value);
         }
     }
 
     @ExportMessage
-    public static class Become {
+    protected static final class Become {
         @Specialization(guards = "receiver != other")
-        protected static final boolean doBecome(final ClassObject receiver, final ClassObject other) {
+        protected static boolean doBecome(final ClassObject receiver, final ClassObject other) {
             receiver.becomeOtherClass(other);
 
             if (receiver.instancesAreClasses != other.getSqueakClass().isMetaClass()) {
@@ -606,13 +606,13 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doFail(final ClassObject left, final Object right) {
+        protected static boolean doFail(final ClassObject left, final Object right) {
             return false;
         }
     }
 
     @ExportMessage
-    public static final class ChangeClassOfTo {
+    protected static final class ChangeClassOfTo {
         @Specialization(guards = {"receiver.getSqueakClass().getFormat() == argument.getFormat()"})
         protected static boolean doChangeClassOfTo(final ClassObject receiver, final ClassObject argument) {
             receiver.setSqueakClass(argument);
@@ -637,14 +637,14 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
-    public static class ShallowCopy {
+    protected static final class ShallowCopy {
         @Specialization(guards = "!receiver.hasInstanceVariables()")
-        protected static final ClassObject doClassNoInstanceVariables(final ClassObject receiver) {
+        protected static ClassObject doClassNoInstanceVariables(final ClassObject receiver) {
             return receiver.shallowCopyWithInstVars(null);
         }
 
         @Specialization(guards = "receiver.hasInstanceVariables()", limit = "1")
-        protected static final ClassObject doClass(final ClassObject receiver,
+        protected static ClassObject doClass(final ClassObject receiver,
                         @CachedLibrary("receiver.getInstanceVariablesOrNull()") final SqueakObjectLibrary objectLibrary) {
             return receiver.shallowCopyWithInstVars((ArrayObject) objectLibrary.shallowCopy(receiver.getInstanceVariablesOrNull()));
         }

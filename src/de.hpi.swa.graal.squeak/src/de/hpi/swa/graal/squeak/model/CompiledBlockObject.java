@@ -94,9 +94,9 @@ public final class CompiledBlockObject extends CompiledCodeObject {
 
     @ImportStatic(SqueakGuards.class)
     @ExportMessage
-    public static class ReplaceFromToWithStartingAt {
+    protected static final class ReplaceFromToWithStartingAt {
         @Specialization(guards = "inBounds(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)")
-        protected static final boolean doBlock(final CompiledBlockObject rcvr, final int start, final int stop, final CompiledBlockObject repl, final int replStart) {
+        protected static boolean doBlock(final CompiledBlockObject rcvr, final int start, final int stop, final CompiledBlockObject repl, final int replStart) {
             final int repOff = replStart - start;
             for (int i = start - 1; i < stop; i++) {
                 rcvr.atput0(i, repl.at0(repOff + i));
@@ -106,7 +106,7 @@ public final class CompiledBlockObject extends CompiledCodeObject {
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doFail(final CompiledBlockObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
+        protected static boolean doFail(final CompiledBlockObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
             return false;
         }
     }

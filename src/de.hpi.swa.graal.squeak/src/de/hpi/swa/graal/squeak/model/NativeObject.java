@@ -262,106 +262,106 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     @ExportMessage
-    public abstract static class AcceptsValue {
+    protected static final class AcceptsValue {
         @Specialization(guards = "obj.isByteType()")
-        protected static final boolean doNativeBytes(@SuppressWarnings("unused") final NativeObject obj, final char value) {
+        protected static boolean doNativeBytes(@SuppressWarnings("unused") final NativeObject obj, final char value) {
             return value <= NativeObject.BYTE_MAX;
         }
 
         @Specialization(guards = "obj.isShortType()")
-        protected static final boolean doNativeShorts(@SuppressWarnings("unused") final NativeObject obj, final char value) {
+        protected static boolean doNativeShorts(@SuppressWarnings("unused") final NativeObject obj, final char value) {
             return value <= NativeObject.SHORT_MAX;
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = "obj.isIntType() || obj.isLongType()")
-        protected static final boolean doNativeInts(final NativeObject obj, final char value) {
+        protected static boolean doNativeInts(final NativeObject obj, final char value) {
             return true;
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = "obj.isByteType()")
-        protected static final boolean doNativeBytes(final NativeObject obj, final CharacterObject value) {
+        protected static boolean doNativeBytes(final NativeObject obj, final CharacterObject value) {
             return false; // Value of CharacterObjects is always larger than `Character.MAX_VALUE`.
         }
 
         @Specialization(guards = "obj.isShortType()")
-        protected static final boolean doNativeShorts(@SuppressWarnings("unused") final NativeObject obj, final CharacterObject value) {
+        protected static boolean doNativeShorts(@SuppressWarnings("unused") final NativeObject obj, final CharacterObject value) {
             return value.getValue() <= NativeObject.SHORT_MAX;
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = "obj.isIntType() || obj.isLongType()")
-        protected static final boolean doNativeInts(final NativeObject obj, final CharacterObject value) {
+        protected static boolean doNativeInts(final NativeObject obj, final CharacterObject value) {
             return true;
         }
 
         @Specialization(guards = "obj.isByteType()")
-        protected static final boolean doNativeBytes(@SuppressWarnings("unused") final NativeObject obj, final long value) {
+        protected static boolean doNativeBytes(@SuppressWarnings("unused") final NativeObject obj, final long value) {
             return 0 <= value && value <= NativeObject.BYTE_MAX;
         }
 
         @Specialization(guards = "obj.isShortType()")
-        protected static final boolean doNativeShorts(@SuppressWarnings("unused") final NativeObject obj, final long value) {
+        protected static boolean doNativeShorts(@SuppressWarnings("unused") final NativeObject obj, final long value) {
             return 0 <= value && value <= NativeObject.SHORT_MAX;
         }
 
         @Specialization(guards = "obj.isIntType()")
-        protected static final boolean doNativeInts(@SuppressWarnings("unused") final NativeObject obj, final long value) {
+        protected static boolean doNativeInts(@SuppressWarnings("unused") final NativeObject obj, final long value) {
             return 0 <= value && value <= NativeObject.INTEGER_MAX;
         }
 
         @Specialization(guards = "obj.isLongType()")
-        protected static final boolean doNativeLongs(@SuppressWarnings("unused") final NativeObject obj, final long value) {
+        protected static boolean doNativeLongs(@SuppressWarnings("unused") final NativeObject obj, final long value) {
             return 0 <= value;
         }
 
         @Specialization(guards = {"obj.isByteType()"})
-        protected static final boolean doNativeBytesLargeInteger(@SuppressWarnings("unused") final NativeObject obj, final LargeIntegerObject value) {
+        protected static boolean doNativeBytesLargeInteger(@SuppressWarnings("unused") final NativeObject obj, final LargeIntegerObject value) {
             return value.inRange(0, NativeObject.BYTE_MAX);
         }
 
         @Specialization(guards = {"obj.isShortType()"})
-        protected static final boolean doNativeShortsLargeInteger(@SuppressWarnings("unused") final NativeObject obj, final LargeIntegerObject value) {
+        protected static boolean doNativeShortsLargeInteger(@SuppressWarnings("unused") final NativeObject obj, final LargeIntegerObject value) {
             return value.inRange(0, NativeObject.SHORT_MAX);
         }
 
         @Specialization(guards = {"obj.isIntType()"})
-        protected static final boolean doNativeIntsLargeInteger(@SuppressWarnings("unused") final NativeObject obj, final LargeIntegerObject value) {
+        protected static boolean doNativeIntsLargeInteger(@SuppressWarnings("unused") final NativeObject obj, final LargeIntegerObject value) {
             return value.inRange(0, NativeObject.INTEGER_MAX);
         }
 
         @Specialization(guards = {"obj.isLongType()"})
-        protected static final boolean doNativeLongsLargeInteger(@SuppressWarnings("unused") final NativeObject obj, final LargeIntegerObject value) {
+        protected static boolean doNativeLongsLargeInteger(@SuppressWarnings("unused") final NativeObject obj, final LargeIntegerObject value) {
             return value.isZeroOrPositive() && value.lessThanOneShiftedBy64();
         }
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doOtherwiseFalse(final NativeObject obj, final Object value) {
+        protected static boolean doOtherwiseFalse(final NativeObject obj, final Object value) {
             return false;
         }
     }
 
     @ExportMessage
-    public abstract static class At0 {
+    protected static final class At0 {
         @Specialization(guards = "obj.isByteType()")
-        protected static final long doNativeBytes(final NativeObject obj, final int index) {
+        protected static long doNativeBytes(final NativeObject obj, final int index) {
             return Byte.toUnsignedLong(obj.getByteStorage()[index]);
         }
 
         @Specialization(guards = "obj.isShortType()")
-        protected static final long doNativeShorts(final NativeObject obj, final int index) {
+        protected static long doNativeShorts(final NativeObject obj, final int index) {
             return Short.toUnsignedLong(obj.getShortStorage()[index]);
         }
 
         @Specialization(guards = "obj.isIntType()")
-        protected static final long doNativeInts(final NativeObject obj, final int index) {
+        protected static long doNativeInts(final NativeObject obj, final int index) {
             return Integer.toUnsignedLong(obj.getIntStorage()[index]);
         }
 
         @Specialization(guards = "obj.isLongType()")
-        protected static final Object doNativeLongs(final NativeObject obj, final int index) {
+        protected static Object doNativeLongs(final NativeObject obj, final int index) {
             final long value = obj.getLongStorage()[index];
             if (value >= 0) {
                 return value;
@@ -373,91 +373,91 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
 
     @ExportMessage
     @ImportStatic(NativeObject.class)
-    public abstract static class Atput0 {
+    protected static final class Atput0 {
         @Specialization(guards = {"obj.isByteType()", "value >= 0", "value <= BYTE_MAX"})
-        protected static final void doNativeBytes(final NativeObject obj, final int index, final long value) {
+        protected static void doNativeBytes(final NativeObject obj, final int index, final long value) {
             obj.getByteStorage()[index] = (byte) value;
         }
 
         @Specialization(guards = {"obj.isShortType()", "value >= 0", "value <= SHORT_MAX"})
-        protected static final void doNativeShorts(final NativeObject obj, final int index, final long value) {
+        protected static void doNativeShorts(final NativeObject obj, final int index, final long value) {
             obj.getShortStorage()[index] = (short) value;
         }
 
         @Specialization(guards = {"obj.isIntType()", "value >= 0", "value <= INTEGER_MAX"})
-        protected static final void doNativeInts(final NativeObject obj, final int index, final long value) {
+        protected static void doNativeInts(final NativeObject obj, final int index, final long value) {
             obj.getIntStorage()[index] = (int) value;
         }
 
         @Specialization(guards = {"obj.isLongType()", "value >= 0"})
-        protected static final void doNativeLongs(final NativeObject obj, final int index, final long value) {
+        protected static void doNativeLongs(final NativeObject obj, final int index, final long value) {
             obj.getLongStorage()[index] = value;
         }
 
-        protected static final boolean inByteRange(final char value) {
+        protected static boolean inByteRange(final char value) {
             return value <= NativeObject.BYTE_MAX;
         }
 
         @Specialization(guards = {"obj.isByteType()", "inByteRange(value)"})
-        protected static final void doNativeBytesChar(final NativeObject obj, final int index, final char value) {
+        protected static void doNativeBytesChar(final NativeObject obj, final int index, final char value) {
             doNativeBytes(obj, index, value);
         }
 
         @Specialization(guards = "obj.isShortType()") // char values fit into short
-        protected static final void doNativeShortsChar(final NativeObject obj, final int index, final char value) {
+        protected static void doNativeShortsChar(final NativeObject obj, final int index, final char value) {
             doNativeShorts(obj, index, value);
         }
 
         @Specialization(guards = "obj.isIntType()")
-        protected static final void doNativeIntsChar(final NativeObject obj, final int index, final char value) {
+        protected static void doNativeIntsChar(final NativeObject obj, final int index, final char value) {
             doNativeInts(obj, index, value);
         }
 
         @Specialization(guards = "obj.isIntType()")
-        protected static final void doNativeIntsChar(final NativeObject obj, final int index, final CharacterObject value) {
+        protected static void doNativeIntsChar(final NativeObject obj, final int index, final CharacterObject value) {
             doNativeInts(obj, index, value.getValue());
         }
 
         @Specialization(guards = "obj.isLongType()")
-        protected static final void doNativeLongsChar(final NativeObject obj, final int index, final char value) {
+        protected static void doNativeLongsChar(final NativeObject obj, final int index, final char value) {
             doNativeLongs(obj, index, value);
         }
 
         @Specialization(guards = "obj.isLongType()")
-        protected static final void doNativeLongsChar(final NativeObject obj, final int index, final CharacterObject value) {
+        protected static void doNativeLongsChar(final NativeObject obj, final int index, final CharacterObject value) {
             doNativeLongs(obj, index, value.getValue());
         }
 
         @Specialization(guards = {"obj.isByteType()", "value.inRange(0, BYTE_MAX)"})
-        protected static final void doNativeBytesLargeInteger(final NativeObject obj, final int index, final LargeIntegerObject value) {
+        protected static void doNativeBytesLargeInteger(final NativeObject obj, final int index, final LargeIntegerObject value) {
             doNativeBytes(obj, index, value.longValueExact());
         }
 
         @Specialization(guards = {"obj.isShortType()", "value.inRange(0, SHORT_MAX)"})
-        protected static final void doNativeShortsLargeInteger(final NativeObject obj, final int index, final LargeIntegerObject value) {
+        protected static void doNativeShortsLargeInteger(final NativeObject obj, final int index, final LargeIntegerObject value) {
             doNativeShorts(obj, index, value.longValueExact());
         }
 
         @Specialization(guards = {"obj.isIntType()", "value.inRange(0, INTEGER_MAX)"})
-        protected static final void doNativeIntsLargeInteger(final NativeObject obj, final int index, final LargeIntegerObject value) {
+        protected static void doNativeIntsLargeInteger(final NativeObject obj, final int index, final LargeIntegerObject value) {
             doNativeInts(obj, index, value.longValueExact());
         }
 
         @Specialization(guards = {"obj.isLongType()", "value.isZeroOrPositive()", "value.fitsIntoLong()"})
-        protected static final void doNativeLongsLargeInteger(final NativeObject obj, final int index, final LargeIntegerObject value) {
+        protected static void doNativeLongsLargeInteger(final NativeObject obj, final int index, final LargeIntegerObject value) {
             doNativeLongs(obj, index, value.longValueExact());
         }
 
         @Specialization(guards = {"obj.isLongType()", "value.isZeroOrPositive()", "!value.fitsIntoLong()", "value.lessThanOneShiftedBy64()"})
-        protected static final void doNativeLongsLargeIntegerSigned(final NativeObject obj, final int index, final LargeIntegerObject value) {
+        protected static void doNativeLongsLargeIntegerSigned(final NativeObject obj, final int index, final LargeIntegerObject value) {
             doNativeLongs(obj, index, value.toSigned().longValueExact());
         }
     }
 
     @ExportMessage
-    public static class Become {
+    protected static final class Become {
         @Specialization(guards = "receiver != other")
-        protected static final boolean doBecome(final NativeObject receiver, final NativeObject other) {
+        protected static boolean doBecome(final NativeObject receiver, final NativeObject other) {
             receiver.becomeOtherClass(other);
             final Object otherStorage = other.storage;
             other.setStorage(receiver.storage);
@@ -467,21 +467,21 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doFail(final NativeObject receiver, final Object other) {
+        protected static boolean doFail(final NativeObject receiver, final Object other) {
             return false;
         }
     }
 
     @ExportMessage
-    public static class ChangeClassOfTo {
+    protected static final class ChangeClassOfTo {
         @Specialization(guards = "receiver.hasSameFormat(argument)")
-        protected static final boolean doNative(final NativeObject receiver, final ClassObject argument) {
+        protected static boolean doNative(final NativeObject receiver, final ClassObject argument) {
             receiver.setSqueakClass(argument);
             return true;
         }
 
         @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isBytes()"})
-        protected static final boolean doNativeConvertToBytes(final NativeObject receiver, final ClassObject argument,
+        protected static boolean doNativeConvertToBytes(final NativeObject receiver, final ClassObject argument,
                         @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
             receiver.setSqueakClass(argument);
             receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
@@ -489,7 +489,7 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         }
 
         @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isShorts()"})
-        protected static final boolean doNativeConvertToShorts(final NativeObject receiver, final ClassObject argument,
+        protected static boolean doNativeConvertToShorts(final NativeObject receiver, final ClassObject argument,
                         @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
             receiver.setSqueakClass(argument);
             receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
@@ -497,7 +497,7 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         }
 
         @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isWords()"})
-        protected static final boolean doNativeConvertToInts(final NativeObject receiver, final ClassObject argument,
+        protected static boolean doNativeConvertToInts(final NativeObject receiver, final ClassObject argument,
                         @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
             receiver.setSqueakClass(argument);
             receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
@@ -505,7 +505,7 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         }
 
         @Specialization(guards = {"!receiver.hasSameFormat(argument)", "argument.isLongs()"})
-        protected static final boolean doNativeConvertToLongs(final NativeObject receiver, final ClassObject argument,
+        protected static boolean doNativeConvertToLongs(final NativeObject receiver, final ClassObject argument,
                         @CachedLibrary("receiver") final SqueakObjectLibrary objectLibrary) {
             receiver.setSqueakClass(argument);
             receiver.convertToBytesStorage(objectLibrary.nativeBytes(receiver));
@@ -514,30 +514,30 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doFail(final NativeObject receiver, final ClassObject argument) {
+        protected static boolean doFail(final NativeObject receiver, final ClassObject argument) {
             return false;
         }
     }
 
     @ExportMessage
-    public static class NativeBytes {
+    protected static final class NativeBytes {
         @Specialization(guards = "obj.isByteType()")
-        protected static final byte[] doNativeBytes(final NativeObject obj) {
+        protected static byte[] doNativeBytes(final NativeObject obj) {
             return obj.getByteStorage();
         }
 
         @Specialization(guards = "obj.isShortType()")
-        protected static final byte[] doNativeShorts(final NativeObject obj) {
+        protected static byte[] doNativeShorts(final NativeObject obj) {
             return ArrayConversionUtils.bytesFromShortsReversed(obj.getShortStorage());
         }
 
         @Specialization(guards = "obj.isIntType()")
-        protected static final byte[] doNativeInts(final NativeObject obj) {
+        protected static byte[] doNativeInts(final NativeObject obj) {
             return ArrayConversionUtils.bytesFromIntsReversed(obj.getIntStorage());
         }
 
         @Specialization(guards = "obj.isLongType()")
-        protected static final byte[] doNativeLongs(final NativeObject obj) {
+        protected static byte[] doNativeLongs(final NativeObject obj) {
             return ArrayConversionUtils.bytesFromLongsReversed(obj.getLongStorage());
         }
     }
@@ -550,86 +550,86 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
 
     @ImportStatic(SqueakGuards.class)
     @ExportMessage
-    public static class ReplaceFromToWithStartingAt {
+    protected static final class ReplaceFromToWithStartingAt {
         @Specialization(guards = {"rcvr.isByteType()", "repl.isByteType()", "inBounds(rcvr.instsize(), rcvr.getByteLength(), start, stop, repl.instsize(), repl.getByteLength(), replStart)"})
-        protected static final boolean doNativeBytes(final NativeObject rcvr, final int start, final int stop, final NativeObject repl, final int replStart) {
+        protected static boolean doNativeBytes(final NativeObject rcvr, final int start, final int stop, final NativeObject repl, final int replStart) {
             System.arraycopy(repl.getByteStorage(), replStart - 1, rcvr.getByteStorage(), start - 1, 1 + stop - start);
             return true;
         }
 
         @Specialization(guards = {"rcvr.isShortType()", "repl.isShortType()", "inBounds(rcvr.instsize(), rcvr.getShortLength(), start, stop, repl.instsize(), repl.getShortLength(), replStart)"})
-        protected static final boolean doNativeShorts(final NativeObject rcvr, final int start, final int stop, final NativeObject repl, final int replStart) {
+        protected static boolean doNativeShorts(final NativeObject rcvr, final int start, final int stop, final NativeObject repl, final int replStart) {
             System.arraycopy(repl.getShortStorage(), replStart - 1, rcvr.getShortStorage(), start - 1, 1 + stop - start);
             return true;
         }
 
         @Specialization(guards = {"rcvr.isIntType()", "repl.isIntType()", "inBounds(rcvr.instsize(), rcvr.getIntLength(), start, stop, repl.instsize(), repl.getIntLength(), replStart)"})
-        protected static final boolean doNativeInts(final NativeObject rcvr, final int start, final int stop, final NativeObject repl, final int replStart) {
+        protected static boolean doNativeInts(final NativeObject rcvr, final int start, final int stop, final NativeObject repl, final int replStart) {
             System.arraycopy(repl.getIntStorage(), replStart - 1, rcvr.getIntStorage(), start - 1, 1 + stop - start);
             return true;
         }
 
         @Specialization(guards = {"rcvr.isLongType()", "repl.isLongType()", "inBounds(rcvr.instsize(), rcvr.getLongLength(), start, stop, repl.instsize(), repl.getLongLength(), replStart)"})
-        protected static final boolean doNativeLongs(final NativeObject rcvr, final int start, final int stop, final NativeObject repl, final int replStart) {
+        protected static boolean doNativeLongs(final NativeObject rcvr, final int start, final int stop, final NativeObject repl, final int replStart) {
             System.arraycopy(repl.getLongStorage(), replStart - 1, rcvr.getLongStorage(), start - 1, 1 + stop - start);
             return true;
         }
 
         @Specialization(guards = {"rcvr.isByteType()", "inBounds(rcvr.instsize(), rcvr.getByteLength(), start, stop, repl.instsize(), repl.size(), replStart)"})
-        protected static final boolean doNativeLargeInteger(final NativeObject rcvr, final int start, final int stop, final LargeIntegerObject repl, final int replStart) {
+        protected static boolean doNativeLargeInteger(final NativeObject rcvr, final int start, final int stop, final LargeIntegerObject repl, final int replStart) {
             System.arraycopy(repl.getBytes(), replStart - 1, rcvr.getByteStorage(), start - 1, 1 + stop - start);
             return true;
         }
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doFail(final NativeObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
+        protected static boolean doFail(final NativeObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
             return false;
         }
     }
 
     @ExportMessage
-    public abstract static class Size {
+    protected static final class Size {
         @Specialization(guards = "obj.isByteType()")
-        protected static final int doNativeBytes(final NativeObject obj) {
+        protected static int doNativeBytes(final NativeObject obj) {
             return obj.getByteLength();
         }
 
         @Specialization(guards = "obj.isShortType()")
-        protected static final int doNativeShorts(final NativeObject obj) {
+        protected static int doNativeShorts(final NativeObject obj) {
             return obj.getShortLength();
         }
 
         @Specialization(guards = "obj.isIntType()")
-        protected static final int doNativeInts(final NativeObject obj) {
+        protected static int doNativeInts(final NativeObject obj) {
             return obj.getIntLength();
         }
 
         @Specialization(guards = "obj.isLongType()")
-        protected static final int doNativeLongs(final NativeObject obj) {
+        protected static int doNativeLongs(final NativeObject obj) {
             return obj.getLongLength();
         }
     }
 
     @ExportMessage
-    public abstract static class ShallowCopy {
+    protected static final class ShallowCopy {
         @Specialization(guards = "receiver.isByteType()")
-        protected static final NativeObject doNativeBytes(final NativeObject receiver) {
+        protected static NativeObject doNativeBytes(final NativeObject receiver) {
             return NativeObject.newNativeBytes(receiver.image, receiver.getSqueakClass(), receiver.getByteStorage().clone());
         }
 
         @Specialization(guards = "receiver.isShortType()")
-        protected static final NativeObject doNativeShorts(final NativeObject receiver) {
+        protected static NativeObject doNativeShorts(final NativeObject receiver) {
             return NativeObject.newNativeShorts(receiver.image, receiver.getSqueakClass(), receiver.getShortStorage().clone());
         }
 
         @Specialization(guards = "receiver.isIntType()")
-        protected static final NativeObject doNativeInts(final NativeObject receiver) {
+        protected static NativeObject doNativeInts(final NativeObject receiver) {
             return NativeObject.newNativeInts(receiver.image, receiver.getSqueakClass(), receiver.getIntStorage().clone());
         }
 
         @Specialization(guards = "receiver.isLongType()")
-        protected static final NativeObject doNativeLongs(final NativeObject receiver) {
+        protected static NativeObject doNativeLongs(final NativeObject receiver) {
             return NativeObject.newNativeLongs(receiver.image, receiver.getSqueakClass(), receiver.getLongStorage().clone());
         }
     }

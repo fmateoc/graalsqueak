@@ -178,9 +178,9 @@ public final class CompiledMethodObject extends CompiledCodeObject {
 
     @ImportStatic(SqueakGuards.class)
     @ExportMessage
-    public static class ReplaceFromToWithStartingAt {
+    protected static final class ReplaceFromToWithStartingAt {
         @Specialization(guards = "inBounds(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)")
-        protected static final boolean doMethod(final CompiledMethodObject rcvr, final int start, final int stop, final CompiledMethodObject repl, final int replStart) {
+        protected static boolean doMethod(final CompiledMethodObject rcvr, final int start, final int stop, final CompiledMethodObject repl, final int replStart) {
             final int repOff = replStart - start;
             for (int i = start - 1; i < stop; i++) {
                 rcvr.atput0(i, repl.at0(repOff + i));
@@ -190,7 +190,7 @@ public final class CompiledMethodObject extends CompiledCodeObject {
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doFail(final CompiledMethodObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
+        protected static boolean doFail(final CompiledMethodObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
             return false;
         }
     }
@@ -211,12 +211,12 @@ public final class CompiledMethodObject extends CompiledCodeObject {
 
     @SuppressWarnings("static-method")
     @ExportMessage
-    public boolean isExecutable() {
+    protected boolean isExecutable() {
         return true;
     }
 
     @ExportMessage
-    public Object execute(final Object[] receiverAndArguments,
+    protected Object execute(final Object[] receiverAndArguments,
                     @Shared("wrapNode") @Cached final WrapToSqueakNode wrapNode,
                     @Shared("dispatchNode") @Cached final DispatchUneagerlyNode dispatchNode) throws ArityException {
         final int actualArity = receiverAndArguments.length;

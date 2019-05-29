@@ -94,9 +94,9 @@ public final class PointersObject extends AbstractPointersObject {
     }
 
     @ExportMessage
-    public static class Become {
+    protected static final class Become {
         @Specialization(guards = "receiver != other")
-        protected static final boolean doBecome(final PointersObject receiver, final PointersObject other) {
+        protected static boolean doBecome(final PointersObject receiver, final PointersObject other) {
             receiver.becomeOtherClass(other);
             final Object[] otherPointers = other.getPointers();
             other.setPointers(receiver.getPointers());
@@ -106,7 +106,7 @@ public final class PointersObject extends AbstractPointersObject {
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doFail(final PointersObject receiver, final Object other) {
+        protected static boolean doFail(final PointersObject receiver, final Object other) {
             return false;
         }
     }
@@ -129,15 +129,15 @@ public final class PointersObject extends AbstractPointersObject {
 
     @ImportStatic(SqueakGuards.class)
     @ExportMessage
-    public static class ReplaceFromToWithStartingAt {
+    protected static final class ReplaceFromToWithStartingAt {
         @Specialization(guards = "inBounds(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)")
-        protected static final boolean doPointers(final PointersObject rcvr, final int start, final int stop, final PointersObject repl, final int replStart) {
+        protected static boolean doPointers(final PointersObject rcvr, final int start, final int stop, final PointersObject repl, final int replStart) {
             System.arraycopy(repl.getPointers(), replStart - 1, rcvr.getPointers(), start - 1, 1 + stop - start);
             return true;
         }
 
         @Specialization(guards = "inBounds(rcvr.instsize(), rcvr.size(), start, stop, repl.instsize(), repl.size(), replStart)", limit = "1")
-        protected static final boolean doPointersWeakPointers(final PointersObject rcvr, final int start, final int stop, final WeakPointersObject repl, final int replStart,
+        protected static boolean doPointersWeakPointers(final PointersObject rcvr, final int start, final int stop, final WeakPointersObject repl, final int replStart,
                         @CachedLibrary("repl") final SqueakObjectLibrary replLib) {
             final int repOff = replStart - start;
             for (int i = start - 1; i < stop; i++) {
@@ -148,7 +148,7 @@ public final class PointersObject extends AbstractPointersObject {
 
         @SuppressWarnings("unused")
         @Fallback
-        protected static final boolean doFail(final PointersObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
+        protected static boolean doFail(final PointersObject rcvr, final int start, final int stop, final Object repl, final int replStart) {
             return false;
         }
     }

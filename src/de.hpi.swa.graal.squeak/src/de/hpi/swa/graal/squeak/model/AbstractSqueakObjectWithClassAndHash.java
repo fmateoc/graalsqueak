@@ -203,24 +203,25 @@ public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSquea
     @ExportMessage(name = "isMemberReadable")
     @ExportMessage(name = "isMemberModifiable")
     @ExportMessage(name = "isMemberInvocable")
-    public boolean isMemberReadable(final String key,
+    protected final boolean isMemberReadable(final String key,
                     @Shared("lookupNode") @Cached final LookupMethodByStringNode lookupNode) {
         return lookupNode.executeLookup(getSqueakClass(), toSelector(key)) != null;
     }
 
     @ExportMessage
-    public Object readMember(final String key,
+    protected final Object readMember(final String key,
                     @Shared("lookupNode") @Cached final LookupMethodByStringNode lookupNode) {
         return lookupNode.executeLookup(getSqueakClass(), toSelector(key));
     }
 
+    @SuppressWarnings("static-method")
     @ExportMessage
-    public boolean isMemberInsertable(@SuppressWarnings("unused") final String member) {
+    protected final boolean isMemberInsertable(@SuppressWarnings("unused") final String member) {
         return false;
     }
 
     @ExportMessage
-    public void writeMember(final String member, final Object value,
+    protected final void writeMember(final String member, final Object value,
                     @Shared("lookupNode") @Cached final LookupMethodByStringNode lookupNode,
                     @Shared("wrapNode") @Cached final WrapToSqueakNode wrapNode,
                     @Shared("dispatchNode") @Cached final DispatchUneagerlyNode dispatchNode) throws UnsupportedMessageException {
@@ -238,7 +239,7 @@ public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSquea
     }
 
     @ExportMessage
-    public Object invokeMember(final String member, final Object[] arguments,
+    protected final Object invokeMember(final String member, final Object[] arguments,
                     @Shared("lookupNode") @Cached final LookupMethodByStringNode lookupNode,
                     @Shared("wrapNode") @Cached final WrapToSqueakNode wrapNode,
                     @Shared("dispatchNode") @Cached final DispatchUneagerlyNode dispatchNode) throws UnsupportedMessageException, ArityException {
@@ -269,12 +270,12 @@ public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSquea
     }
 
     @ExportMessage
-    public final ClassObject squeakClass() {
+    protected final ClassObject squeakClass() {
         return getSqueakClass();
     }
 
     @ExportMessage
-    public final long squeakHash() {
+    protected final long squeakHash() {
         return getSqueakHash();
     }
 }
