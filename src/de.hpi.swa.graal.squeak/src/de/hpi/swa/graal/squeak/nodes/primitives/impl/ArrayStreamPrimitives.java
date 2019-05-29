@@ -178,7 +178,7 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
          * Context>>#objectSize:
          */
 
-        @Specialization(guards = {"objectLibrary.accepts(target)", "objectLibrary.squeakClass(target).isVariable()"}, limit = "3")
+        @Specialization(guards = {"!isNotProvided(target)", "objectLibrary.accepts(target)", "objectLibrary.squeakClass(target).isVariable()"}, limit = "3")
         protected static final long doObject(@SuppressWarnings("unused") final Object receiver, final Object target,
                         @CachedLibrary("target") final SqueakObjectLibrary objectLibrary) {
             return objectLibrary.size(target) - objectLibrary.instsize(target);

@@ -450,7 +450,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             return objectLibrary.squeakClass(receiver);
         }
 
-        @Specialization(guards = {"objectLibrary.accepts(receiver)", "!isNotProvided(target)"}, limit = "3")
+        @Specialization(guards = {"!isNotProvided(target)", "objectLibrary.accepts(target)", "!isNotProvided(target)"}, limit = "3")
         protected static final ClassObject doClass(@SuppressWarnings("unused") final Object receiver, final Object target,
                         @CachedLibrary("target") final SqueakObjectLibrary objectLibrary) {
             return objectLibrary.squeakClass(target);
