@@ -7,6 +7,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 import de.hpi.swa.graal.squeak.model.AbstractImmutableSqueakObjectWithClassAndHash;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
+import de.hpi.swa.graal.squeak.model.ImmutableConsCharObject;
 import de.hpi.swa.graal.squeak.model.ImmutablePointersObject;
 import de.hpi.swa.graal.squeak.model.NativeImmutableBytesObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
@@ -31,6 +32,11 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(names = "primitiveImmutableCopy")
     protected abstract static class PrimImmutableCopyNode extends AbstractPrimitiveNode implements UnaryPrimitive {
+
+        protected final boolean isConsCharObject(final PointersObject object) {
+            return object.getSqueakClassName().equals("Cons") && (object.getPointers()[0] instanceof Character);
+        }
+
         protected PrimImmutableCopyNode(final CompiledMethodObject method) {
             super(method);
         }
@@ -43,6 +49,11 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
         @Specialization
         protected Object doNativeImmutableBytes(final NativeImmutableBytesObject receiver) {
             return new NativeImmutableBytesObject(receiver);
+        }
+
+        @Specialization(guards = "isConsCharObject(receiver)")
+        protected Object doConsCharObject(final PointersObject receiver) {
+            return new ImmutableConsCharObject(receiver);
         }
 
         @Specialization
@@ -73,9 +84,20 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
             return false;
         }
     }
+
     @GenerateNodeFactory
     @SqueakPrimitive(names = "primitiveImmutableFromArgs")
     public abstract static class PrimImmutableFromArgs extends AbstractPrimitiveNode implements OctonaryPrimitive {
+
+        @SuppressWarnings("unused")
+        protected final boolean isConsClassObject(final ClassObject classObject) {
+            return classObject.getClassName().equals("Cons");
+        }
+
+        @SuppressWarnings("unused")
+        protected final boolean isCharacterObject(final Object object) {
+            return (object instanceof Character);
+        }
 
         protected PrimImmutableFromArgs(final CompiledMethodObject method) {
             super(method);
@@ -93,6 +115,13 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
         protected final Object doArg1(final ClassObject classObject, final Object arg1, final NotProvided n2, final NotProvided n3, final NotProvided n4, final NotProvided n5,
                                       final NotProvided n6, final NotProvided n7) {
             return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1});
+        }
+
+        @SuppressWarnings("unused")
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "isConsClassObject(classObject)", "isCharacterObject(arg1)"})
+        protected final Object doArgConsChar(final ClassObject classObject, final Object arg1, final Object arg2, final NotProvided n3, final NotProvided n4, final NotProvided n5, final NotProvided n6,
+                                             final NotProvided n7) {
+            return new ImmutableConsCharObject(method.image,classObject, (Character)arg1, arg2);
         }
 
         @SuppressWarnings("unused")
@@ -139,4 +168,5 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
             return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6,arg7});
         }
     }
+
 }
