@@ -11,6 +11,7 @@ import de.hpi.swa.graal.squeak.model.ImmutableConsCharObject;
 import de.hpi.swa.graal.squeak.model.ImmutablePointersObject;
 import de.hpi.swa.graal.squeak.model.NativeImmutableBytesObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
+import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
@@ -92,6 +93,7 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
         @SuppressWarnings("unused")
         protected final boolean isConsClassObject(final ClassObject classObject) {
             return classObject.getClassName().equals("Cons");
+            // return classObject == classObject.image.speciali...at(32)
         }
 
         @SuppressWarnings("unused")
@@ -118,14 +120,20 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "isConsClassObject(classObject)", "isCharacterObject(arg1)"})
-        protected final Object doArgConsChar(final ClassObject classObject, final Object arg1, final Object arg2, final NotProvided n3, final NotProvided n4, final NotProvided n5, final NotProvided n6,
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!isNotProvided(arg1)", "!isNotProvided(arg2)"})
+        protected final Object doArgConsChar(final ClassObject classObject, final char arg1, final ImmutableConsCharObject arg2, final NotProvided n3, final NotProvided n4, final NotProvided n5, final NotProvided n6,
                                              final NotProvided n7) {
-            return new ImmutableConsCharObject(method.image,classObject, (Character)arg1, arg2);
+            return new ImmutableConsCharObject(method.image,classObject, arg1, arg2);
+        }
+
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!isNotProvided(arg1)", "!isNotProvided(arg2)"})
+        protected final Object doArgConsChar(final ClassObject classObject, final char arg1, final NilObject arg2, final NotProvided n3, final NotProvided n4, final NotProvided n5, final NotProvided n6,
+                                             final NotProvided n7) {
+            return new ImmutableConsCharObject(method.image,classObject, arg1, null);
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)", "!isNotProvided(arg2)"})
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isCharacterObject(arg1)"})
         protected final Object doArg2(final ClassObject classObject, final Object arg1, final Object arg2, final NotProvided n3, final NotProvided n4, final NotProvided n5, final NotProvided n6,
                                       final NotProvided n7) {
             return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1,arg2});

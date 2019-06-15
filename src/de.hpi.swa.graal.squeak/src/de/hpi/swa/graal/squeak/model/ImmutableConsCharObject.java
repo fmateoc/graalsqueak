@@ -4,10 +4,10 @@ import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 
 public final class ImmutableConsCharObject extends AbstractImmutableSqueakObjectWithClassAndHash {
-    Object next;
-    char value;
+    final ImmutableConsCharObject next;
+    final char value;
 
-    public ImmutableConsCharObject(final SqueakImageContext image, final ClassObject sqClass, final char value, final Object next) {
+    public ImmutableConsCharObject(final SqueakImageContext image, final ClassObject sqClass, final char value, final ImmutableConsCharObject next) {
         super(image, sqClass);
         this.next = next;
         this.value = value;
@@ -28,14 +28,15 @@ public final class ImmutableConsCharObject extends AbstractImmutableSqueakObject
             throw new Exception("Trying to create ImmutableConsCharObject from incompatible pointers objects");
         }*/
         this.value = (Character)original.getPointers()[0];
-        this.next = original.getPointers()[1];
+        Object nextValue = original.getPointers()[1];
+        this.next = nextValue == NilObject.SINGLETON ? null : (ImmutableConsCharObject) nextValue;
     }
 
     public Object at0(final long i) throws IndexOutOfBoundsException {
         if (i == 0) {
             return this.value;
         } else if (i == 1) {
-            return this.next;
+            return this.next == null ? NilObject.SINGLETON : this.next;
         } else {
             throw new IndexOutOfBoundsException("Trying to access pointer at index " + i + " for immutable cons char object");
         }
