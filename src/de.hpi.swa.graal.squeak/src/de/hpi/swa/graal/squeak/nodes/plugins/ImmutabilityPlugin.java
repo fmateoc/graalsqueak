@@ -91,12 +91,6 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
     public abstract static class PrimImmutableFromArgs extends AbstractPrimitiveNode implements OctonaryPrimitive {
 
         @SuppressWarnings("unused")
-        protected final boolean isConsClassObject(final ClassObject classObject) {
-            return classObject.getClassName().equals("Cons");
-            // return classObject == classObject.image.speciali...at(32)
-        }
-
-        @SuppressWarnings("unused")
         protected final boolean isCharacterObject(final Object object) {
             return (object instanceof Character);
         }
@@ -106,14 +100,14 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0"})
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()"})
         protected final Object doArg0(final ClassObject classObject, final NotProvided n1, final NotProvided n2, final NotProvided n3, final NotProvided n4, final NotProvided n5,
                                       final NotProvided n6, final NotProvided n7) {
             return new ImmutablePointersObject(method.image,classObject, new Object[]{});
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)"})
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!isNotProvided(arg1)"})
         protected final Object doArg1(final ClassObject classObject, final Object arg1, final NotProvided n2, final NotProvided n3, final NotProvided n4, final NotProvided n5,
                                       final NotProvided n6, final NotProvided n7) {
             return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1});
@@ -140,28 +134,28 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)"})
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)"})
         protected final Object doArg3(final ClassObject classObject, final Object arg1, final Object arg2, final Object arg3, final NotProvided n4, final NotProvided n5, final NotProvided n6,
                                       final NotProvided n7) {
             return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1,arg2,arg3});
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)", "!isNotProvided(arg4)"})
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)", "!isNotProvided(arg4)"})
         protected final Object doArg3(final ClassObject classObject, final Object arg1, final Object arg2, final Object arg3, final Object arg4, final NotProvided n5, final NotProvided n6,
                                       final NotProvided n7) {
             return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1,arg2,arg3,arg4});
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)", "!isNotProvided(arg4)", "!isNotProvided(arg5)"})
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)", "!isNotProvided(arg4)", "!isNotProvided(arg5)"})
         protected final Object doArg5(final ClassObject classObject, final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final NotProvided n6,
                                       final NotProvided n7) {
             return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1,arg2,arg3,arg4,arg5});
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)", "!isNotProvided(arg4)", "!isNotProvided(arg5)",
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)", "!isNotProvided(arg4)", "!isNotProvided(arg5)",
                 "!isNotProvided(arg6)"})
         protected final Object doArg6(final ClassObject classObject, final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final Object arg6,
                                       final NotProvided n7) {
@@ -169,7 +163,7 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
         }
 
         @SuppressWarnings("unused")
-        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "method.getNumLiterals() > 0", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)", "!isNotProvided(arg4)", "!isNotProvided(arg5)",
+        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isNotProvided(arg3)", "!isNotProvided(arg4)", "!isNotProvided(arg5)",
                 "!isNotProvided(arg6)", "!isNotProvided(arg7)"})
         protected final Object doArg7(final ClassObject classObject, final Object arg1, final Object arg2, final Object arg3, final Object arg4, final Object arg5, final Object arg6,
                                       final Object arg7) {
