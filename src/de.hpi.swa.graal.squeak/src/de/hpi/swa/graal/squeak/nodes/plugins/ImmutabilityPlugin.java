@@ -115,15 +115,9 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!isNotProvided(arg1)", "!isNotProvided(arg2)"})
-        protected final Object doArgConsChar(final ClassObject classObject, final char arg1, final ImmutableConsCharObject arg2, final NotProvided n3, final NotProvided n4, final NotProvided n5, final NotProvided n6,
+        protected final Object doArgConsChar(final ClassObject classObject, final char arg1, final Object arg2, final NotProvided n3, final NotProvided n4, final NotProvided n5, final NotProvided n6,
                                              final NotProvided n7) {
             return new ImmutableConsCharObject(method.image,classObject, arg1, arg2);
-        }
-
-        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!isNotProvided(arg1)", "!isNotProvided(arg2)"})
-        protected final Object doArgConsChar(final ClassObject classObject, final char arg1, final NilObject arg2, final NotProvided n3, final NotProvided n4, final NotProvided n5, final NotProvided n6,
-                                             final NotProvided n7) {
-            return new ImmutableConsCharObject(method.image,classObject, arg1, null);
         }
 
         @SuppressWarnings("unused")
