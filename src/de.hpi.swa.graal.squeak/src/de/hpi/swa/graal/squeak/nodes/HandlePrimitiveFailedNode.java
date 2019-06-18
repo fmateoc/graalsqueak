@@ -23,7 +23,7 @@ public abstract class HandlePrimitiveFailedNode extends AbstractNodeWithCode {
         return HandlePrimitiveFailedNodeGen.create(code);
     }
 
-    public abstract void executeHandle(VirtualFrame frame, PrimitiveFailed e);
+    public abstract void executeHandle(VirtualFrame frame, FrameStackWriteNode pushNode, PrimitiveFailed e);
 
     /*
      * Look up error symbol in error table and push it to stack. The fallback code pops the error
@@ -31,23 +31,21 @@ public abstract class HandlePrimitiveFailedNode extends AbstractNodeWithCode {
      * StackInterpreter>>#getErrorObjectFromPrimFailCode for more information.
      */
     @Specialization(guards = {"followedByExtendedStore(code)", "e.getReasonCode() < sizeNode.execute(code.image.primitiveErrorTable)"}, limit = "1")
-    protected final void doHandleWithLookup(final VirtualFrame frame, final PrimitiveFailed e,
+    protected final void doHandleWithLookup(final VirtualFrame frame, final FrameStackWriteNode pushNode, final PrimitiveFailed e,
                     @SuppressWarnings("unused") @Cached final ArrayObjectSizeNode sizeNode,
-                    @Cached("create(code)") final FrameStackWriteNode pushNode,
                     @Cached final ArrayObjectReadNode readNode) {
         pushNode.executePush(frame, readNode.execute(code.image.primitiveErrorTable, e.getReasonCode()));
     }
 
     @Specialization(guards = {"followedByExtendedStore(code)", "e.getReasonCode() >= sizeNode.execute(code.image.primitiveErrorTable)"}, limit = "1")
-    protected static final void doHandleRawValue(final VirtualFrame frame, final PrimitiveFailed e,
-                    @SuppressWarnings("unused") @Cached final ArrayObjectSizeNode sizeNode,
-                    @Cached("create(code)") final FrameStackWriteNode pushNode) {
+    protected static final void doHandleRawValue(final VirtualFrame frame, final FrameStackWriteNode pushNode, final PrimitiveFailed e,
+                    @SuppressWarnings("unused") @Cached final ArrayObjectSizeNode sizeNode) {
         pushNode.executePush(frame, e.getReasonCode());
     }
 
     @SuppressWarnings("unused")
     @Specialization(guards = "!followedByExtendedStore(code)")
-    protected static final void doNothing(final PrimitiveFailed e) {
+    protected static final void doNothing(final FrameStackWriteNode pushNode, final PrimitiveFailed e) {
         // nothing to do
     }
 

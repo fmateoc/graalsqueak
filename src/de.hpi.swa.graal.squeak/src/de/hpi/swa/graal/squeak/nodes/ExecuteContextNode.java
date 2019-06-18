@@ -1,26 +1,23 @@
 package de.hpi.swa.graal.squeak.nodes;
 
-import java.util.logging.Level;
-
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
-import com.oracle.truffle.api.TruffleLogger;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.MaterializedFrame;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.LoopNode;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 
-import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.exceptions.ProcessSwitch;
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonVirtualReturn;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
-import de.hpi.swa.graal.squeak.nodes.ExecuteContextNodeGen.TriggerInterruptHandlerNodeGen;
+import de.hpi.swa.graal.squeak.nodes.ExecuteContextNodeFactory.TriggerInterruptHandlerNodeGen;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.AbstractBytecodeNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.JumpBytecodes.ConditionalJumpNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.JumpBytecodes.UnconditionalJumpNode;
@@ -32,16 +29,11 @@ import de.hpi.swa.graal.squeak.nodes.bytecodes.ReturnBytecodes.ReturnReceiverNod
 import de.hpi.swa.graal.squeak.nodes.bytecodes.ReturnBytecodes.ReturnTopFromBlockNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.ReturnBytecodes.ReturnTopFromMethodNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackReadAndClearNode;
-import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
-import de.hpi.swa.graal.squeak.nodes.primitives.impl.ControlPrimitives.PrimitiveFailedNode;
-import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
-import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 import de.hpi.swa.graal.squeak.util.InterruptHandlerNode;
 import de.hpi.swa.graal.squeak.util.SqueakBytecodeDecoder;
 
-public abstract class ExecuteContextNode extends AbstractNodeWithCode {
-    private static final TruffleLogger LOG = TruffleLogger.getLogger(SqueakLanguageConfig.ID, CallPrimitiveNode.class);
+public final class ExecuteContextNode extends AbstractNodeWithCode {
     private static final boolean DECODE_BYTECODE_ON_DEMAND = true;
     private static final int STACK_DEPTH_LIMIT = 25000;
 
@@ -49,9 +41,9 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
     @Child private HandleNonLocalReturnNode handleNonLocalReturnNode;
     @Child private TriggerInterruptHandlerNode triggerInterruptHandlerNode;
     @Child private GetOrCreateContextNode getOrCreateContextNode;
+    @Child private MaterializeContextOnMethodExitNode materializeContextOnMethodExitNode;
 
     @Child private FrameStackReadAndClearNode readAndClearNode;
-    @Child private HandlePrimitiveFailedNode handlePrimitiveFailedNode;
 
     private static int stackDepth = 0;
 
@@ -68,20 +60,16 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
     }
 
     public static ExecuteContextNode create(final CompiledCodeObject code) {
-        return ExecuteContextNodeGen.create(code);
+        return new ExecuteContextNode(code);
     }
 
-    public abstract Object executeContext(VirtualFrame frame, ContextObject context);
-
     @Override
-    public final String toString() {
+    public String toString() {
         CompilerAsserts.neverPartOfCompilation();
         return code.toString();
     }
 
-    @Specialization(guards = "context == null")
-    protected final Object doVirtualized(final VirtualFrame frame, @SuppressWarnings("unused") final ContextObject context,
-                    @Cached("create(code)") final MaterializeContextOnMethodExitNode materializeContextOnMethodExitNode) {
+    public Object executeContext(final VirtualFrame frame) {
         final boolean shouldCheckStackDepth = CompilerDirectives.inInterpreter() || CompilerDirectives.inCompilationRoot();
         try {
             if (shouldCheckStackDepth && stackDepth++ > STACK_DEPTH_LIMIT) {
@@ -106,12 +94,12 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
             if (shouldCheckStackDepth) {
                 stackDepth--;
             }
-            materializeContextOnMethodExitNode.execute(frame);
+            getMaterializeContextOnMethodExitNode().execute(frame);
         }
     }
 
-    @Fallback
-    protected final Object doNonVirtualized(final VirtualFrame frame, final ContextObject context) {
+    public Object executeTopLevelContext(final ContextObject context) {
+        final MaterializedFrame frame = context.getTruffleFrame();
         // maybe persist newContext, so there's no need to lookup the context to update its pc.
         try {
             if (triggerInterruptHandlerNode != null) {
@@ -146,12 +134,20 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
         return getOrCreateContextNode;
     }
 
+    private MaterializeContextOnMethodExitNode getMaterializeContextOnMethodExitNode() {
+        if (materializeContextOnMethodExitNode == null) {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            materializeContextOnMethodExitNode = insert(MaterializeContextOnMethodExitNode.create(code));
+        }
+        return materializeContextOnMethodExitNode;
+    }
+
     /*
      * Inspired by Sulong's LLVMDispatchBasicBlockNode (https://git.io/fjEDw).
      */
     @ExplodeLoop(kind = ExplodeLoop.LoopExplosionKind.MERGE_EXPLODE)
     private Object startBytecode(final VirtualFrame frame) {
-        int pc = 0;
+        int pc = code.hasPrimitive() ? CallPrimitiveNode.NUM_BYTECODES : 0;
         int backJumpCounter = 0;
         CompilerAsserts.compilationConstant(bytecodeNodes.length);
         Object returnValue = null;
@@ -181,22 +177,6 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
                     backJumpCounter++;
                 }
                 pc = successor;
-                continue bytecode_loop;
-            } else if (node instanceof CallPrimitiveNode) {
-                final AbstractPrimitiveNode primitiveNode = ((CallPrimitiveNode) node).primitiveNode;
-                if (primitiveNode != null) {
-                    try {
-                        returnValue = primitiveNode.executePrimitive(frame);
-                        break bytecode_loop;
-                    } catch (final PrimitiveFailed e) {
-                        /** getHandlePrimitiveFailedNode() acts as branch profile. */
-                        getHandlePrimitiveFailedNode().executeHandle(frame, e);
-                        LOG.log(Level.FINE, () -> (primitiveNode instanceof PrimitiveFailedNode ? FrameAccess.getMethod(frame) : primitiveNode) +
-                                        " (" + ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(frame)) + ")");
-                        /** continue with fallback code. */
-                    }
-                }
-                pc = node.getSuccessorIndex();
                 continue bytecode_loop;
             } else if (node instanceof AbstractReturnNode) {
                 if (node instanceof ReturnConstantNode) {
@@ -240,14 +220,6 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
         return readAndClearNode;
     }
 
-    private HandlePrimitiveFailedNode getHandlePrimitiveFailedNode() {
-        if (handlePrimitiveFailedNode == null) {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
-            handlePrimitiveFailedNode = insert(HandlePrimitiveFailedNode.create(code));
-        }
-        return handlePrimitiveFailedNode;
-    }
-
     /*
      * Non-optimized version of startBytecode which is used to resume contexts.
      */
@@ -267,22 +239,6 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
                 }
             } else if (node instanceof UnconditionalJumpNode) {
                 pc = ((UnconditionalJumpNode) node).getJumpSuccessor();
-                continue bytecode_loop_slow;
-            } else if (node instanceof CallPrimitiveNode) {
-                final AbstractPrimitiveNode primitiveNode = ((CallPrimitiveNode) node).primitiveNode;
-                if (primitiveNode != null) {
-                    try {
-                        returnValue = primitiveNode.executePrimitive(frame);
-                        break bytecode_loop_slow;
-                    } catch (final PrimitiveFailed e) {
-                        /** getHandlePrimitiveFailedNode() acts as branch profile. */
-                        getHandlePrimitiveFailedNode().executeHandle(frame, e);
-                        LOG.log(Level.FINE, () -> (primitiveNode instanceof PrimitiveFailedNode ? FrameAccess.getMethod(frame) : primitiveNode) +
-                                        " (" + ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(frame)) + ")");
-                        /** continue with fallback code. */
-                    }
-                }
-                pc = node.getSuccessorIndex();
                 continue bytecode_loop_slow;
             } else if (node instanceof AbstractReturnNode) {
                 if (node instanceof ReturnConstantNode) {

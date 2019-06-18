@@ -31,7 +31,7 @@ public final class ExecuteTopLevelContextNode extends RootNode {
     private final ContextObject initialContext;
     private final boolean needsShutdown;
 
-    @Child private ExecuteContextNode executeContextNode;
+    @Child private EnterTopLevelCodeNode enterTopLevelCodeNode;
     @Child private UnwindContextChainNode unwindContextChainNode = UnwindContextChainNode.create();
 
     private ExecuteTopLevelContextNode(final SqueakLanguage language, final ContextObject context, final CompiledCodeObject code, final boolean needsShutdown) {
@@ -75,13 +75,13 @@ public final class ExecuteTopLevelContextNode extends RootNode {
                 MaterializeContextOnMethodExitNode.reset();
                 final CompiledCodeObject code = activeContext.getBlockOrMethod();
                 // FIXME: do not create node here?
-                if (executeContextNode == null) {
-                    executeContextNode = insert(ExecuteContextNode.create(code));
+                if (enterTopLevelCodeNode == null) {
+                    enterTopLevelCodeNode = insert(EnterTopLevelCodeNode.create(code));
                 } else {
-                    executeContextNode.replace(ExecuteContextNode.create(code));
+                    enterTopLevelCodeNode.replace(EnterTopLevelCodeNode.create(code));
                 }
                 // doIt: activeContext.printSqStackTrace();
-                final Object result = executeContextNode.executeContext(activeContext.getTruffleFrame(), activeContext);
+                final Object result = enterTopLevelCodeNode.execute(activeContext);
                 activeContext = unwindContextChainNode.executeUnwind(sender, sender, result);
                 LOG.log(Level.FINE, "Local Return on top-level: {0}", activeContext);
             } catch (final ProcessSwitch ps) {

@@ -21,20 +21,17 @@ import de.hpi.swa.graal.squeak.nodes.bytecodes.StoreBytecodes.StoreIntoTempNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackReadAndClearNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackReadNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackWriteNode;
-import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
 
 public final class MiscellaneousBytecodes {
 
     public static final class CallPrimitiveNode extends AbstractBytecodeNode {
         public static final int NUM_BYTECODES = 3;
 
-        @Child public AbstractPrimitiveNode primitiveNode;
         private final int primitiveIndex;
 
-        public CallPrimitiveNode(final CompiledMethodObject method, final int index, final int byte1, final int byte2) {
+        private CallPrimitiveNode(final CompiledMethodObject method, final int index, final int byte1, final int byte2) {
             super(method, index, NUM_BYTECODES);
             primitiveIndex = byte1 + (byte2 << 8);
-            primitiveNode = method.image.primitiveNodeFactory.forIndex(method, primitiveIndex);
             assert method.hasPrimitive();
         }
 
