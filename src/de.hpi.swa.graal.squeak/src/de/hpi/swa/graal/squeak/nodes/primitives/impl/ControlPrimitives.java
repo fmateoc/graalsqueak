@@ -621,9 +621,10 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization
-        protected static final Object doFlush(final Object receiver) {
-            // TODO: actually flush caches once there are some
+        @TruffleBoundary
+        @Specialization(guards = "receiver.getSqueakClass().isSymbolClass()")
+        protected static final Object doFlush(final NativeObject receiver) {
+            receiver.image.methodCache.removeKey(receiver);
             return receiver;
         }
     }

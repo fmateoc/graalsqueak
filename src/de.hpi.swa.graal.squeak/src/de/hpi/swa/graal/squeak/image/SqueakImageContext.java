@@ -164,6 +164,7 @@ public final class SqueakImageContext {
     @CompilationFinal private PointersObject scheduler = null;
 
     public final PrimitiveNodeFactory primitiveNodeFactory = new PrimitiveNodeFactory();
+    public final EconomicMap<NativeObject, EconomicMap<ClassObject, Object>> methodCache = EconomicMap.create();
     public final EconomicMap<Long, SeekableByteChannel> filePluginHandles = EconomicMap.create();
     public final EconomicMap<Long, SqueakSocket> socketPluginHandles = EconomicMap.create();
     public final EconomicMap<Long, SqSSL> squeakSSLHandles = EconomicMap.create();
