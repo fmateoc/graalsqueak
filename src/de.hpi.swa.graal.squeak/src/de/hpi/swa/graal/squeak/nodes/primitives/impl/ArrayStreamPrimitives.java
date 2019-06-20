@@ -20,6 +20,7 @@ import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.ImmutableArrayObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeImmutableBytesObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
@@ -102,6 +103,11 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         protected static final Object doArray(final ArrayObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided,
                         @Shared("arrayObjectReadNode") @Cached final ArrayObjectReadNode arrayObjectReadNode) {
             return arrayObjectReadNode.execute(receiver, index - 1);
+        }
+
+        @Specialization(guards = "inBounds(index, receiver)")
+        protected static final Object doImmutableArray(final ImmutableArrayObject receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided) {
+            return receiver.at0(index - 1);
         }
 
         @Specialization(guards = {"inBoundsOfSqueakObject(index, receiver)",

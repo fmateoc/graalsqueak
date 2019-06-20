@@ -14,6 +14,7 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.EmptyObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
+import de.hpi.swa.graal.squeak.model.ImmutableArrayObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeImmutableBytesObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
@@ -84,6 +85,11 @@ public abstract class SqueakObjectSizeNode extends AbstractNode {
     @Specialization
     protected  static final int doNativeImmutableBytes(final NativeImmutableBytesObject obj) {
         return obj.getByteLength();
+    }
+
+    @Specialization
+    protected  static final int doImmutableArray(final ImmutableArrayObject obj) {
+        return obj.size();
     }
 
     @Specialization
