@@ -24,7 +24,7 @@ public final class InterruptHandlerState {
 
     protected long nextWakeupTick = 0;
     protected boolean interruptPending = false;
-    private boolean isActive = false;
+    private boolean isActive = true;
     private boolean pendingFinalizationSignals = false;
 
     /**
@@ -170,7 +170,7 @@ public final class InterruptHandlerState {
         CompilerAsserts.neverPartOfCompilation("Resetting interrupt handler only supported for testing purposes");
         nextWakeupTick = 0;
         interruptPending = false;
-        isActive = false;
         pendingFinalizationSignals = false;
+        semaphoresToSignal.clear();
     }
 }
