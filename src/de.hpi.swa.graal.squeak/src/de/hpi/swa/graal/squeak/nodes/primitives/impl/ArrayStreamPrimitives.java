@@ -315,6 +315,11 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         }
 
         @Specialization
+        protected static final long doImmutableArrayObject(final ImmutableArrayObject receiver, @SuppressWarnings("unused") final NotProvided notProvided) {
+            return receiver.size();
+        }
+
+        @Specialization
         protected static final long doClosure(final BlockClosureObject receiver, @SuppressWarnings("unused") final NotProvided notProvided) {
             return receiver.size() - receiver.instsize();
         }
