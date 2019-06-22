@@ -1,5 +1,7 @@
 package de.hpi.swa.graal.squeak.nodes.plugins;
 
+import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.NodeFactory;
@@ -16,6 +18,7 @@ import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
 import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectToObjectArrayNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.BinaryPrimitive;
@@ -102,8 +105,8 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "classObject.isIndexableWithNoInstVars()")
-        protected Object doArrayObject( final ClassObject classObject, ArrayObject param){
-            return new ImmutableArrayObject(method.image, classObject, param.getObjectStorage().clone());
+        protected Object doArrayObject(final ClassObject classObject, ArrayObject param, @Cached ArrayObjectToObjectArrayNode conversionNode){
+            return new ImmutableArrayObject(method.image, classObject, conversionNode.execute(param));
         }
     }
 
