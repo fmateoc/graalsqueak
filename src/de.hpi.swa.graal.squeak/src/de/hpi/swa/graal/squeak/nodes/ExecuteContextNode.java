@@ -19,6 +19,7 @@ import de.hpi.swa.graal.squeak.exceptions.ProcessSwitch;
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonVirtualReturn;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
+import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.ExecuteContextNodeGen.TriggerInterruptHandlerNodeGen;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.AbstractBytecodeNode;
@@ -50,6 +51,7 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
     @Child private GetOrCreateContextNode getOrCreateContextNode;
 
     @Child private FrameStackReadAndClearNode readAndClearNode;
+    @Child public AbstractPrimitiveNode primitiveNode;
     @Child private HandlePrimitiveFailedNode handlePrimitiveFailedNode;
 
     private static int stackDepth = 0;
@@ -60,6 +62,9 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
             bytecodeNodes = new AbstractBytecodeNode[SqueakBytecodeDecoder.trailerPosition(code)];
         } else {
             bytecodeNodes = SqueakBytecodeDecoder.decode(code);
+        }
+        if (code.hasPrimitive()) {
+            primitiveNode = code.image.primitiveNodeFactory.forMethod((CompiledMethodObject) code);
         }
     }
 
@@ -141,7 +146,19 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
      */
     @ExplodeLoop(kind = ExplodeLoop.LoopExplosionKind.MERGE_EXPLODE)
     private Object startBytecode(final VirtualFrame frame) {
-        int pc = 0;
+        if (primitiveNode != null) {
+            try {
+                return primitiveNode.executePrimitive(frame);
+            } catch (final PrimitiveFailed e) {
+                /** getHandlePrimitiveFailedNode() acts as branch profile. */
+                getHandlePrimitiveFailedNode().executeHandle(frame, e);
+                LOG.log(Level.FINE, () -> (primitiveNode instanceof PrimitiveFailedNode ? FrameAccess.getMethod(frame) : primitiveNode) +
+                                " (" + ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(frame)) + ")");
+                /** continue with fallback code. */
+            }
+        }
+        CompilerAsserts.compilationConstant(code.hasPrimitive());
+        int pc = code.hasPrimitive() ? CallPrimitiveNode.NUM_BYTECODES : 0;
         int backJumpCounter = 0;
         CompilerAsserts.compilationConstant(bytecodeNodes.length);
         Object returnValue = null;
@@ -171,22 +188,6 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
                     backJumpCounter++;
                 }
                 pc = successor;
-                continue bytecode_loop;
-            } else if (node instanceof CallPrimitiveNode) {
-                final AbstractPrimitiveNode primitiveNode = ((CallPrimitiveNode) node).primitiveNode;
-                if (primitiveNode != null) {
-                    try {
-                        returnValue = primitiveNode.executePrimitive(frame);
-                        break bytecode_loop;
-                    } catch (final PrimitiveFailed e) {
-                        /** getHandlePrimitiveFailedNode() acts as branch profile. */
-                        getHandlePrimitiveFailedNode().executeHandle(frame, e);
-                        LOG.log(Level.FINE, () -> (primitiveNode instanceof PrimitiveFailedNode ? FrameAccess.getMethod(frame) : primitiveNode) +
-                                        " (" + ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(frame)) + ")");
-                        /** continue with fallback code. */
-                    }
-                }
-                pc = node.getSuccessorIndex();
                 continue bytecode_loop;
             } else if (node instanceof AbstractReturnNode) {
                 if (node instanceof ReturnConstantNode) {
@@ -242,6 +243,7 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
      * Non-optimized version of startBytecode which is used to resume contexts.
      */
     private Object resumeBytecode(final VirtualFrame frame, final long initialPC) {
+        assert initialPC > 0;
         int pc = (int) initialPC;
         Object returnValue = null;
         bytecode_loop_slow: while (true) {
@@ -257,22 +259,6 @@ public abstract class ExecuteContextNode extends AbstractNodeWithCode {
                 }
             } else if (node instanceof UnconditionalJumpNode) {
                 pc = ((UnconditionalJumpNode) node).getJumpSuccessor();
-                continue bytecode_loop_slow;
-            } else if (node instanceof CallPrimitiveNode) {
-                final AbstractPrimitiveNode primitiveNode = ((CallPrimitiveNode) node).primitiveNode;
-                if (primitiveNode != null) {
-                    try {
-                        returnValue = primitiveNode.executePrimitive(frame);
-                        break bytecode_loop_slow;
-                    } catch (final PrimitiveFailed e) {
-                        /** getHandlePrimitiveFailedNode() acts as branch profile. */
-                        getHandlePrimitiveFailedNode().executeHandle(frame, e);
-                        LOG.log(Level.FINE, () -> (primitiveNode instanceof PrimitiveFailedNode ? FrameAccess.getMethod(frame) : primitiveNode) +
-                                        " (" + ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(frame)) + ")");
-                        /** continue with fallback code. */
-                    }
-                }
-                pc = node.getSuccessorIndex();
                 continue bytecode_loop_slow;
             } else if (node instanceof AbstractReturnNode) {
                 if (node instanceof ReturnConstantNode) {

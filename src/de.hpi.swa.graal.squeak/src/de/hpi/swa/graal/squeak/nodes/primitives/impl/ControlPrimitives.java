@@ -578,13 +578,15 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
 
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 118)
-    protected abstract static class PrimDoPrimitiveWithArgsNode extends AbstractPrimitiveNode implements QuaternaryPrimitive {
+    public abstract static class PrimDoPrimitiveWithArgsNode extends AbstractPrimitiveNode implements QuaternaryPrimitive {
         @Child private ArrayObjectToObjectArrayCopyNode getObjectArrayNode = ArrayObjectToObjectArrayCopyNode.create();
         @Child private CreateEagerArgumentsNode createEagerArgumentsNode = CreateEagerArgumentsNode.create();
 
         public PrimDoPrimitiveWithArgsNode(final CompiledMethodObject method) {
             super(method);
         }
+
+        // TODO: Cached primitiveNode for N primitiveIndices?
 
         @Specialization
         protected final Object doPrimitiveWithArgs(final VirtualFrame frame, final Object receiver, final long primitiveIndex, final ArrayObject argumentArray,
@@ -604,7 +606,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
              * acceptable because primitive is mostly used for debugging anyway.
              */
             final Object[] receiverAndArguments = getObjectArrayNode.executeWithFirst(argumentArray, receiver);
-            final AbstractPrimitiveNode primitiveNode = method.image.primitiveNodeFactory.forIndex(method, (int) primitiveIndex);
+            final AbstractPrimitiveNode primitiveNode = method.image.primitiveNodeFactory.forIndex((int) primitiveIndex, method);
             if (primitiveNode == null) {
                 throw new PrimitiveFailed();
             } else {

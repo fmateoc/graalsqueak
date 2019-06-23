@@ -34,7 +34,7 @@ public abstract class DispatchEagerlyNode extends AbstractNode {
     protected static final Object doPrimitiveEagerly(final VirtualFrame frame, final CompiledMethodObject method, final Object[] receiverAndArguments, final Object contextOrMarker,
                     @Cached("method") final CompiledMethodObject cachedMethod,
                     @Cached("method.getCallTargetStable()") final Assumption callTargetStable,
-                    @Cached("cachedMethod.image.primitiveNodeFactory.forIndex(cachedMethod, cachedMethod.primitiveIndex())") final AbstractPrimitiveNode primitiveNode,
+                    @Cached("cachedMethod.image.primitiveNodeFactory.forMethod(cachedMethod)") final AbstractPrimitiveNode primitiveNode,
                     @Cached final CreateEagerArgumentsNode createEagerArgumentsNode,
                     @Cached("cachedMethod.getCallTarget()") final RootCallTarget cachedTarget,
                     @Cached("create(cachedTarget)") final DirectCallNode callNode,

@@ -9,6 +9,7 @@ import org.graalvm.collections.UnmodifiableEconomicMap;
 
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.NodeFactory;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
@@ -58,7 +59,6 @@ import de.hpi.swa.graal.squeak.nodes.primitives.impl.StoragePrimitives;
 
 public final class PrimitiveNodeFactory {
     private static final int MAX_PRIMITIVE_INDEX = 575;
-    @CompilationFinal(dimensions = 1) private static final byte[] NULL_MODULE_NAME = NullPlugin.class.getSimpleName().getBytes();
 
     // Using an array instead of a HashMap requires type-checking to be disabled here.
     @SuppressWarnings("unchecked") @CompilationFinal(dimensions = 1) private final NodeFactory<? extends AbstractPrimitiveNode>[] primitiveTable = (NodeFactory<? extends AbstractPrimitiveNode>[]) new NodeFactory<?>[MAX_PRIMITIVE_INDEX];
@@ -109,15 +109,19 @@ public final class PrimitiveNodeFactory {
         fillPluginMap(image, plugins);
     }
 
-    public AbstractPrimitiveNode forIndex(final CompiledMethodObject method, final int primitiveIndex) {
-        CompilerAsserts.neverPartOfCompilation("Primitive node instantiation should never happen on fast path");
+    public AbstractPrimitiveNode forMethod(final CompiledMethodObject method) {
+        return forIndex(method.primitiveIndex(), method);
+    }
+
+    @TruffleBoundary
+    public AbstractPrimitiveNode forIndex(final int primitiveIndex, final CompiledMethodObject someMethod) {
         assert primitiveIndex >= 0 : "Unexpected negative primitiveIndex";
         if (264 <= primitiveIndex && primitiveIndex <= 520) {
-            return ControlPrimitivesFactory.PrimQuickReturnReceiverVariableNodeFactory.create(method, primitiveIndex - 264, new AbstractArgumentNode[]{new ArgumentNode(0)});
+            return ControlPrimitivesFactory.PrimQuickReturnReceiverVariableNodeFactory.create(someMethod, primitiveIndex - 264, new AbstractArgumentNode[]{new ArgumentNode(0)});
         } else if (primitiveIndex <= MAX_PRIMITIVE_INDEX) {
             final NodeFactory<? extends AbstractPrimitiveNode> nodeFactory = primitiveTable[primitiveIndex - 1];
             if (nodeFactory != null) {
-                return createInstance(method, nodeFactory);
+                return createInstance(someMethod, nodeFactory);
             }
         }
         return null;
@@ -129,19 +133,19 @@ public final class PrimitiveNodeFactory {
             return PrimitiveFailedNode.create(method);
         } else if (values[0] == NilObject.SINGLETON) {
             final NativeObject functionName = (NativeObject) values[1];
-            return forName(method, NULL_MODULE_NAME, functionName.getByteStorage());
+            return forName(method, NullPlugin.class.getSimpleName(), functionName.asStringUnsafe());
         } else {
             final NativeObject moduleName = (NativeObject) values[0];
             final NativeObject functionName = (NativeObject) values[1];
-            return forName(method, moduleName.getByteStorage(), functionName.getByteStorage());
+            return forName(method, moduleName.asStringUnsafe(), functionName.asStringUnsafe());
         }
     }
 
-    private AbstractPrimitiveNode forName(final CompiledMethodObject method, final byte[] moduleName, final byte[] functionName) {
+    private AbstractPrimitiveNode forName(final CompiledMethodObject method, final String moduleName, final String functionName) {
         CompilerAsserts.neverPartOfCompilation("Primitive node instantiation should never happen on fast path");
-        final UnmodifiableEconomicMap<String, NodeFactory<? extends AbstractPrimitiveNode>> functionNameToNodeFactory = pluginsMap.get(new String(moduleName));
+        final UnmodifiableEconomicMap<String, NodeFactory<? extends AbstractPrimitiveNode>> functionNameToNodeFactory = pluginsMap.get(moduleName);
         if (functionNameToNodeFactory != null) {
-            final NodeFactory<? extends AbstractPrimitiveNode> nodeFactory = functionNameToNodeFactory.get(new String(functionName));
+            final NodeFactory<? extends AbstractPrimitiveNode> nodeFactory = functionNameToNodeFactory.get(functionName);
             if (nodeFactory != null) {
                 return createInstance(method, nodeFactory);
             }
