@@ -20,9 +20,9 @@ import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
-import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.nodes.GetOrCreateContextNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
+import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodesFactory.PushClosureNodeGen;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodesFactory.PushNewArrayNodeGen;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodesFactory.PushReceiverNodeGen;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodesFactory.PushReceiverVariableNodeGen;
@@ -68,21 +68,23 @@ public final class PushBytecodes {
     }
 
     @GenerateWrapper
-    public static class PushClosureNode extends AbstractBytecodeNode implements InstrumentableNode {
+    public abstract static class PushClosureNode extends AbstractBytecodeNode implements InstrumentableNode {
         private final int blockSize;
         private final int numArgs;
         private final int numCopied;
 
         @Child protected FrameStackWriteNode pushNode;
+        @Child private GetOrCreateContextNode getOrCreateContextNode;
 
         @CompilationFinal private CompiledBlockObject block;
 
-        private PushClosureNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int i, final int j, final int k) {
+        protected PushClosureNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int i, final int j, final int k) {
             super(code, index, numBytecodes);
             numArgs = i & 0xF;
             numCopied = i >> 4 & 0xF;
             blockSize = j << 8 | k;
             pushNode = FrameStackWriteNode.create(code);
+            getOrCreateContextNode = GetOrCreateContextNode.create(code, false);
         }
 
         public PushClosureNode(final PushClosureNode node) {
@@ -90,10 +92,13 @@ public final class PushBytecodes {
             numArgs = node.numArgs;
             numCopied = node.numCopied;
             blockSize = node.blockSize;
+            // TODO: Re-use nodes or create new ones?
+            pushNode = FrameStackWriteNode.create(code);
+            getOrCreateContextNode = GetOrCreateContextNode.create(code, false);
         }
 
         public static PushClosureNode create(final CompiledCodeObject code, final int index, final int numBytecodes, final int i, final int j, final int k) {
-            return new PushClosureNode(code, index, numBytecodes, i, j, k);
+            return PushClosureNodeGen.create(code, index, numBytecodes, i, j, k);
         }
 
         private CompiledBlockObject getBlock(final VirtualFrame frame) {
@@ -113,32 +118,32 @@ public final class PushBytecodes {
         }
 
         @Override
-        public void executeVoid(final VirtualFrame frame) {
+        public final void executeVoid(final VirtualFrame frame) {
             throw SqueakException.create("Should never be called directly.");
         }
 
-        public void executePush(final VirtualFrame frame, final FrameStackReadAndClearNode readAndClearNode) {
-            pushNode.executePush(frame, createClosure(frame, readAndClearNode));
+        public final void executePush(final VirtualFrame frame, final FrameStackReadAndClearNode readAndClearNode) {
+            executePush(frame, FrameAccess.getClosure(frame), readAndClearNode.executePopN(frame, numCopied));
         }
 
-        private BlockClosureObject createClosure(final VirtualFrame frame, final FrameStackReadAndClearNode readAndClearNode) {
+        protected abstract void executePush(VirtualFrame frame, BlockClosureObject closure, Object[] copiedValues);
+
+        @Specialization(guards = "closure == null")
+        protected final void doClosureHome(final VirtualFrame frame, @SuppressWarnings("unused") final BlockClosureObject closure, final Object[] copiedValues) {
             final Object receiver = FrameAccess.getReceiver(frame);
-            final Object[] copiedValues = readAndClearNode.executePopN(frame, numCopied);
-            ContextObject thisContext = FrameAccess.getContext(frame, code);
-            if (thisContext == null) {
-                final FrameMarker thisContextMarker = FrameAccess.getMarker(frame, code);
-                thisContext = ContextObject.create(code.image, code.getSqueakContextSize(), thisContextMarker);
-                FrameAccess.setContext(frame, code, thisContext);
-            }
-            final BlockClosureObject closure = FrameAccess.getClosure(frame);
-            final Object homeContextSender;
-            if (closure != null) {
-                homeContextSender = closure.getHomeContextSender();
-            } else {
-                assert code instanceof CompiledMethodObject : "Only methods can be home contexts";
-                homeContextSender = FrameAccess.getSender(frame);
-            }
-            return new BlockClosureObject(getBlock(frame), receiver, copiedValues, thisContext, homeContextSender);
+            final ContextObject thisContext = getOrCreateContextNode.executeGet(frame);
+            assert code instanceof CompiledMethodObject : "Only methods can be home contexts";
+            final Object homeContextSender = FrameAccess.getSender(frame);
+            pushNode.executePush(frame, new BlockClosureObject(getBlock(frame), receiver, copiedValues, thisContext, homeContextSender));
+        }
+
+        @Specialization(guards = "closure != null")
+        protected final void doClosure(final VirtualFrame frame, final BlockClosureObject closure, final Object[] copiedValues) {
+            final Object receiver = FrameAccess.getReceiver(frame);
+            final ContextObject thisContext = getOrCreateContextNode.executeGet(frame);
+            assert code instanceof CompiledBlockObject : "Only blocks can have home contexts";
+            final Object homeContextSender = closure.getHomeContextSender();
+            pushNode.executePush(frame, new BlockClosureObject(getBlock(frame), receiver, copiedValues, thisContext, homeContextSender));
         }
 
         @Override

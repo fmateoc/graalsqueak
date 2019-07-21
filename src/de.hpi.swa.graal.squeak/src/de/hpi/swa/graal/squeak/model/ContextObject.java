@@ -42,17 +42,21 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         this.size = size;
     }
 
-    private ContextObject(final SqueakImageContext image, final int size, final FrameMarker marker) {
-        this(image, size);
-        truffleFrameMarker = marker;
-    }
-
     private ContextObject(final Frame frame, final CompiledCodeObject blockOrMethod) {
         super(blockOrMethod.image);
         assert FrameAccess.getSender(frame) != null;
         assert FrameAccess.getContext(frame, blockOrMethod) == null;
         truffleFrame = frame.materialize();
         FrameAccess.setContext(truffleFrame, blockOrMethod, this);
+        size = blockOrMethod.getSqueakContextSize();
+    }
+
+    private ContextObject(final CompiledCodeObject blockOrMethod, final Frame frame) {
+        super(blockOrMethod.image);
+        assert FrameAccess.getSender(frame) != null;
+        assert FrameAccess.getContext(frame, blockOrMethod) == null;
+        truffleFrameMarker = FrameAccess.getMarker(frame, blockOrMethod);
+        FrameAccess.setContext(frame, blockOrMethod, this);
         size = blockOrMethod.getSqueakContextSize();
     }
 
@@ -99,8 +103,8 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         return new ContextObject(frame, blockOrMethod);
     }
 
-    public static ContextObject create(final SqueakImageContext image, final int size, final FrameMarker marker) {
-        return new ContextObject(image, size, marker);
+    public static ContextObject createWithFrameMarker(final Frame frame, final CompiledCodeObject blockOrMethod) {
+        return new ContextObject(blockOrMethod, frame);
     }
 
     @Override
