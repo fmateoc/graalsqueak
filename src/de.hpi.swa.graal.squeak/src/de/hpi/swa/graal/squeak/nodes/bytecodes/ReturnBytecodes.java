@@ -65,7 +65,7 @@ public final class ReturnBytecodes {
         @Specialization(guards = {"closure != null"})
         protected final Object doClosureReturn(final VirtualFrame frame, final BlockClosureObject closure, final FrameStackReadAndClearNode readAndClearNode) {
             // Target is sender of closure's home context.
-            throw new NonLocalReturn(getReturnValue(frame, readAndClearNode), closure.getHomeContext().getFrameSender());
+            throw new NonLocalReturn(getReturnValue(frame, readAndClearNode), closure.getHomeContextSender());
         }
     }
 
@@ -137,7 +137,7 @@ public final class ReturnBytecodes {
 
         @Specialization(guards = {"closureOrNull != null", "hasModifiedSender(frame)"})
         protected final Object doNonLocalReturn(final VirtualFrame frame, final BlockClosureObject closureOrNull, final FrameStackReadAndClearNode readAndClearNode) {
-            throw new NonLocalReturn(getReturnValue(frame, readAndClearNode), closureOrNull.getHomeContext().getFrameSender());
+            throw new NonLocalReturn(getReturnValue(frame, readAndClearNode), closureOrNull.getHomeContextSender());
         }
 
         @Override

@@ -4,7 +4,6 @@ import java.util.Arrays;
 
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.interop.ArityException;
@@ -23,6 +22,7 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 public final class BlockClosureObject extends AbstractSqueakObjectWithHash {
     @CompilationFinal private Object receiver;
     @CompilationFinal private ContextObject outerContext;
+    @CompilationFinal private Object homeContextSender;
     @CompilationFinal private CompiledBlockObject block;
     @CompilationFinal private long pc = -1;
     @CompilationFinal private long numArgs = -1;
@@ -33,10 +33,11 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithHash {
         copied = ArrayUtils.EMPTY_ARRAY; // Ensure copied is set.
     }
 
-    public BlockClosureObject(final CompiledBlockObject compiledBlock, final Object receiver, final Object[] copied, final ContextObject outerContext) {
+    public BlockClosureObject(final CompiledBlockObject compiledBlock, final Object receiver, final Object[] copied, final ContextObject outerContext, final Object outerContextSender) {
         super(compiledBlock.image);
         block = compiledBlock;
         this.outerContext = outerContext;
+        homeContextSender = outerContextSender;
         this.receiver = receiver;
         this.copied = copied;
         pc = block.getInitialPC();
@@ -185,21 +186,19 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithHash {
         return block;
     }
 
-    public ContextObject getHomeContext() {
+    public Object getHomeContextSender() {
+        if (homeContextSender == null) {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            homeContextSender = getHomeContext().getFrameSender();
+        }
+        return homeContextSender;
+    }
+
+    private ContextObject getHomeContext() {
         // Recursively unpack closures until home context is reached.
         final BlockClosureObject closure = outerContext.getClosure();
         if (closure != null) {
-            return closure.getHomeContextWithBoundary();
-        } else {
-            return outerContext;
-        }
-    }
-
-    @TruffleBoundary
-    private ContextObject getHomeContextWithBoundary() {
-        final BlockClosureObject closure = outerContext.getClosure();
-        if (closure != null) {
-            return closure.getHomeContextWithBoundary();
+            return closure.getHomeContext();
         } else {
             return outerContext;
         }

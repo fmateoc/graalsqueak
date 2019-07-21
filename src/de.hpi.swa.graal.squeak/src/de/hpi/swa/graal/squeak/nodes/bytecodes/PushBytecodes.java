@@ -18,6 +18,7 @@ import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
+import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.GetOrCreateContextNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
@@ -126,7 +127,15 @@ public final class PushBytecodes {
             final Object receiver = FrameAccess.getReceiver(frame);
             final Object[] copiedValues = readAndClearNode.executePopN(frame, numCopied);
             final ContextObject outerContext = getOrCreateContextNode.executeGet(frame);
-            return new BlockClosureObject(getBlock(frame), receiver, copiedValues, outerContext);
+            final BlockClosureObject closure = FrameAccess.getClosure(frame);
+            final Object homeContextSender;
+            if (closure != null) {
+                homeContextSender = closure.getHomeContextSender();
+            } else {
+                assert code instanceof CompiledMethodObject : "Only methods can be home contexts";
+                homeContextSender = FrameAccess.getSender(frame);
+            }
+            return new BlockClosureObject(getBlock(frame), receiver, copiedValues, outerContext, homeContextSender);
         }
 
         @Override
