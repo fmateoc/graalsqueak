@@ -26,6 +26,7 @@ import de.hpi.swa.graal.squeak.util.MiscUtils;
 
 public final class ContextObject extends AbstractSqueakObjectWithHash {
     @CompilationFinal private MaterializedFrame truffleFrame;
+    private FrameMarker truffleFrameMarker;
     @CompilationFinal private int size;
     private boolean hasModifiedSender = false;
     private boolean escaped = false;
@@ -39,6 +40,11 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         super(image);
         truffleFrame = null;
         this.size = size;
+    }
+
+    private ContextObject(final SqueakImageContext image, final int size, final FrameMarker marker) {
+        this(image, size);
+        truffleFrameMarker = marker;
     }
 
     private ContextObject(final Frame frame, final CompiledCodeObject blockOrMethod) {
@@ -91,6 +97,10 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
 
     public static ContextObject create(final Frame frame, final CompiledCodeObject blockOrMethod) {
         return new ContextObject(frame, blockOrMethod);
+    }
+
+    public static ContextObject create(final SqueakImageContext image, final int size, final FrameMarker marker) {
+        return new ContextObject(image, size, marker);
     }
 
     @Override
@@ -379,7 +389,7 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
     }
 
     public CompiledMethodObject getMethod() {
-        return FrameAccess.getMethod(truffleFrame);
+        return FrameAccess.getMethod(getTruffleFrame());
     }
 
     public void setMethod(final CompiledMethodObject value) {
@@ -387,11 +397,11 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
     }
 
     public BlockClosureObject getClosure() {
-        return FrameAccess.getClosure(truffleFrame);
+        return FrameAccess.getClosure(getTruffleFrame());
     }
 
     public boolean hasClosure() {
-        return FrameAccess.getClosure(truffleFrame) != null;
+        return FrameAccess.getClosure(getTruffleFrame()) != null;
     }
 
     public void setClosure(final BlockClosureObject value) {
@@ -556,11 +566,19 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
     }
 
     public MaterializedFrame getTruffleFrame() {
+        if (truffleFrame == null) {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            truffleFrame = FrameAccess.findFrameForMarker(truffleFrameMarker).materialize();
+        }
         return truffleFrame;
     }
 
     public boolean hasTruffleFrame() {
         return truffleFrame != null;
+    }
+
+    public void setTruffleFrame(final MaterializedFrame truffleFrame) {
+        this.truffleFrame = truffleFrame;
     }
 
     public boolean hasMaterializedSender() {

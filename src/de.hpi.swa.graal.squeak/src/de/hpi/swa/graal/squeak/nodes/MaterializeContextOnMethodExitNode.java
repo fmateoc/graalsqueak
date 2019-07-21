@@ -35,6 +35,9 @@ public abstract class MaterializeContextOnMethodExitNode extends AbstractNodeWit
     @Specialization(guards = {"!hasLastSeenContext(frame)", "!isVirtualized(frame)", "getContext(frame).hasEscaped()"})
     protected final void doStartMaterialization(final VirtualFrame frame) {
         lastSeenContext = getContext(frame);
+        if (!lastSeenContext.hasTruffleFrame()) {
+            lastSeenContext.setTruffleFrame(frame.materialize());
+        }
     }
 
     @Specialization(guards = {"hasLastSeenContext(frame)"})
@@ -45,7 +48,9 @@ public abstract class MaterializeContextOnMethodExitNode extends AbstractNodeWit
                     @Cached("create(code)") final GetOrCreateContextNode getOrCreateContextNode) {
         final ContextObject context = getOrCreateContextNode.executeGet(frame);
         if (isNotLastSeenContextProfile.profile(context != lastSeenContext)) {
-            assert context.hasTruffleFrame();
+            if (!context.hasTruffleFrame()) {
+                context.setTruffleFrame(frame.materialize());
+            }
             if (lastSeenNeedsSenderProfile.profile(lastSeenContext != null && !lastSeenContext.hasMaterializedSender())) {
                 lastSeenContext.setSender(context);
             }

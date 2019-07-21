@@ -4,6 +4,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 
+import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
@@ -33,7 +34,16 @@ public abstract class SqueakObjectAtPutAndMarkContextsNode extends AbstractNode 
         atPut0Node.execute(object, index, value);
     }
 
-    @Specialization(guards = {"!isContextObject(value)"})
+    @Specialization
+    protected final void doBlockClosure(final Object object, final BlockClosureObject value) {
+        final ContextObject outerContext = value.getOuterContextOrNull();
+        if (outerContext != null) {
+            outerContext.markEscaped();
+        }
+        atPut0Node.execute(object, index, value);
+    }
+
+    @Specialization(guards = {"!isContextObject(value)", "!isBlockClosureObject(value)"})
     protected final void doSqueakObject(final Object object, final Object value) {
         atPut0Node.execute(object, index, value);
     }

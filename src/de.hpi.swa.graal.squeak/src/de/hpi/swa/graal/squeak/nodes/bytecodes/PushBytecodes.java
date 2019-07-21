@@ -20,6 +20,7 @@ import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
+import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.nodes.GetOrCreateContextNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodesFactory.PushNewArrayNodeGen;
@@ -73,7 +74,6 @@ public final class PushBytecodes {
         private final int numCopied;
 
         @Child protected FrameStackWriteNode pushNode;
-        @Child private GetOrCreateContextNode getOrCreateContextNode;
 
         @CompilationFinal private CompiledBlockObject block;
 
@@ -83,7 +83,6 @@ public final class PushBytecodes {
             numCopied = i >> 4 & 0xF;
             blockSize = j << 8 | k;
             pushNode = FrameStackWriteNode.create(code);
-            getOrCreateContextNode = GetOrCreateContextNode.create(code);
         }
 
         public PushClosureNode(final PushClosureNode node) {
@@ -91,7 +90,6 @@ public final class PushBytecodes {
             numArgs = node.numArgs;
             numCopied = node.numCopied;
             blockSize = node.blockSize;
-            getOrCreateContextNode = GetOrCreateContextNode.create(code);
         }
 
         public static PushClosureNode create(final CompiledCodeObject code, final int index, final int numBytecodes, final int i, final int j, final int k) {
@@ -126,7 +124,12 @@ public final class PushBytecodes {
         private BlockClosureObject createClosure(final VirtualFrame frame, final FrameStackReadAndClearNode readAndClearNode) {
             final Object receiver = FrameAccess.getReceiver(frame);
             final Object[] copiedValues = readAndClearNode.executePopN(frame, numCopied);
-            final ContextObject outerContext = getOrCreateContextNode.executeGet(frame);
+            ContextObject thisContext = FrameAccess.getContext(frame, code);
+            if (thisContext == null) {
+                final FrameMarker thisContextMarker = FrameAccess.getMarker(frame, code);
+                thisContext = ContextObject.create(code.image, code.getSqueakContextSize(), thisContextMarker);
+                FrameAccess.setContext(frame, code, thisContext);
+            }
             final BlockClosureObject closure = FrameAccess.getClosure(frame);
             final Object homeContextSender;
             if (closure != null) {
@@ -135,7 +138,7 @@ public final class PushBytecodes {
                 assert code instanceof CompiledMethodObject : "Only methods can be home contexts";
                 homeContextSender = FrameAccess.getSender(frame);
             }
-            return new BlockClosureObject(getBlock(frame), receiver, copiedValues, outerContext, homeContextSender);
+            return new BlockClosureObject(getBlock(frame), receiver, copiedValues, thisContext, homeContextSender);
         }
 
         @Override

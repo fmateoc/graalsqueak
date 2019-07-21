@@ -5,6 +5,7 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 
+import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithCode;
@@ -32,7 +33,17 @@ public abstract class TemporaryWriteMarkContextsNode extends AbstractNodeWithCod
         writeNode.executeWrite(frame, value);
     }
 
-    @Specialization(guards = {"!isContextObject(value)"})
+    @Specialization
+    protected final void doWriteBlockClosure(final VirtualFrame frame, final BlockClosureObject value) {
+        assert value != null;
+        final ContextObject outerContext = value.getOuterContextOrNull();
+        if (outerContext != null) {
+            outerContext.markEscaped();
+        }
+        writeNode.executeWrite(frame, value);
+    }
+
+    @Specialization(guards = {"!isContextObject(value)", "!isBlockClosureObject(value)"})
     protected final void doWriteOther(final VirtualFrame frame, final Object value) {
         assert value != null;
         writeNode.executeWrite(frame, value);

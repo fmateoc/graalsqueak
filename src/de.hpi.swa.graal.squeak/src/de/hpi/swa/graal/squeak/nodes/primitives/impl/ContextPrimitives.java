@@ -60,7 +60,7 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(guards = "receiver.hasMaterializedSender()")
+        @Specialization(guards = {"receiver.hasTruffleFrame()", "receiver.hasMaterializedSender()"})
         protected static final AbstractSqueakObject doFindNext(final ContextObject receiver, final AbstractSqueakObject previousContextOrNil) {
             ContextObject current = receiver;
             while (current != previousContextOrNil) {
@@ -77,7 +77,7 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
             return NilObject.SINGLETON;
         }
 
-        @Specialization(guards = "!receiver.hasMaterializedSender()")
+        @Specialization(guards = "!receiver.hasTruffleFrame() || !receiver.hasMaterializedSender()")
         protected static final AbstractSqueakObject doFindNextAvoidingMaterialization(final ContextObject receiver, final ContextObject previousContext) {
             // Sender is not materialized, so avoid materialization by walking Truffle frames.
             final boolean[] foundMyself = {false};
@@ -109,7 +109,7 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
             return NilObject.nullToNil(result);
         }
 
-        @Specialization(guards = "!receiver.hasMaterializedSender()")
+        @Specialization(guards = "!receiver.hasTruffleFrame() || !receiver.hasMaterializedSender()")
         protected static final AbstractSqueakObject doFindNextAvoidingMaterializationNil(final ContextObject receiver, @SuppressWarnings("unused") final NilObject nil) {
             return doFindNext(receiver, nil);
         }
@@ -202,7 +202,7 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(guards = {"receiver.hasMaterializedSender()"})
+        @Specialization(guards = {"receiver.hasTruffleFrame()", "receiver.hasMaterializedSender()"})
         protected static final AbstractSqueakObject findNext(final ContextObject receiver) {
             ContextObject context = receiver;
             while (true) {
@@ -220,7 +220,7 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
             }
         }
 
-        @Specialization(guards = {"!receiver.hasMaterializedSender()"})
+        @Specialization(guards = {"!receiver.hasTruffleFrame() || !receiver.hasMaterializedSender()"})
         protected static final AbstractSqueakObject findNextAvoidingMaterialization(final ContextObject receiver) {
             final boolean[] foundMyself = new boolean[1];
             final Object[] lastSender = new Object[1];
