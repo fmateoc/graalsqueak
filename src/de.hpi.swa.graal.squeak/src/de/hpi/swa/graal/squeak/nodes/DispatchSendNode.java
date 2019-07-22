@@ -22,8 +22,6 @@ import de.hpi.swa.graal.squeak.util.MiscUtils;
 
 @NodeInfo(cost = NodeCost.NONE)
 public abstract class DispatchSendNode extends AbstractNodeWithCode {
-    protected static final int NO_LIMIT = Integer.MAX_VALUE;
-
     @Child private DispatchEagerlyNode dispatchNode = DispatchEagerlyNode.create();
     @Child private LookupMethodNode lookupNode;
 
@@ -38,11 +36,20 @@ public abstract class DispatchSendNode extends AbstractNodeWithCode {
     public abstract Object executeSend(VirtualFrame frame, NativeObject selector, Object lookupResult, ClassObject rcvrClass, Object[] receiverAndArguments, Object contextOrMarker);
 
     @Specialization(guards = {"!code.image.isHeadless() || isAllowedInHeadlessMode(selector)", "lookupResult != null", "lookupResult == cachedMethod"}, //
-                    assumptions = {"cachedMethod.getDoesNotNeedSenderAssumption()"}, limit = "NO_LIMIT")
+                    assumptions = {"cachedMethod.getDoesNotNeedSenderAssumption()"})
     protected final Object doDispatch(final VirtualFrame frame, @SuppressWarnings("unused") final NativeObject selector, final CompiledMethodObject lookupResult,
                     @SuppressWarnings("unused") final ClassObject rcvrClass, final Object[] rcvrAndArgs, final Object contextOrMarker,
                     @SuppressWarnings("unused") @Cached("lookupResult") final CompiledMethodObject cachedMethod) {
         return dispatchNode.executeDispatch(frame, lookupResult, rcvrAndArgs, contextOrMarker);
+    }
+
+    @Specialization(guards = {"!code.image.isHeadless() || isAllowedInHeadlessMode(selector)", "lookupResult != null", "lookupResult == cachedMethod",
+                    "!cachedMethod.getDoesNotNeedSenderAssumption().isValid()"})
+    protected final Object doDispatchFoo(final VirtualFrame frame, @SuppressWarnings("unused") final NativeObject selector, final CompiledMethodObject lookupResult,
+                    @SuppressWarnings("unused") final ClassObject rcvrClass, final Object[] rcvrAndArgs, @SuppressWarnings("unused") final Object contextOrMarker,
+                    @SuppressWarnings("unused") @Cached("lookupResult") final CompiledMethodObject cachedMethod,
+                    @Cached("create(code)") final GetOrCreateContextNode getOrCreateContextNode) {
+        return dispatchNode.executeDispatch(frame, lookupResult, rcvrAndArgs, getOrCreateContextNode.executeGet(frame));
     }
 
     @Specialization(guards = {"!code.image.isHeadless() || isAllowedInHeadlessMode(selector)", "lookupResult != null"})
