@@ -26,14 +26,13 @@ public abstract class GetOrCreateContextNode extends AbstractNodeWithCode {
 
     public abstract ContextObject executeGet(Frame frame);
 
-    @Specialization(guards = {"materializeFrame", "isVirtualized(frame)"})
+    @Specialization(guards = {"isVirtualized(frame)"})
     protected final ContextObject doCreateMaterialized(final VirtualFrame frame) {
-        return ContextObject.create(frame, code);
-    }
-
-    @Specialization(guards = {"!materializeFrame", "isVirtualized(frame)"})
-    protected final ContextObject doCreateWithFrameMarker(final VirtualFrame frame) {
-        return ContextObject.createWithFrameMarker(frame, code);
+        if (materializeFrame) {
+            return ContextObject.create(frame, code);
+        } else {
+            return ContextObject.createWithFrameMarker(frame, code);
+        }
     }
 
     @Fallback
