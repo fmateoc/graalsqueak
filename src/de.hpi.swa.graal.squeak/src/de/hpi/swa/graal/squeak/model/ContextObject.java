@@ -321,6 +321,10 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         return FrameAccess.getSender(truffleFrame);
     }
 
+    public void setFrameSender(final AbstractSqueakObject value) {
+        FrameAccess.setSender(truffleFrame, value);
+    }
+
     public AbstractSqueakObject getSender() {
         final Object value = FrameAccess.getSender(truffleFrame);
         if (value instanceof FrameMarker) {

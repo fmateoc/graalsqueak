@@ -3,6 +3,7 @@ package de.hpi.swa.graal.squeak.nodes.bytecodes;
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.GenerateWrapper;
@@ -137,7 +138,7 @@ public final class PushBytecodes {
             pushNode.executePush(frame, new BlockClosureObject(getBlock(frame), receiver, copiedValues, thisContext, homeContextSender));
         }
 
-        @Specialization(guards = "closure != null")
+        @Fallback
         protected final void doClosure(final VirtualFrame frame, final BlockClosureObject closure, final Object[] copiedValues) {
             final Object receiver = FrameAccess.getReceiver(frame);
             final ContextObject thisContext = getOrCreateContextNode.executeGet(frame);

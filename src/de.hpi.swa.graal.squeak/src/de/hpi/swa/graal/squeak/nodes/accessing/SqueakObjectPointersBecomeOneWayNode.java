@@ -6,6 +6,7 @@ import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
 
+import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
@@ -134,15 +135,29 @@ public abstract class SqueakObjectPointersBecomeOneWayNode extends AbstractNode 
         }
     }
 
-    @Specialization
+    @Specialization(guards = "obj.hasTruffleFrame()")
     protected final void doContext(final ContextObject obj, final Object[] from, final Object[] to, final boolean copyHash,
                     @Cached final ContextObjectReadNode readNode,
                     @Cached final ContextObjectWriteNode writeNode) {
         for (int i = 0; i < from.length; i++) {
             final Object fromPointer = from[i];
-            // Skip sender (for performance), pc, and sp.
+            if (obj.getFrameSender() == fromPointer) {
+                final Object toPointer = to[i];
+                obj.setFrameSender((AbstractSqueakObject) toPointer);
+                updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
+            }
+            if (obj.getMethod() == fromPointer) {
+                final Object toPointer = to[i];
+                obj.setMethod((CompiledMethodObject) toPointer);
+                updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
+            }
+            if (obj.getClosure() == fromPointer) {
+                final Object toPointer = to[i];
+                obj.setClosure((BlockClosureObject) toPointer);
+                updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
+            }
             // TODO: Check that all pointers are actually traced (obj.size()?).
-            for (int j = CONTEXT.METHOD; j < obj.size(); j++) {
+            for (int j = CONTEXT.TEMP_FRAME_START; j < obj.size(); j++) {
                 final Object newPointer = readNode.execute(obj, j);
                 if (newPointer == fromPointer) {
                     final Object toPointer = to[i];
