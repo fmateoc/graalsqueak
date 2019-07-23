@@ -1,6 +1,8 @@
 package de.hpi.swa.graal.squeak.nodes.bytecodes;
 
 import com.oracle.truffle.api.CompilerAsserts;
+import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 
@@ -13,6 +15,7 @@ import de.hpi.swa.graal.squeak.nodes.bytecodes.ReturnBytecodesFactory.ReturnCons
 import de.hpi.swa.graal.squeak.nodes.bytecodes.ReturnBytecodesFactory.ReturnReceiverNodeGen;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.ReturnBytecodesFactory.ReturnTopFromBlockNodeGen;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.ReturnBytecodesFactory.ReturnTopFromMethodNodeGen;
+import de.hpi.swa.graal.squeak.nodes.context.EscapeMarkerNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackReadAndClearNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
@@ -46,26 +49,28 @@ public final class ReturnBytecodes {
     }
 
     protected abstract static class AbstractReturnWithSpecializationsNode extends AbstractReturnNode {
-
         protected AbstractReturnWithSpecializationsNode(final CompiledCodeObject code, final int index) {
             super(code, index);
         }
 
         @Specialization(guards = {"closure == null", "!hasModifiedSender(frame)"})
-        protected final Object doLocalReturn(final VirtualFrame frame, @SuppressWarnings("unused") final Object closure, final FrameStackReadAndClearNode readAndClearNode) {
-            return getReturnValue(frame, readAndClearNode);
+        protected final Object doLocalReturn(final VirtualFrame frame, @SuppressWarnings("unused") final Object closure, final FrameStackReadAndClearNode readAndClearNode,
+                        @Shared("escapeMarkerNode") @Cached final EscapeMarkerNode escapeMarkerNode) {
+            return escapeMarkerNode.execute(getReturnValue(frame, readAndClearNode));
         }
 
         @Specialization(guards = {"closure == null", "hasModifiedSender(frame)"})
-        protected final Object doNonLocalReturn(final VirtualFrame frame, @SuppressWarnings("unused") final Object closure, final FrameStackReadAndClearNode readAndClearNode) {
+        protected final Object doNonLocalReturn(final VirtualFrame frame, @SuppressWarnings("unused") final Object closure, final FrameStackReadAndClearNode readAndClearNode,
+                        @Shared("escapeMarkerNode") @Cached final EscapeMarkerNode escapeMarkerNode) {
             assert FrameAccess.getSender(frame) instanceof ContextObject : "Sender must be a materialized ContextObject";
-            throw new NonLocalReturn(getReturnValue(frame, readAndClearNode), FrameAccess.getSender(frame));
+            throw new NonLocalReturn(escapeMarkerNode.execute(getReturnValue(frame, readAndClearNode)), FrameAccess.getSender(frame));
         }
 
         @Specialization(guards = {"closure != null"})
-        protected final Object doClosureReturn(final VirtualFrame frame, final BlockClosureObject closure, final FrameStackReadAndClearNode readAndClearNode) {
+        protected final Object doClosureReturn(final VirtualFrame frame, final BlockClosureObject closure, final FrameStackReadAndClearNode readAndClearNode,
+                        @Shared("escapeMarkerNode") @Cached final EscapeMarkerNode escapeMarkerNode) {
             // Target is sender of closure's home context.
-            throw new NonLocalReturn(getReturnValue(frame, readAndClearNode), closure.getHomeContextSender());
+            throw new NonLocalReturn(escapeMarkerNode.execute(getReturnValue(frame, readAndClearNode)), closure.getHomeContextSender());
         }
     }
 
@@ -116,6 +121,8 @@ public final class ReturnBytecodes {
     }
 
     public abstract static class ReturnTopFromBlockNode extends AbstractReturnNode {
+        @Child private EscapeMarkerNode escapeMarkerNode = EscapeMarkerNode.create();
+
         protected ReturnTopFromBlockNode(final CompiledCodeObject code, final int index) {
             super(code, index);
         }
@@ -142,7 +149,7 @@ public final class ReturnBytecodes {
 
         @Override
         protected final Object getReturnValue(final VirtualFrame frame, final FrameStackReadAndClearNode readAndClearNode) {
-            return readAndClearNode.executePop(frame);
+            return escapeMarkerNode.execute(readAndClearNode.executePop(frame));
         }
 
         @Override
@@ -153,6 +160,7 @@ public final class ReturnBytecodes {
     }
 
     public abstract static class ReturnTopFromMethodNode extends AbstractReturnWithSpecializationsNode {
+
         protected ReturnTopFromMethodNode(final CompiledCodeObject code, final int index) {
             super(code, index);
         }
