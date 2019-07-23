@@ -8,8 +8,8 @@ import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.BooleanObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
-import de.hpi.swa.graal.squeak.nodes.context.TemporaryWriteMarkContextsNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameSlotReadNode;
+import de.hpi.swa.graal.squeak.nodes.context.frame.FrameSlotWriteNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
@@ -35,7 +35,7 @@ public abstract class AboutToReturnNode extends AbstractNodeWithCode {
     protected final void doAboutToReturnVirtualized(final VirtualFrame frame, @SuppressWarnings("unused") final NonLocalReturn nlr,
                     @Cached("createTemporaryWriteNode(0)") final FrameSlotReadNode blockArgumentNode,
                     @SuppressWarnings("unused") @Cached("createTemporaryWriteNode(1)") final FrameSlotReadNode completeTempReadNode,
-                    @Cached("create(code, 1)") final TemporaryWriteMarkContextsNode completeTempWriteNode,
+                    @Cached("create(code.getStackSlot(1))") final FrameSlotWriteNode completeTempWriteNode,
                     @Cached final DispatchBlockNode dispatchNode) {
         completeTempWriteNode.executeWrite(frame, BooleanObject.TRUE);
         final BlockClosureObject block = (BlockClosureObject) blockArgumentNode.executeRead(frame);

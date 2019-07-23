@@ -7,14 +7,23 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.ASSOCIATION;
-import de.hpi.swa.graal.squeak.nodes.context.SqueakObjectAtPutAndMarkContextsNode;
-import de.hpi.swa.graal.squeak.nodes.context.TemporaryWriteMarkContextsNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
+import de.hpi.swa.graal.squeak.nodes.context.EscapeMarkerNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameSlotReadNode;
+import de.hpi.swa.graal.squeak.nodes.context.frame.FrameSlotWriteNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackReadAndClearNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackReadNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public final class StoreBytecodes {
+
+    private abstract static class AbstractStoreNode extends AbstractInstrumentableBytecodeNode {
+        @Child protected EscapeMarkerNode escapeMarkerNode = EscapeMarkerNode.create();
+
+        private AbstractStoreNode(final CompiledCodeObject code, final int index, final int numBytecodes) {
+            super(code, index, numBytecodes);
+        }
+    }
 
     private abstract static class AbstractStoreIntoAssociationNode extends AbstractStoreIntoNode {
         protected final long variableIndex;
@@ -22,7 +31,6 @@ public final class StoreBytecodes {
         private AbstractStoreIntoAssociationNode(final CompiledCodeObject code, final int index, final int numBytecodes, final long variableIndex) {
             super(code, index, numBytecodes);
             this.variableIndex = variableIndex;
-            storeNode = SqueakObjectAtPutAndMarkContextsNode.create(ASSOCIATION.VALUE);
         }
 
         @Override
@@ -33,8 +41,8 @@ public final class StoreBytecodes {
     }
 
     @NodeInfo(cost = NodeCost.NONE)
-    private abstract static class AbstractStoreIntoNode extends AbstractInstrumentableBytecodeNode {
-        @Child protected SqueakObjectAtPutAndMarkContextsNode storeNode;
+    private abstract static class AbstractStoreIntoNode extends AbstractStoreNode {
+        @Child protected SqueakObjectAtPut0Node storeNode = SqueakObjectAtPut0Node.create();
 
         private AbstractStoreIntoNode(final CompiledCodeObject code, final int index, final int numBytecodes) {
             super(code, index, numBytecodes);
@@ -49,7 +57,6 @@ public final class StoreBytecodes {
         private AbstractStoreIntoReceiverVariableNode(final CompiledCodeObject code, final int index, final int numBytecodes, final long receiverIndex) {
             super(code, index, numBytecodes);
             this.receiverIndex = receiverIndex;
-            storeNode = SqueakObjectAtPutAndMarkContextsNode.create(receiverIndex);
         }
 
         @Override
@@ -60,7 +67,7 @@ public final class StoreBytecodes {
     }
 
     private abstract static class AbstractStoreIntoRemoteTempNode extends AbstractStoreIntoNode {
-        private final int indexInArray;
+        protected final int indexInArray;
         private final int indexOfArray;
 
         @Child protected FrameSlotReadNode readNode;
@@ -69,7 +76,6 @@ public final class StoreBytecodes {
             super(code, index, numBytecodes);
             this.indexInArray = indexInArray;
             this.indexOfArray = indexOfArray;
-            storeNode = SqueakObjectAtPutAndMarkContextsNode.create(indexInArray);
             readNode = FrameSlotReadNode.create(code.getStackSlot(indexOfArray));
         }
 
@@ -80,15 +86,15 @@ public final class StoreBytecodes {
         }
     }
 
-    private abstract static class AbstractStoreIntoTempNode extends AbstractInstrumentableBytecodeNode {
+    private abstract static class AbstractStoreIntoTempNode extends AbstractStoreNode {
         protected final int tempIndex;
 
-        @Child protected TemporaryWriteMarkContextsNode storeNode;
+        @Child protected FrameSlotWriteNode storeNode;
 
         private AbstractStoreIntoTempNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int tempIndex) {
             super(code, index, numBytecodes);
             this.tempIndex = tempIndex;
-            storeNode = TemporaryWriteMarkContextsNode.create(code, tempIndex);
+            storeNode = FrameSlotWriteNode.create(code.getStackSlot(tempIndex));
         }
 
         protected abstract String getTypeName();
@@ -110,7 +116,7 @@ public final class StoreBytecodes {
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            storeNode.executeWrite(code.getLiteral(variableIndex), popNode.executePop(frame));
+            storeNode.execute(code.getLiteral(variableIndex), ASSOCIATION.VALUE, escapeMarkerNode.execute(popNode.executePop(frame)));
         }
 
         @Override
@@ -129,7 +135,7 @@ public final class StoreBytecodes {
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            storeNode.executeWrite(FrameAccess.getReceiver(frame), popNode.executePop(frame));
+            storeNode.execute(FrameAccess.getReceiver(frame), receiverIndex, escapeMarkerNode.execute(popNode.executePop(frame)));
         }
 
         @Override
@@ -148,7 +154,7 @@ public final class StoreBytecodes {
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            storeNode.executeWrite(readNode.executeRead(frame), popNode.executePop(frame));
+            storeNode.execute(readNode.executeRead(frame), indexInArray, escapeMarkerNode.execute(popNode.executePop(frame)));
         }
 
         @Override
@@ -167,7 +173,7 @@ public final class StoreBytecodes {
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            storeNode.executeWrite(frame, popNode.executePop(frame));
+            storeNode.executeWrite(frame, escapeMarkerNode.execute(popNode.executePop(frame)));
         }
 
         @Override
@@ -186,7 +192,7 @@ public final class StoreBytecodes {
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            storeNode.executeWrite(code.getLiteral(variableIndex), topNode.executeTop(frame));
+            storeNode.execute(code.getLiteral(variableIndex), ASSOCIATION.VALUE, escapeMarkerNode.execute(topNode.executeTop(frame)));
         }
 
         @Override
@@ -205,7 +211,7 @@ public final class StoreBytecodes {
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            storeNode.executeWrite(FrameAccess.getReceiver(frame), topNode.executeTop(frame));
+            storeNode.execute(FrameAccess.getReceiver(frame), receiverIndex, escapeMarkerNode.execute(topNode.executeTop(frame)));
         }
 
         @Override
@@ -224,7 +230,7 @@ public final class StoreBytecodes {
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            storeNode.executeWrite(readNode.executeRead(frame), topNode.executeTop(frame));
+            storeNode.execute(readNode.executeRead(frame), indexInArray, escapeMarkerNode.execute(topNode.executeTop(frame)));
         }
 
         @Override
@@ -243,7 +249,7 @@ public final class StoreBytecodes {
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            storeNode.executeWrite(frame, topNode.executeTop(frame));
+            storeNode.executeWrite(frame, escapeMarkerNode.execute(topNode.executeTop(frame)));
         }
 
         @Override
