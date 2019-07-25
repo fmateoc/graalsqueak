@@ -7,7 +7,7 @@ import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassCachedNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 /**
@@ -17,7 +17,7 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 public final class SendSelectorNode extends Node {
     private final NativeObject selector;
 
-    @Child private SqueakObjectClassNode lookupClassNode = SqueakObjectClassNode.create();
+    @Child private SqueakObjectClassCachedNode lookupClassNode = SqueakObjectClassCachedNode.create();
     @Child private LookupMethodNode lookupMethodNode = LookupMethodNode.create();
     @Child private DispatchEagerlyNode dispatchNode = DispatchEagerlyNode.create();
 

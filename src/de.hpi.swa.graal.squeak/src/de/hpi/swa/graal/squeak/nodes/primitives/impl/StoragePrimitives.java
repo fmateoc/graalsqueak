@@ -385,8 +385,17 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization
-        protected static final long doHash(final Object receiver, @Cached final SqueakObjectHashNode hashNode) {
+        // Cache up to 2 calls (`a hash == b hash`).
+        @Specialization(guards = "receiver == cachedReceiver", assumptions = "cachedReceiver.getSqueakHashStableAssumption()", limit = "2")
+        protected static final long doCached(@SuppressWarnings("unused") final AbstractSqueakObjectWithHash receiver,
+                        @SuppressWarnings("unused") @Cached("receiver") final AbstractSqueakObjectWithHash cachedReceiver,
+                        @Cached("cachedReceiver.getSqueakHash()") final long cachedSqueakHash) {
+            return cachedSqueakHash;
+        }
+
+        @Specialization(replaces = "doCached")
+        protected static final long doUncached(final Object receiver,
+                        @Cached final SqueakObjectHashNode hashNode) {
             return hashNode.execute(receiver);
         }
     }

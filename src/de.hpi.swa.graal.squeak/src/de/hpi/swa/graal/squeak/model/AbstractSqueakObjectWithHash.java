@@ -1,5 +1,8 @@
 package de.hpi.swa.graal.squeak.model;
 
+import com.oracle.truffle.api.Assumption;
+import com.oracle.truffle.api.Truffle;
+
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 
@@ -10,6 +13,7 @@ public abstract class AbstractSqueakObjectWithHash extends AbstractSqueakObject 
     private static final int PINNED_BIT_MASK = 1 << PINNED_BIT_SHIFT;
 
     private long squeakHash;
+    private final Assumption squeakHashStable = Truffle.getRuntime().createAssumption("squeakHash stability");
     public final SqueakImageContext image;
 
     // For special/well-known objects only.
@@ -30,11 +34,15 @@ public abstract class AbstractSqueakObjectWithHash extends AbstractSqueakObject 
         return getSqueakClass() == null;
     }
 
-    public void setSqueakClass(@SuppressWarnings("unused") final ClassObject classObject) {
-        // Do nothing by default.
+    public abstract void fillin(SqueakImageChunk chunk);
+
+    public final void fillInSqueakHash(final long newHash) {
+        squeakHash = newHash;
     }
 
-    public abstract void fillin(SqueakImageChunk chunk);
+    public void fillInSqueakClass(@SuppressWarnings("unused") final ClassObject classObject) {
+        // Do nothing by default.
+    }
 
     public final long getSqueakHash() {
         if (needsSqueakHash()) {
@@ -42,6 +50,10 @@ public abstract class AbstractSqueakObjectWithHash extends AbstractSqueakObject 
             squeakHash = hashCode() & IDENTITY_HASH_MASK;
         }
         return squeakHash;
+    }
+
+    public final Assumption getSqueakHashStableAssumption() {
+        return squeakHashStable;
     }
 
     public final boolean needsSqueakHash() {
@@ -61,6 +73,7 @@ public abstract class AbstractSqueakObjectWithHash extends AbstractSqueakObject 
     }
 
     public final void setSqueakHash(final long newHash) {
+        squeakHashStable.invalidate("squeakHash has changed");
         squeakHash = newHash;
     }
 

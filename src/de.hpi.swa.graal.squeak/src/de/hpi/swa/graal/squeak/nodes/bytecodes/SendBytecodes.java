@@ -19,7 +19,7 @@ import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
 import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassCachedNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackReadAndClearNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackWriteNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.ControlPrimitives.PrimExitToDebuggerNode;
@@ -126,9 +126,11 @@ public final class SendBytecodes {
         protected abstract ClassObject executeLookup(VirtualFrame frame, Object receiver);
     }
 
+    // TODO: merge nodes and configure...
+
     @NodeInfo(cost = NodeCost.NONE)
     protected static final class LookupClassNode extends AbstractLookupClassNode {
-        @Child private SqueakObjectClassNode lookupClassNode = SqueakObjectClassNode.create();
+        @Child private SqueakObjectClassCachedNode lookupClassNode = SqueakObjectClassCachedNode.create();
 
         @Override
         protected ClassObject executeLookup(final VirtualFrame frame, final Object receiver) {

@@ -16,7 +16,7 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.MESSAGE;
 import de.hpi.swa.graal.squeak.model.PointersObject;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassCachedNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
@@ -84,7 +84,7 @@ public abstract class DispatchSendNode extends AbstractNodeWithCode {
     @Specialization(guards = {"!isCompiledMethodObject(targetObject)"})
     protected final Object doObjectAsMethod(final VirtualFrame frame, final NativeObject selector, final Object targetObject, @SuppressWarnings("unused") final ClassObject rcvrClass,
                     final Object[] rcvrAndArgs, final Object contextOrMarker,
-                    @Cached final SqueakObjectClassNode classNode,
+                    @Cached final SqueakObjectClassCachedNode classNode,
                     @Cached("createBinaryProfile()") final ConditionProfile isDoesNotUnderstandProfile) {
         final Object[] arguments = ArrayUtils.allButFirst(rcvrAndArgs);
         final ClassObject targetClass = classNode.executeLookup(targetObject);

@@ -46,7 +46,7 @@ import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeN
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectToObjectArrayCopyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectChangeClassOfToNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassCachedNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.SendBytecodes.AbstractSendNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.CreateEagerArgumentsNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
@@ -115,7 +115,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
 
     private abstract static class AbstractPerformPrimitiveNode extends AbstractPrimitiveNode {
         @Child protected LookupMethodNode lookupMethodNode = LookupMethodNode.create();
-        @Child protected SqueakObjectClassNode classNode;
+        @Child protected SqueakObjectClassCachedNode classNode;
         @Child private DispatchSendNode dispatchSendNode;
 
         protected AbstractPerformPrimitiveNode(final CompiledMethodObject method) {
@@ -135,7 +135,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         protected final ClassObject lookupClass(final Object object) {
             if (classNode == null) {
                 CompilerDirectives.transferToInterpreterAndInvalidate();
-                classNode = insert(SqueakObjectClassNode.create());
+                classNode = insert(SqueakObjectClassCachedNode.create(2));
             }
             return classNode.executeLookup(object);
         }
@@ -446,19 +446,21 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 111)
     protected abstract static class PrimClassNode extends AbstractPrimitiveNode implements BinaryPrimitive {
+        protected static final int CACHE_LIMIT = 2; // Cache up to 2 calls (`a class == b class`).
+
         protected PrimClassNode(final CompiledMethodObject method) {
             super(method);
         }
 
         @Specialization
         protected static final ClassObject doClass(final Object receiver, @SuppressWarnings("unused") final NotProvided object,
-                        @Shared("lookupNode") @Cached final SqueakObjectClassNode classNode) {
+                        @Shared("lookupNode") @Cached("create(CACHE_LIMIT)") final SqueakObjectClassCachedNode classNode) {
             return classNode.executeLookup(receiver);
         }
 
         @Specialization(guards = "!isNotProvided(object)")
         protected static final ClassObject doClass(@SuppressWarnings("unused") final Object receiver, final Object object,
-                        @Shared("lookupNode") @Cached final SqueakObjectClassNode classNode) {
+                        @Shared("lookupNode") @Cached("create(CACHE_LIMIT)") final SqueakObjectClassCachedNode classNode) {
             return classNode.executeLookup(object);
         }
     }
