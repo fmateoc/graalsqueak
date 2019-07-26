@@ -1,5 +1,7 @@
 package de.hpi.swa.graal.squeak.nodes;
 
+import java.lang.ref.WeakReference;
+
 import com.oracle.truffle.api.TruffleOptions;
 
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
@@ -21,6 +23,10 @@ import de.hpi.swa.graal.squeak.model.PointersObject;
 public final class SqueakGuards {
 
     private SqueakGuards() {
+    }
+
+    public static <T> WeakReference<T> asWeakReference(final T object) {
+        return new WeakReference<>(object);
     }
 
     public static boolean between(final long value, final int minIncluded, final int maxIncluded) {

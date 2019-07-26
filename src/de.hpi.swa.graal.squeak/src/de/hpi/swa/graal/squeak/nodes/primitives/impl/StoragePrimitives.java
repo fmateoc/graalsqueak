@@ -1,9 +1,11 @@
 package de.hpi.swa.graal.squeak.nodes.primitives.impl;
 
+import java.lang.ref.WeakReference;
 import java.util.AbstractCollection;
 import java.util.List;
 import java.util.Set;
 
+import com.oracle.truffle.api.Assumption;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
@@ -386,11 +388,16 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         // Cache up to 2 calls (`a hash == b hash`).
-        @Specialization(guards = "receiver == cachedReceiver", assumptions = "cachedReceiver.getSqueakHashStableAssumption()", limit = "2")
+        @Specialization(guards = "receiver == unpackWeakReference(cachedReceiverWeak)", assumptions = "cachedSqueakHashStableAssumption", limit = "2")
         protected static final long doCached(@SuppressWarnings("unused") final AbstractSqueakObjectWithHash receiver,
-                        @SuppressWarnings("unused") @Cached("receiver") final AbstractSqueakObjectWithHash cachedReceiver,
-                        @Cached("cachedReceiver.getSqueakHash()") final long cachedSqueakHash) {
+                        @SuppressWarnings("unused") @Cached("asWeakReference(receiver)") final WeakReference<AbstractSqueakObjectWithHash> cachedReceiverWeak,
+                        @SuppressWarnings("unused") @Cached("receiver.getSqueakHashStableAssumption()") final Assumption cachedSqueakHashStableAssumption,
+                        @Cached("receiver.getSqueakHash()") final long cachedSqueakHash) {
             return cachedSqueakHash;
+        }
+
+        public static AbstractSqueakObjectWithHash unpackWeakReference(final WeakReference<AbstractSqueakObjectWithHash> weakRef) {
+            return weakRef.get();
         }
 
         @Specialization(replaces = "doCached")

@@ -1,5 +1,8 @@
 package de.hpi.swa.graal.squeak.nodes.accessing;
 
+import java.lang.ref.WeakReference;
+
+import com.oracle.truffle.api.Assumption;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.nodes.NodeCost;
@@ -27,11 +30,16 @@ public abstract class SqueakObjectClassCachedNode extends AbstractNode {
 
     public abstract ClassObject executeLookup(Object receiver);
 
-    @Specialization(guards = "receiver == cachedReceiver", assumptions = "cachedReceiver.getSqueakClassStableAssumption()", limit = "cacheLimit")
+    @Specialization(guards = "receiver == unpackWeakReference(cachedReceiverWeak)", assumptions = "cachedSqueakClassStableAssumption", limit = "cacheLimit")
     protected static final ClassObject doCached(@SuppressWarnings("unused") final AbstractSqueakObjectWithClassAndHash receiver,
-                    @SuppressWarnings("unused") @Cached("receiver") final AbstractSqueakObjectWithClassAndHash cachedReceiver,
-                    @Cached("cachedReceiver.getSqueakClass()") final ClassObject cachedSqueakClass) {
+                    @SuppressWarnings("unused") @Cached("asWeakReference(receiver)") final WeakReference<AbstractSqueakObjectWithClassAndHash> cachedReceiverWeak,
+                    @SuppressWarnings("unused") @Cached("receiver.getSqueakClassStableAssumption()") final Assumption cachedSqueakClassStableAssumption,
+                    @Cached("receiver.getSqueakClass()") final ClassObject cachedSqueakClass) {
         return cachedSqueakClass;
+    }
+
+    public static AbstractSqueakObjectWithClassAndHash unpackWeakReference(final WeakReference<AbstractSqueakObjectWithClassAndHash> weakRef) {
+        return weakRef.get();
     }
 
     @Specialization(replaces = "doCached")
