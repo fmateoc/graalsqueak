@@ -8,6 +8,7 @@ import com.oracle.truffle.api.Assumption;
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.interop.ArityException;
 import com.oracle.truffle.api.interop.InteropLibrary;
@@ -34,6 +35,8 @@ import de.hpi.swa.graal.squeak.util.ArrayUtils;
  */
 @ExportLibrary(InteropLibrary.class)
 public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
+    private static final Object METHOD_NOT_FOUND_MARKER = new Object();
+
     private final CyclicAssumption classHierarchyStable = new CyclicAssumption("Class hierarchy stability");
     private final CyclicAssumption methodDictStable = new CyclicAssumption("Method dictionary stability");
     private final CyclicAssumption classFormatStable = new CyclicAssumption("Class format stability");
@@ -292,6 +295,53 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         return methodDict;
     }
 
+    @TruffleBoundary
+    public Object lookupSelector(final NativeObject selector) {
+        final Object value = selector.getMethodDictCache().get(this);
+        if (value != null) {
+            if (value != METHOD_NOT_FOUND_MARKER) {
+                return value;
+            } else {
+                final ClassObject superClass = getSuperclassOrNull();
+                if (superClass != null) {
+                    return superClass.lookupSelector(selector);
+                } else {
+                    return null; // Signals a doesNotUnderstand.
+                }
+            }
+        } else {
+            final Object lookupSelectorSlow = lookupSelectorInMethodDict(selector);
+            selector.getMethodDictCache().put(this, lookupSelectorSlow == null ? METHOD_NOT_FOUND_MARKER : lookupSelectorSlow);
+            return lookupSelector(selector); // Retry
+        }
+    }
+
+    public Object lookupSelectorInMethodDict(final NativeObject selector) {
+        final Object[] methodDictPointers = getMethodDict().getPointers();
+        for (int i = METHOD_DICT.NAMES; i < methodDictPointers.length; i++) {
+            if (selector == methodDictPointers[i]) {
+                return ((ArrayObject) methodDictPointers[METHOD_DICT.VALUES]).getObjectStorage()[i - METHOD_DICT.NAMES];
+            }
+        }
+        return null; // Signals a doesNotUnderstand.
+    }
+
+    public Object lookupSelectorInHierachy(final NativeObject selector) {
+        ClassObject lookupClass = this;
+        while (lookupClass != null) {
+            final Object[] methodDictPointers = lookupClass.getMethodDict().getPointers();
+            for (int i = METHOD_DICT.NAMES; i < methodDictPointers.length; i++) {
+                if (selector == methodDictPointers[i]) {
+                    return ((ArrayObject) methodDictPointers[METHOD_DICT.VALUES]).getObjectStorage()[i - METHOD_DICT.NAMES];
+                }
+            }
+            lookupClass = lookupClass.getSuperclassOrNull();
+        }
+        assert !selector.isDoesNotUnderstand() : "Could not find does not understand method";
+        return null; // Signals a doesNotUnderstand.
+
+    }
+
     public boolean hasInstanceVariables() {
         return instanceVariables != null;
     }
@@ -350,8 +400,8 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         this.methodDict = methodDict;
     }
 
+    @TruffleBoundary
     public Object[] listMethods() {
-        CompilerAsserts.neverPartOfCompilation("This is only for the interop API.");
         final List<String> methodNames = new ArrayList<>();
         ClassObject lookupClass = this;
         while (lookupClass != null) {

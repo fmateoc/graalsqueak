@@ -616,15 +616,16 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
 
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 119)
-    protected abstract static class PrimFlushCacheSelectiveNode extends AbstractPrimitiveNode implements UnaryPrimitiveWithoutFallback {
+    protected abstract static class PrimFlushCacheSelectiveNode extends AbstractPrimitiveNode implements UnaryPrimitive {
 
         public PrimFlushCacheSelectiveNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        @Specialization
-        protected static final Object doFlush(final Object receiver) {
-            // TODO: actually flush caches once there are some
+        @Specialization(guards = "receiver.getSqueakClass().isSymbolClass()")
+        @TruffleBoundary
+        protected static final Object doFlush(final NativeObject receiver) {
+            receiver.getMethodDictCache().clear();
             return receiver;
         }
     }

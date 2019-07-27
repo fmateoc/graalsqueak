@@ -2,6 +2,8 @@ package de.hpi.swa.graal.squeak.model;
 
 import java.util.Arrays;
 
+import org.graalvm.collections.EconomicMap;
+
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
@@ -25,6 +27,7 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
     public static final long INTEGER_MAX = (long) (Math.pow(2, Integer.SIZE) - 1);
 
     @CompilationFinal private Object storage;
+    @CompilationFinal private EconomicMap<ClassObject, Object> methodDictCache = EconomicMap.create();
 
     public NativeObject(final SqueakImageContext image) { // constructor for special selectors
         super(image, -1, null);
@@ -110,6 +113,15 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         } else {
             throw SqueakException.create("Unsupported type");
         }
+    }
+
+    public EconomicMap<ClassObject, Object> getMethodDictCache() {
+        if (methodDictCache == null) {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            assert getSqueakClass().isSymbolClass() : "Only symbols are allowed to have a methodDictCache";
+            methodDictCache = EconomicMap.create();
+        }
+        return methodDictCache;
     }
 
     @Override
