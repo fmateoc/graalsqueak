@@ -38,7 +38,7 @@ public abstract class DispatchEagerlyNode extends AbstractNodeWithCode {
         return primitiveNode.executeWithArguments(frame, createEagerArgumentsNode.executeCreate(primitiveNode.getNumArguments(), receiverAndArguments));
     }
 
-    @Specialization(guards = {"method == cachedMethod"}, //
+    @Specialization(guards = {"method == cachedMethod", "!cachedMethod.isUnwindMarked()"}, //
                     limit = "INLINE_CACHE_SIZE", assumptions = {"cachedMethod.getCallTargetStable()", "cachedMethod.getDoesNotNeedSenderAssumption()"}, replaces = "doPrimitiveEagerly")
     protected final Object doDirect(final VirtualFrame frame, @SuppressWarnings("unused") final CompiledMethodObject method, final Object[] receiverAndArguments,
                     @SuppressWarnings("unused") @Cached("method") final CompiledMethodObject cachedMethod,
@@ -55,13 +55,13 @@ public abstract class DispatchEagerlyNode extends AbstractNodeWithCode {
         return callDirect(callNode, cachedMethod, getOrCreateContextNode.executeGet(frame), receiverAndArguments);
     }
 
-    @Specialization(guards = "method.getDoesNotNeedSenderAssumption().isValid()", replaces = {"doDirect", "doDirectWithSender"})
+    @Specialization(guards = {"!method.isUnwindMarked()", "method.getDoesNotNeedSenderAssumption().isValid()"}, replaces = {"doDirect", "doDirectWithSender"})
     protected final Object doIndirect(final VirtualFrame frame, final CompiledMethodObject method, final Object[] receiverAndArguments,
                     @Cached final IndirectCallNode callNode) {
         return callIndirect(callNode, method, getContextOrMarker(frame), receiverAndArguments);
     }
 
-    @Specialization(guards = "!method.getDoesNotNeedSenderAssumption().isValid()", replaces = {"doDirect", "doDirectWithSender"})
+    @Specialization(guards = "method.isUnwindMarked() || !method.getDoesNotNeedSenderAssumption().isValid()", replaces = {"doDirect", "doDirectWithSender"})
     protected static final Object doIndirectWithSender(final VirtualFrame frame, final CompiledMethodObject method, final Object[] receiverAndArguments,
                     @Cached("create(code)") final GetOrCreateContextNode getOrCreateContextNode,
                     @Cached final IndirectCallNode callNode) {

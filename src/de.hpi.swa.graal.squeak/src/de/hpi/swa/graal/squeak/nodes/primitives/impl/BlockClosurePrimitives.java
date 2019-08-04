@@ -13,6 +13,7 @@ import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
 import de.hpi.swa.graal.squeak.nodes.DispatchBlockNode;
+import de.hpi.swa.graal.squeak.nodes.GetOrCreateContextNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectToObjectArrayCopyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
@@ -37,10 +38,17 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
             super(method);
         }
 
-        @Specialization(guards = {"block.getNumArgs() == 0"})
+        @Specialization(guards = {"block.getNumArgs() == 0", "block.getCompiledBlock().getDoesNotNeedSenderAssumption().isValid()"})
         protected final Object doValue(final VirtualFrame frame, final BlockClosureObject block,
                         @Cached final DispatchBlockNode dispatchNode) {
             return dispatchNode.executeBlock(block, FrameAccess.newClosureArguments(block, getContextOrMarker(frame), ArrayUtils.EMPTY_ARRAY));
+        }
+
+        @Specialization(guards = {"block.getNumArgs() == 0", "!block.getCompiledBlock().getDoesNotNeedSenderAssumption().isValid()"})
+        protected static final Object doValueContext(final VirtualFrame frame, final BlockClosureObject block,
+                        @Cached final DispatchBlockNode dispatchNode,
+                        @Cached("create(method)") final GetOrCreateContextNode getOrCreateContextNode) {
+            return dispatchNode.executeBlock(block, FrameAccess.newClosureArguments(block, getOrCreateContextNode.executeGet(frame), ArrayUtils.EMPTY_ARRAY));
         }
     }
 
@@ -52,10 +60,17 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
             super(method);
         }
 
-        @Specialization(guards = {"block.getNumArgs() == 1"})
+        @Specialization(guards = {"block.getNumArgs() == 1", "block.getCompiledBlock().getDoesNotNeedSenderAssumption().isValid()"})
         protected final Object doValue(final VirtualFrame frame, final BlockClosureObject block, final Object arg,
                         @Cached final DispatchBlockNode dispatchNode) {
             return dispatchNode.executeBlock(block, FrameAccess.newClosureArguments(block, getContextOrMarker(frame), new Object[]{arg}));
+        }
+
+        @Specialization(guards = {"block.getNumArgs() == 1", "!block.getCompiledBlock().getDoesNotNeedSenderAssumption().isValid()"})
+        protected static final Object doValueContext(final VirtualFrame frame, final BlockClosureObject block, final Object arg,
+                        @Cached final DispatchBlockNode dispatchNode,
+                        @Cached("create(method)") final GetOrCreateContextNode getOrCreateContextNode) {
+            return dispatchNode.executeBlock(block, FrameAccess.newClosureArguments(block, getOrCreateContextNode.executeGet(frame), new Object[]{arg}));
         }
     }
 
@@ -67,10 +82,17 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
             super(method);
         }
 
-        @Specialization(guards = {"block.getNumArgs() == 2"})
+        @Specialization(guards = {"block.getNumArgs() == 2", "block.getCompiledBlock().getDoesNotNeedSenderAssumption().isValid()"})
         protected final Object doValue(final VirtualFrame frame, final BlockClosureObject block, final Object arg1, final Object arg2,
                         @Cached final DispatchBlockNode dispatchNode) {
             return dispatchNode.executeBlock(block, FrameAccess.newClosureArguments(block, getContextOrMarker(frame), new Object[]{arg1, arg2}));
+        }
+
+        @Specialization(guards = {"block.getNumArgs() == 2", "!block.getCompiledBlock().getDoesNotNeedSenderAssumption().isValid()"})
+        protected static final Object doValueContext(final VirtualFrame frame, final BlockClosureObject block, final Object arg1, final Object arg2,
+                        @Cached final DispatchBlockNode dispatchNode,
+                        @Cached("create(method)") final GetOrCreateContextNode getOrCreateContextNode) {
+            return dispatchNode.executeBlock(block, FrameAccess.newClosureArguments(block, getOrCreateContextNode.executeGet(frame), new Object[]{arg1, arg2}));
         }
     }
 

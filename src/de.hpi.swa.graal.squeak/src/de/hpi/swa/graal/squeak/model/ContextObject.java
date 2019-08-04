@@ -26,7 +26,7 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
 public final class ContextObject extends AbstractSqueakObjectWithHash {
-    @CompilationFinal private MaterializedFrame truffleFrame;
+    private MaterializedFrame truffleFrame;
     @CompilationFinal private int size;
     private boolean hasModifiedSender = false;
     private boolean escaped = false;
@@ -128,7 +128,6 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         final int endArguments = CONTEXT.RECEIVER + 1 + method.getNumArgsAndCopied();
         final Object[] arguments = Arrays.copyOfRange(pointers, CONTEXT.RECEIVER, endArguments);
         final Object[] frameArguments = FrameAccess.newWith(method, sender, closure, arguments);
-        CompilerDirectives.transferToInterpreterAndInvalidate();
         truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, code.getFrameDescriptor());
         FrameAccess.initializeMarker(truffleFrame, code);
         FrameAccess.setContext(truffleFrame, code, this);
@@ -215,9 +214,9 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         }
     }
 
+    @TruffleBoundary
     public MaterializedFrame getOrCreateTruffleFrame() {
         if (truffleFrame == null) {
-            CompilerDirectives.transferToInterpreterAndInvalidate();
             // Method is unknown, use dummy frame instead
             final int guessedArgumentSize = size > CONTEXT.LARGE_FRAMESIZE ? size - CONTEXT.LARGE_FRAMESIZE : size - CONTEXT.SMALL_FRAMESIZE;
             final Object[] dummyArguments = FrameAccess.newDummyWith(null, NilObject.SINGLETON, null, new Object[guessedArgumentSize]);
@@ -226,6 +225,7 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         return truffleFrame;
     }
 
+    @TruffleBoundary
     private MaterializedFrame getOrCreateTruffleFrame(final CompiledMethodObject method) {
         if (truffleFrame == null || FrameAccess.getMethod(truffleFrame) == null) {
             final Object[] frameArguments;
@@ -253,7 +253,6 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
                 instructionPointer = 0;
                 stackPointer = 0;
             }
-            CompilerDirectives.transferToInterpreterAndInvalidate();
             truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, method.getFrameDescriptor());
             FrameAccess.initializeMarker(truffleFrame, method);
             FrameAccess.setContext(truffleFrame, method, this);
@@ -263,6 +262,7 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         return truffleFrame;
     }
 
+    @TruffleBoundary
     private MaterializedFrame getOrCreateTruffleFrame(final BlockClosureObject closure) {
         if (truffleFrame == null || FrameAccess.getClosure(truffleFrame) != closure) {
             final Object[] frameArguments;
@@ -296,7 +296,6 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
                 instructionPointer = 0;
                 stackPointer = 0;
             }
-            CompilerDirectives.transferToInterpreterAndInvalidate();
             truffleFrame = Truffle.getRuntime().createMaterializedFrame(frameArguments, compiledBlock.getFrameDescriptor());
             FrameAccess.assertSenderNotNull(truffleFrame);
             FrameAccess.assertReceiverNotNull(truffleFrame);
@@ -315,6 +314,7 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
     public AbstractSqueakObject getSender() {
         final Object value = FrameAccess.getSender(truffleFrame);
         if (value instanceof FrameMarker) {
+            CompilerDirectives.transferToInterpreter();
             getBlockOrMethod().getDoesNotNeedSenderAssumption().invalidate("Sender requested");
             return ((FrameMarker) value).getMaterializedContext();
         } else {
