@@ -24,8 +24,8 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithHash {
     @CompilationFinal private Object receiver;
     @CompilationFinal private ContextObject outerContext;
     @CompilationFinal private CompiledBlockObject block;
-    private long startPC = -1;
-    private long numArgs = -1;
+    @CompilationFinal private long startPC = -1;
+    @CompilationFinal private long numArgs = -1;
     @CompilationFinal(dimensions = 0) private Object[] copied;
 
     public BlockClosureObject(final SqueakImageContext image, final long hash) {
@@ -39,8 +39,8 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithHash {
         this.outerContext = outerContext;
         this.receiver = receiver;
         this.copied = copied;
+        startPC = block.getInitialPC();
         this.numArgs = numArgs;
-        /* startPC does not need to be initialized, it's often not needed for a block activation. */
     }
 
     private BlockClosureObject(final BlockClosureObject original) {
@@ -79,6 +79,7 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithHash {
 
     public long getStartPC() {
         if (startPC == -1) {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
             startPC = block.getInitialPC();
         }
         return startPC;
@@ -86,6 +87,7 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithHash {
 
     public long getNumArgs() {
         if (numArgs == -1) {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
             numArgs = block.getNumArgs();
         }
         return numArgs;
