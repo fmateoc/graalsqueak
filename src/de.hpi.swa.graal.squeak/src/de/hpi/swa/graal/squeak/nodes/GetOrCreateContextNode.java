@@ -2,7 +2,6 @@ package de.hpi.swa.graal.squeak.nodes;
 
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
-import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
@@ -18,7 +17,7 @@ public abstract class GetOrCreateContextNode extends AbstractNodeWithCode {
         return GetOrCreateContextNodeGen.create(code);
     }
 
-    public abstract ContextObject executeGet(Frame frame);
+    public abstract ContextObject executeGet(VirtualFrame frame);
 
     @Specialization(guards = {"isVirtualized(frame)"})
     protected final ContextObject doCreate(final VirtualFrame frame) {

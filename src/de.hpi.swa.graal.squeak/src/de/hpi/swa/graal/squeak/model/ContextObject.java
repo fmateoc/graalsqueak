@@ -90,6 +90,7 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         return create(frame, FrameAccess.getBlockOrMethod(frame));
     }
 
+    @TruffleBoundary
     public static ContextObject create(final Frame frame, final CompiledCodeObject blockOrMethod) {
         return new ContextObject(frame, blockOrMethod);
     }
