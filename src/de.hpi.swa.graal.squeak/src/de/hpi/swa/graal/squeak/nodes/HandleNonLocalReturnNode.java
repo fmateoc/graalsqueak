@@ -1,6 +1,5 @@
 package de.hpi.swa.graal.squeak.nodes;
 
-import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 
@@ -33,7 +32,7 @@ public abstract class HandleNonLocalReturnNode extends AbstractNodeWithCode {
         throw new NonVirtualReturn(nlr.getReturnValue(), target, newSender);
     }
 
-    @Fallback
+    @Specialization(guards = {"!hasModifiedSender(frame)"})
     protected final Object handleVirtualized(final VirtualFrame frame, final NonLocalReturn nlr) {
         aboutToReturnNode.executeAboutToReturn(frame, nlr); // handle ensure: or ifCurtailed:
         FrameAccess.terminate(frame, code);

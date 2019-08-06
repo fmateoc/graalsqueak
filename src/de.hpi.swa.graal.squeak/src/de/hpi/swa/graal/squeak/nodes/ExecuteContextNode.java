@@ -70,7 +70,6 @@ public class ExecuteContextNode extends AbstractNodeWithCode implements Instrume
             bytecodeNodes = SqueakBytecodeDecoder.decode(code);
         }
         frameInitializationNode = resume ? null : FrameStackInitializationNode.create(code);
-        materializeContextOnMethodExitNode = resume ? null : MaterializeContextOnMethodExitNode.create(code);
     }
 
     protected ExecuteContextNode(final ExecuteContextNode executeContextNode) {
@@ -100,19 +99,26 @@ public class ExecuteContextNode extends AbstractNodeWithCode implements Instrume
             /** {@link getHandleNonLocalReturnNode()} acts as {@link BranchProfile} */
             return getHandleNonLocalReturnNode().executeHandle(frame, nlr);
         } catch (final NonVirtualReturn nvr) {
-            /** {@link getGetOrCreateContextNode()} acts as {@link BranchProfile} */
-            getGetOrCreateContextNode().executeGet(frame).markEscaped();
+            /** {@link materializeContext()} acts as {@link BranchProfile} */
+            materializeContext(frame);
             throw nvr;
         } catch (final ProcessSwitch ps) {
-            /** {@link getGetOrCreateContextNode()} acts as {@link BranchProfile} */
-            getGetOrCreateContextNode().executeGet(frame).markEscaped();
+            /** {@link materializeContext()} acts as {@link BranchProfile} */
+            materializeContext(frame);
             throw ps;
         } finally {
             if (enableStackDepthProtection) {
                 code.image.stackDepth--;
             }
-            materializeContextOnMethodExitNode.execute(frame);
         }
+    }
+
+    private void materializeContext(final VirtualFrame frame) {
+        if (materializeContextOnMethodExitNode == null) {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            materializeContextOnMethodExitNode = MaterializeContextOnMethodExitNode.create(code);
+        }
+        materializeContextOnMethodExitNode.execute(frame);
     }
 
     public final Object executeResumeAtStart(final VirtualFrame frame) {
