@@ -10,15 +10,16 @@ import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
+import com.oracle.truffle.api.profiles.BranchProfile;
 import com.oracle.truffle.api.profiles.ConditionProfile;
 
+import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.CharacterObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
-import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeAcceptsValueNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
@@ -39,82 +40,91 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         return ArrayStreamPrimitivesFactory.getFactories();
     }
 
-    protected abstract static class AbstractBasicAtOrAtPutNode extends AbstractPrimitiveNode {
-        @Child protected SqueakObjectInstSizeNode instSizeNode = SqueakObjectInstSizeNode.create();
-        @Child private SqueakObjectSizeNode sizeNode = SqueakObjectSizeNode.create();
-
-        protected AbstractBasicAtOrAtPutNode(final CompiledMethodObject method) {
-            super(method);
-        }
-
-        protected final boolean inBoundsOfSqueakObject(final long index, final Object target) {
-            return SqueakGuards.inBounds1(index + instSizeNode.execute(target), sizeNode.execute(target));
-        }
-    }
-
     @GenerateNodeFactory
     @NodeInfo(cost = NodeCost.NONE)
     @SqueakPrimitive(indices = 60)
-    protected abstract static class PrimBasicAtNode extends AbstractBasicAtOrAtPutNode implements TernaryPrimitive {
+    protected abstract static class PrimBasicAtNode extends AbstractPrimitiveNode implements TernaryPrimitive {
         protected PrimBasicAtNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        @Specialization(guards = {"inBoundsOfSqueakObject(index, receiver)"})
-        protected final Object doSqueakObject(final Object receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided,
-                        @Shared("at0Node") @Cached final SqueakObjectAt0Node at0Node) {
-            return at0Node.execute(receiver, index - 1 + instSizeNode.execute(receiver));
+        @Specialization
+        protected static final Object doSqueakObject(final Object receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided,
+                        @Shared("at0Node") @Cached final SqueakObjectAt0Node at0Node,
+                        @Shared("instSizeNode") @Cached final SqueakObjectInstSizeNode instSizeNode,
+                        @Shared("failureProfile") @Cached final BranchProfile failureProfile) {
+            try {
+                return at0Node.execute(receiver, index - 1 + instSizeNode.execute(receiver));
+            } catch (final IndexOutOfBoundsException e) {
+                failureProfile.enter();
+                throw PrimitiveFailed.GENERIC_ERROR;
+            }
         }
 
         /* Context>>#object:basicAt: */
-        @Specialization(guards = {"inBoundsOfSqueakObject(index, target)"})
-        protected final Object doSqueakObject(@SuppressWarnings("unused") final Object receiver, final Object target, final long index,
-                        @Shared("at0Node") @Cached final SqueakObjectAt0Node at0Node) {
-            return at0Node.execute(target, index - 1 + instSizeNode.execute(target));
+        @Specialization
+        protected static final Object doSqueakObject(@SuppressWarnings("unused") final Object receiver, final Object target, final long index,
+                        @Shared("at0Node") @Cached final SqueakObjectAt0Node at0Node,
+                        @Shared("instSizeNode") @Cached final SqueakObjectInstSizeNode instSizeNode,
+                        @Shared("failureProfile") @Cached final BranchProfile failureProfile) {
+            return doSqueakObject(target, index, NotProvided.SINGLETON, at0Node, instSizeNode, failureProfile);
         }
     }
 
     @GenerateNodeFactory
     @NodeInfo(cost = NodeCost.NONE)
     @SqueakPrimitive(indices = 61)
-    protected abstract static class PrimBasicAtPutNode extends AbstractBasicAtOrAtPutNode implements QuaternaryPrimitive {
+    protected abstract static class PrimBasicAtPutNode extends AbstractPrimitiveNode implements QuaternaryPrimitive {
         @Child private NativeAcceptsValueNode nativeAcceptsNode;
 
         protected PrimBasicAtPutNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        @Specialization(guards = {"inBoundsOfSqueakObject(index, receiver)", "getNativeAcceptsNode().execute(receiver, value)"})
+        @Specialization(guards = {"getNativeAcceptsNode().execute(receiver, value)"})
         protected static final Object doNativeObject(final NativeObject receiver, final long index, final Object value,
                         @SuppressWarnings("unused") final NotProvided notProvided,
-                        @Shared("nativeWriteNode") @Cached final NativeObjectWriteNode writeNode) {
-            writeNode.execute(receiver, index - 1, value);
+                        @Shared("nativeWriteNode") @Cached final NativeObjectWriteNode writeNode,
+                        @Shared("failureProfile") @Cached final BranchProfile failureProfile) {
+            try {
+                writeNode.execute(receiver, index - 1, value);
+            } catch (final IndexOutOfBoundsException e) {
+                failureProfile.enter();
+                throw PrimitiveFailed.GENERIC_ERROR;
+            }
             return value;
         }
 
-        @Specialization(guards = {"inBoundsOfSqueakObject(index, receiver)", "!isNativeObject(receiver)"})
-        protected final Object doSqueakObject(final AbstractSqueakObject receiver, final long index, final Object value,
+        @Specialization(guards = {"!isNativeObject(receiver)"})
+        protected static final Object doSqueakObject(final AbstractSqueakObject receiver, final long index, final Object value,
                         @SuppressWarnings("unused") final NotProvided notProvided,
-                        @Shared("atput0Node") @Cached final SqueakObjectAtPut0Node atput0Node) {
-            atput0Node.execute(receiver, index - 1 + instSizeNode.execute(receiver), value);
+                        @Shared("atput0Node") @Cached final SqueakObjectAtPut0Node atput0Node,
+                        @Shared("instSizeNode") @Cached final SqueakObjectInstSizeNode instSizeNode,
+                        @Shared("failureProfile") @Cached final BranchProfile failureProfile) {
+            try {
+                atput0Node.execute(receiver, index - 1 + instSizeNode.execute(receiver), value);
+            } catch (final IndexOutOfBoundsException e) {
+                failureProfile.enter();
+                throw PrimitiveFailed.GENERIC_ERROR;
+            }
             return value;
         }
 
         /* Context>>#object:basicAt:put: */
 
-        @Specialization(guards = {"inBoundsOfSqueakObject(index, target)", "getNativeAcceptsNode().execute(target, value)"})
+        @Specialization(guards = {"getNativeAcceptsNode().execute(target, value)"})
         protected static final Object doNativeObject(@SuppressWarnings("unused") final Object receiver, final NativeObject target, final long index, final Object value,
-                        @Shared("nativeWriteNode") @Cached final NativeObjectWriteNode writeNode) {
-            writeNode.execute(target, index - 1, value);
-            return value;
+                        @Shared("nativeWriteNode") @Cached final NativeObjectWriteNode writeNode,
+                        @Shared("failureProfile") @Cached final BranchProfile failureProfile) {
+            return doNativeObject(target, index, value, NotProvided.SINGLETON, writeNode, failureProfile);
         }
 
-        @Specialization(guards = {"inBoundsOfSqueakObject(index, target)", "!isNativeObject(target)"})
-        protected final Object doSqueakObject(@SuppressWarnings("unused") final Object receiver, final AbstractSqueakObject target, final long index,
-                        final Object value,
-                        @Shared("atput0Node") @Cached final SqueakObjectAtPut0Node atput0Node) {
-            atput0Node.execute(target, index - 1 + instSizeNode.execute(target), value);
-            return value;
+        @Specialization(guards = {"!isNativeObject(target)"})
+        protected static final Object doSqueakObject(@SuppressWarnings("unused") final Object receiver, final AbstractSqueakObject target, final long index, final Object value,
+                        @Shared("atput0Node") @Cached final SqueakObjectAtPut0Node atput0Node,
+                        @Shared("instSizeNode") @Cached final SqueakObjectInstSizeNode instSizeNode,
+                        @Shared("failureProfile") @Cached final BranchProfile failureProfile) {
+            return doSqueakObject(target, index, value, NotProvided.SINGLETON, atput0Node, instSizeNode, failureProfile);
         }
 
         /* TODO: Use @Shared as soon as https://github.com/oracle/graal/issues/1207 is fixed. */
