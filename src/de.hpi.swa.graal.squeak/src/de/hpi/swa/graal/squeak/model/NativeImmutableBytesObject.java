@@ -14,7 +14,6 @@ import java.util.Arrays;
 
 @ExportLibrary(InteropLibrary.class)
 public final class NativeImmutableBytesObject extends AbstractImmutableSqueakObjectWithClassAndHash {
-    public static final short BYTE_MAX = (short) (Math.pow(2, Byte.SIZE) - 1);
 
     @CompilationFinal(dimensions = 1) private final byte[] storage;
 
