@@ -114,11 +114,6 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
     @SqueakPrimitive(names = "primitiveImmutableFromArgs")
     public abstract static class PrimImmutableFromArgs extends AbstractPrimitiveNode implements OctonaryPrimitive {
 
-        @SuppressWarnings("unused")
-        protected final boolean isCharacterObject(final Object object) {
-            return (object instanceof Character);
-        }
-
         protected PrimImmutableFromArgs(final CompiledMethodObject method) {
             super(method);
         }
@@ -139,19 +134,6 @@ public final class ImmutabilityPlugin extends AbstractPrimitiveFactoryHolder {
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!isNotProvided(arg1)", "!isNotProvided(arg2)"})
-        protected final Object doNonIndexableArgConsChar(final ClassObject classObject, final char arg1, final ImmutableConsCharObject arg2, final NotProvided n3, final NotProvided n4, final NotProvided n5, final NotProvided n6,
-                                             final NotProvided n7) {
-            return new ImmutableConsCharObject(method.image,classObject, arg1, arg2);
-        }
-
-        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!isNotProvided(arg1)", "!isNotProvided(arg2)"})
-        protected final Object doNonIndexableArgConsChar(final ClassObject classObject, final char arg1, final NilObject arg2, final NotProvided n3, final NotProvided n4, final NotProvided n5, final NotProvided n6,
-                                             final NotProvided n7) {
-            return new ImmutableConsCharObject(method.image,classObject, arg1, null);
-        }
-
-        @SuppressWarnings("unused")
-        @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!isNotProvided(arg1)", "!isNotProvided(arg2)", "!isCharacterObject(arg1)"})
         protected final Object doNonIndexableArg2(final ClassObject classObject, final Object arg1, final Object arg2, final NotProvided n3, final NotProvided n4, final NotProvided n5, final NotProvided n6,
                                       final NotProvided n7) {
             return new ImmutablePointersObject(method.image,classObject, new Object[]{arg1,arg2});

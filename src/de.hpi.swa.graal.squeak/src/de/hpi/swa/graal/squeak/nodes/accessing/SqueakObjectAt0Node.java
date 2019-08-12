@@ -13,7 +13,6 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.ImmutableArrayObject;
-import de.hpi.swa.graal.squeak.model.ImmutableConsCharObject;
 import de.hpi.swa.graal.squeak.model.ImmutablePointersObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeImmutableBytesObject;
@@ -73,11 +72,6 @@ public abstract class SqueakObjectAt0Node extends AbstractNode {
 
     @Specialization
     protected static final Object doImmutablePointers(final ImmutablePointersObject obj, final long index){
-        return obj.at0(index);
-    }
-
-    @Specialization(guards = "index < 2")
-    protected static final Object doImmutableConsChar(final ImmutableConsCharObject obj, final long index){
         return obj.at0(index);
     }
 
