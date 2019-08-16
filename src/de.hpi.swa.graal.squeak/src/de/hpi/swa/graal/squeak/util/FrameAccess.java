@@ -152,6 +152,17 @@ public final class FrameAccess {
         return (FrameMarker) FrameUtil.getObjectSafe(frame, blockOrMethod.getThisMarkerSlot());
     }
 
+    public static FrameMarker getOrCreateMarker(final Frame frame, final CompiledCodeObject blockOrMethod) {
+        final FrameMarker marker = (FrameMarker) FrameUtil.getObjectSafe(frame, blockOrMethod.getThisMarkerSlot());
+        if (marker != null) {
+            return marker;
+        } else {
+            final FrameMarker newMarker = new FrameMarker();
+            setMarker(frame, blockOrMethod, newMarker);
+            return newMarker;
+        }
+    }
+
     public static void setMarker(final Frame frame, final CompiledCodeObject code, final FrameMarker marker) {
         frame.setObject(code.getThisMarkerSlot(), marker);
     }

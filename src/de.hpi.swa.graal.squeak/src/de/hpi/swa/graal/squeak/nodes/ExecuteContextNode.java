@@ -87,8 +87,6 @@ public class ExecuteContextNode extends AbstractNodeWithCode implements Instrume
     }
 
     public Object executeFresh(final VirtualFrame frame) {
-        FrameAccess.initializeMarker(frame, code);
-        FrameAccess.setInstructionPointer(frame, code, 0);
         final boolean enableStackDepthProtection = enableStackDepthProtection();
         try {
             if (enableStackDepthProtection && code.image.stackDepth++ > STACK_DEPTH_LIMIT) {
@@ -172,6 +170,7 @@ public class ExecuteContextNode extends AbstractNodeWithCode implements Instrume
              * Initialize frame iff not resuming an existing context and after a potential primitive
              * has failed.
              */
+            FrameAccess.setInstructionPointer(frame, code, pc);
             frameInitializationNode.executeInitialize(frame);
             if (reasonCode != NO_PRIMITIVE_FAILURE_CODE) {
                 getHandlePrimitiveFailedNode().executeHandle(frame, reasonCode);
