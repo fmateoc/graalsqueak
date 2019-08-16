@@ -1,13 +1,26 @@
 package de.hpi.swa.graal.squeak.model;
 
+import java.lang.reflect.Field;
+
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.interop.InteropLibrary;
+import com.oracle.truffle.api.library.ExportLibrary;
+import com.oracle.truffle.api.library.ExportMessage;
+
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.LINKED_LIST;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
+import sun.misc.Unsafe;
 
+@ExportLibrary(InteropLibrary.class)
 public final class PointersObject extends AbstractPointersObject {
+
+    private long nativeStorage;
+
+    private static final Unsafe unsafe = getUnsafe();
 
     public PointersObject(final SqueakImageContext image) {
         super(image); // for special PointersObjects only
@@ -88,5 +101,40 @@ public final class PointersObject extends AbstractPointersObject {
 
     public PointersObject shallowCopy() {
         return new PointersObject(this);
+    }
+
+    @SuppressWarnings("restriction")
+    private static Unsafe getUnsafe() {
+        try {
+            final Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
+            theUnsafe.setAccessible(true);
+            return (Unsafe) theUnsafe.get(null);
+        } catch (final Exception e) {
+            return null;
+        }
+    }
+
+    @TruffleBoundary
+    @ExportMessage
+    public void toNative() {
+        if (!isPointer()) { // FIXME: check for external* and avoid ClassCastException
+            final byte[] bytes = ((NativeObject) at0(0)).getByteStorage();
+            final int length = bytes.length;
+            nativeStorage = unsafe.allocateMemory(length);
+            // FIXME: something is wrong with the conversion:
+            for (int i = 0; i < length; i++) {
+                unsafe.putByte(nativeStorage + i, bytes[i]);
+            }
+        }
+    }
+
+    @ExportMessage
+    public boolean isPointer() {
+        return nativeStorage != 0;
+    }
+
+    @ExportMessage
+    public long asPointer() {
+        return nativeStorage;
     }
 }
