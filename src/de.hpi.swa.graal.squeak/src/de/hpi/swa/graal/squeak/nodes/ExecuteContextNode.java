@@ -69,7 +69,6 @@ public class ExecuteContextNode extends AbstractNodeWithCode implements Instrume
             bytecodeNodes = SqueakBytecodeDecoder.decode(code);
         }
         frameInitializationNode = resume ? null : FrameStackInitializationNode.create(code);
-        materializeContextOnMethodExitNode = resume ? null : MaterializeContextOnMethodExitNode.create(code);
     }
 
     protected ExecuteContextNode(final ExecuteContextNode executeContextNode) {
@@ -87,12 +86,34 @@ public class ExecuteContextNode extends AbstractNodeWithCode implements Instrume
     }
 
     public Object executeFresh(final VirtualFrame frame) {
+        int pc = 0;
+        int reasonCode = NO_PRIMITIVE_FAILURE_CODE;
+        if (code.hasPrimitive()) {
+            final CallPrimitiveNode callPrimitiveNode = (CallPrimitiveNode) fetchNextBytecodeNode(0);
+            if (callPrimitiveNode.primitiveNode != null) {
+                try {
+                    return callPrimitiveNode.primitiveNode.executePrimitive(frame);
+                } catch (final PrimitiveFailed e) {
+                    reasonCode = e.getReasonCode();
+                    LOG.log(Level.FINE, () -> callPrimitiveNode.primitiveNode +
+                                    " (" + ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(frame)) + ")");
+                    /** continue with fallback code. */
+                }
+            }
+            pc = callPrimitiveNode.getSuccessorIndex();
+            assert pc == CallPrimitiveNode.NUM_BYTECODES;
+        }
+        frameInitializationNode.executeInitialize(frame);
+        if (reasonCode != NO_PRIMITIVE_FAILURE_CODE) {
+            getHandlePrimitiveFailedNode().executeHandle(frame, reasonCode);
+        }
+
         final boolean enableStackDepthProtection = enableStackDepthProtection();
         try {
             if (enableStackDepthProtection && code.image.stackDepth++ > STACK_DEPTH_LIMIT) {
                 throw ProcessSwitch.createWithBoundary(getGetOrCreateContextNode().executeGet(frame));
             }
-            return startBytecode(frame);
+            return startBytecode(frame, pc);
         } catch (final NonLocalReturn nlr) {
             /** {@link getHandleNonLocalReturnNode()} acts as {@link BranchProfile} */
             return getHandleNonLocalReturnNode().executeHandle(frame, nlr);
@@ -108,13 +129,30 @@ public class ExecuteContextNode extends AbstractNodeWithCode implements Instrume
             if (enableStackDepthProtection) {
                 code.image.stackDepth--;
             }
-            materializeContextOnMethodExitNode.execute(frame);
+            getMaterializeContextOnMethodExitNode().execute(frame);
         }
     }
 
     public final Object executeResumeAtStart(final VirtualFrame frame) {
+        int pc = 0;
+        if (code.hasPrimitive()) {
+            final CallPrimitiveNode callPrimitiveNode = (CallPrimitiveNode) fetchNextBytecodeNode(0);
+            if (callPrimitiveNode.primitiveNode != null) {
+                try {
+                    return callPrimitiveNode.primitiveNode.executePrimitive(frame);
+                } catch (final PrimitiveFailed e) {
+                    getHandlePrimitiveFailedNode().executeHandle(frame, e.getReasonCode());
+                    LOG.log(Level.FINE, () -> callPrimitiveNode.primitiveNode +
+                                    " (" + ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(frame)) + ")");
+                    /** continue with fallback code. */
+                }
+            }
+            pc = callPrimitiveNode.getSuccessorIndex();
+            assert pc == CallPrimitiveNode.NUM_BYTECODES;
+        }
+
         try {
-            return startBytecode(frame);
+            return startBytecode(frame, pc);
         } catch (final NonLocalReturn nlr) {
             /** {@link getHandleNonLocalReturnNode()} acts as {@link BranchProfile} */
             return getHandleNonLocalReturnNode().executeHandle(frame, nlr);
@@ -142,40 +180,23 @@ public class ExecuteContextNode extends AbstractNodeWithCode implements Instrume
         return getOrCreateContextNode;
     }
 
+    private MaterializeContextOnMethodExitNode getMaterializeContextOnMethodExitNode() {
+        if (materializeContextOnMethodExitNode == null) {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            materializeContextOnMethodExitNode = insert(MaterializeContextOnMethodExitNode.create(code));
+        }
+        return materializeContextOnMethodExitNode;
+    }
+
     /*
      * Inspired by Sulong's LLVMDispatchBasicBlockNode (https://git.io/fjEDw).
      */
     @ExplodeLoop(kind = ExplodeLoop.LoopExplosionKind.MERGE_EXPLODE)
-    private Object startBytecode(final VirtualFrame frame) {
+    private Object startBytecode(final VirtualFrame frame, final int startPC) {
         CompilerAsserts.compilationConstant(bytecodeNodes.length);
-        int pc = 0;
-        int reasonCode = NO_PRIMITIVE_FAILURE_CODE;
-        if (code.hasPrimitive()) {
-            final CallPrimitiveNode callPrimitiveNode = (CallPrimitiveNode) fetchNextBytecodeNode(0);
-            if (callPrimitiveNode.primitiveNode != null) {
-                try {
-                    return callPrimitiveNode.primitiveNode.executePrimitive(frame);
-                } catch (final PrimitiveFailed e) {
-                    reasonCode = e.getReasonCode();
-                    LOG.log(Level.FINE, () -> callPrimitiveNode.primitiveNode +
-                                    " (" + ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(frame)) + ")");
-                    /** continue with fallback code. */
-                }
-            }
-            pc = callPrimitiveNode.getSuccessorIndex();
-            assert pc == CallPrimitiveNode.NUM_BYTECODES;
-        }
-        if (frameInitializationNode != null) {
-            /*
-             * Initialize frame iff not resuming an existing context and after a potential primitive
-             * has failed.
-             */
-            FrameAccess.setInstructionPointer(frame, code, pc);
-            frameInitializationNode.executeInitialize(frame);
-            if (reasonCode != NO_PRIMITIVE_FAILURE_CODE) {
-                getHandlePrimitiveFailedNode().executeHandle(frame, reasonCode);
-            }
-        }
+        CompilerAsserts.compilationConstant(startPC);
+        int pc = startPC;
+        assert pc == 0 || pc == CallPrimitiveNode.NUM_BYTECODES;
         int backJumpCounter = 0;
         Object returnValue = null;
         bytecode_loop: while (true) {
