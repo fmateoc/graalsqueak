@@ -233,8 +233,10 @@ public final class FrameAccess {
     }
 
     public static void terminate(final Frame frame, final CompiledCodeObject blockOrMethod) {
-        FrameAccess.setInstructionPointer(frame, blockOrMethod, -1);
-        FrameAccess.setSender(frame, NilObject.SINGLETON);
+        if (getContext(frame, blockOrMethod) != null) {
+            setInstructionPointer(frame, blockOrMethod, -1);
+            setSender(frame, NilObject.SINGLETON);
+        }
     }
 
     public static boolean isGraalSqueakFrame(final Frame frame) {
