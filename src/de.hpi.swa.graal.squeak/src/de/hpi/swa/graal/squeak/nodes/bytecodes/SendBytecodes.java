@@ -16,10 +16,10 @@ import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
-import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
+import de.hpi.swa.graal.squeak.nodes.DispatchSend2Node;
 import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassNode;
-import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackPopNNode;
+import de.hpi.swa.graal.squeak.nodes.context.frame.FrameSlotReadNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackPushNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.ControlPrimitives.PrimExitToDebuggerNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
@@ -33,8 +33,8 @@ public final class SendBytecodes {
 
         @Child private AbstractLookupClassNode lookupClassNode;
         @Child private LookupMethodNode lookupMethodNode = LookupMethodNode.create();
-        @Child private DispatchSendNode dispatchSendNode;
-        @Child private FrameStackPopNNode popNNode;
+        @Child private DispatchSend2Node dispatchSendNode;
+        @Child private FrameSlotReadNode popReceiverNode;
         @Child private FrameStackPushNode pushNode;
 
         private final BranchProfile nlrProfile = BranchProfile.create();
@@ -49,8 +49,7 @@ public final class SendBytecodes {
             selector = sel instanceof NativeObject ? (NativeObject) sel : code.image.doesNotUnderstand;
             argumentCount = argcount;
             this.lookupClassNode = lookupClassNode;
-            dispatchSendNode = DispatchSendNode.create(code);
-            popNNode = FrameStackPopNNode.create(code, 1 + argumentCount); // receiver + arguments.
+            dispatchSendNode = DispatchSend2Node.create(code, argumentCount);
         }
 
         protected AbstractSendNode(final AbstractSendNode original) {
@@ -59,12 +58,12 @@ public final class SendBytecodes {
 
         @Override
         public final void executeVoid(final VirtualFrame frame) {
+            final Object receiver = popReceiver(frame);
+            final ClassObject rcvrClass = lookupClassNode.executeLookup(frame, receiver);
+            final Object lookupResult = lookupMethodNode.executeLookup(rcvrClass, selector);
             final Object result;
             try {
-                final Object[] rcvrAndArgs = popNNode.execute(frame);
-                final ClassObject rcvrClass = lookupClassNode.executeLookup(frame, rcvrAndArgs[0]);
-                final Object lookupResult = lookupMethodNode.executeLookup(rcvrClass, selector);
-                result = dispatchSendNode.executeSend(frame, selector, lookupResult, rcvrClass, rcvrAndArgs);
+                result = dispatchSendNode.executeSend(frame, selector, lookupResult, receiver, rcvrClass);
                 assert result != null : "Result of a message send should not be null";
                 if (result != NO_RESULT) {
                     getPushNode().execute(frame, result);
@@ -84,6 +83,15 @@ public final class SendBytecodes {
                     throw nvr;
                 }
             }
+        }
+
+        private Object popReceiver(final VirtualFrame frame) {
+            if (popReceiverNode == null) {
+                CompilerDirectives.transferToInterpreterAndInvalidate();
+                final int stackPointer = FrameAccess.getStackPointer(frame, code) - 1 - argumentCount;
+                popReceiverNode = insert(FrameSlotReadNode.create(code, stackPointer));
+            }
+            return popReceiverNode.executeRead(frame);
         }
 
         private FrameStackPushNode getPushNode() {

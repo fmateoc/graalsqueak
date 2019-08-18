@@ -4,15 +4,19 @@ import java.util.Arrays;
 
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.TruffleLogger;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.FrameUtil;
+import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.nodes.ExplodeLoop;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
@@ -22,8 +26,11 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.NilObject;
+import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithCode;
+import de.hpi.swa.graal.squeak.nodes.context.frame.FrameSlotReadNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackPushNode;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
+import de.hpi.swa.graal.squeak.util.FrameAccessFactory.FrameArgumentsNodeGen;
 
 /**
  * GraalSqueak frame argument layout.
@@ -321,6 +328,70 @@ public final class FrameAccess {
             throw SqueakException.create("Could not find frame for:", frameMarker);
         } else {
             return frame;
+        }
+    }
+
+    public abstract static class FrameArgumentsNode extends AbstractNodeWithCode {
+        protected final int argumentCount;
+        @CompilationFinal private int stackPointer = -1;
+
+        @Children private FrameSlotReadNode[] readNodes;
+
+        protected FrameArgumentsNode(final CompiledCodeObject code, final int argumentCount) {
+            super(code);
+            this.argumentCount = argumentCount;
+            readNodes = argumentCount == 0 ? null : new FrameSlotReadNode[argumentCount];
+        }
+
+        public static FrameArgumentsNode create(final CompiledCodeObject code, final int argumentCount) {
+            return FrameArgumentsNodeGen.create(code, argumentCount);
+        }
+
+        public final Object[] execute(final VirtualFrame frame, final CompiledMethodObject method, final Object sender, final BlockClosureObject closure, final Object receiver) {
+            if (stackPointer == -1) {
+                CompilerDirectives.transferToInterpreterAndInvalidate();
+                stackPointer = FrameAccess.getStackPointer(frame, code) - argumentCount;
+                assert stackPointer >= 0 : "Bad stack pointer";
+            }
+            FrameAccess.setStackPointer(frame, code, stackPointer - 1); // At least skip receiver.
+            return executeSpecialized(frame, method, sender, closure, receiver);
+        }
+
+        protected abstract Object[] executeSpecialized(VirtualFrame frame, CompiledMethodObject method, Object sender, BlockClosureObject closure, Object receiver);
+
+        @Specialization(guards = {"argumentCount == 0"})
+        protected static final Object[] doZero(final CompiledMethodObject method, final Object sender, final BlockClosureObject closure, final Object receiver) {
+            final Object[] frameArguments = new Object[ArgumentIndicies.ARGUMENTS_START.ordinal()];
+            assert method != null || sender != null || receiver != null : "Unexpected `null` value";
+            frameArguments[ArgumentIndicies.METHOD.ordinal()] = method;
+            frameArguments[ArgumentIndicies.SENDER_OR_SENDER_MARKER.ordinal()] = sender;
+            frameArguments[ArgumentIndicies.CLOSURE_OR_NULL.ordinal()] = closure;
+            frameArguments[ArgumentIndicies.RECEIVER.ordinal()] = receiver;
+            return frameArguments;
+        }
+
+        @ExplodeLoop
+        @Specialization(guards = {"argumentCount > 0"})
+        protected final Object[] doNonZero(final VirtualFrame frame, final CompiledMethodObject method, final Object sender, final BlockClosureObject closure, final Object receiver) {
+            final Object[] frameArguments = new Object[ArgumentIndicies.ARGUMENTS_START.ordinal() + argumentCount];
+            assert method != null || sender != null || receiver != null : "Unexpected `null` value";
+            frameArguments[ArgumentIndicies.METHOD.ordinal()] = method;
+            frameArguments[ArgumentIndicies.SENDER_OR_SENDER_MARKER.ordinal()] = sender;
+            frameArguments[ArgumentIndicies.CLOSURE_OR_NULL.ordinal()] = closure;
+            frameArguments[ArgumentIndicies.RECEIVER.ordinal()] = receiver;
+            for (int i = 0; i < argumentCount; i++) {
+                frameArguments[ArgumentIndicies.ARGUMENTS_START.ordinal() + i] = getReadNode(i).executeRead(frame);
+                assert frameArguments[ArgumentIndicies.ARGUMENTS_START.ordinal() + i] != null;
+            }
+            return frameArguments;
+        }
+
+        protected final FrameSlotReadNode getReadNode(final int offset) {
+            if (readNodes[offset] == null) {
+                CompilerDirectives.transferToInterpreterAndInvalidate();
+                readNodes[offset] = insert(FrameSlotReadNode.create(code, stackPointer + offset));
+            }
+            return readNodes[offset];
         }
     }
 }

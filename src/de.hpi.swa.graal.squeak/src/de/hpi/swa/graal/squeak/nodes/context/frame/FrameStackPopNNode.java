@@ -13,28 +13,34 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public abstract class FrameStackPopNNode extends AbstractNodeWithCode {
     protected final int numPop;
+    protected final boolean skipReceiver;
     @CompilationFinal private int stackPointer = -1;
 
     @Children private FrameSlotReadNode[] readNodes;
 
-    protected FrameStackPopNNode(final CompiledCodeObject code, final int numPop) {
+    protected FrameStackPopNNode(final CompiledCodeObject code, final int numPop, final boolean skipReceiver) {
         super(code);
         this.numPop = numPop;
+        this.skipReceiver = skipReceiver;
         readNodes = numPop == 0 ? null : new FrameSlotReadNode[numPop];
     }
 
     public static FrameStackPopNNode create(final CompiledCodeObject code, final int numPop) {
-        return FrameStackPopNNodeGen.create(code, numPop);
+        return FrameStackPopNNodeGen.create(code, numPop, false);
+    }
+
+    public static FrameStackPopNNode createForSend(final CompiledCodeObject code, final int numPop) {
+        return FrameStackPopNNodeGen.create(code, numPop, true);
     }
 
     public final Object[] execute(final VirtualFrame frame) {
-        if (numPop > 0) {
+        if (skipReceiver || numPop > 0) {
             if (stackPointer == -1) {
                 CompilerDirectives.transferToInterpreterAndInvalidate();
                 stackPointer = FrameAccess.getStackPointer(frame, code) - numPop;
                 assert stackPointer >= 0 : "Bad stack pointer";
             }
-            FrameAccess.setStackPointer(frame, code, stackPointer);
+            FrameAccess.setStackPointer(frame, code, skipReceiver ? stackPointer - 1 : stackPointer);
         }
         return executeSpecialized(frame);
     }
