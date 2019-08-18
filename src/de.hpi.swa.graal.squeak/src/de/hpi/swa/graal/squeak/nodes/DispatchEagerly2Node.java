@@ -1,6 +1,5 @@
 package de.hpi.swa.graal.squeak.nodes;
 
-import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.ReportPolymorphism;
 import com.oracle.truffle.api.dsl.Specialization;
@@ -13,8 +12,6 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
-import de.hpi.swa.graal.squeak.nodes.context.frame.CreatePrimitiveArgumentsNode;
-import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackPushNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 import de.hpi.swa.graal.squeak.util.FrameAccess.FrameArgumentsNode;
@@ -37,23 +34,16 @@ public abstract class DispatchEagerly2Node extends AbstractNodeWithCode {
 
     public abstract Object executeDispatch(VirtualFrame frame, CompiledMethodObject method, Object receiver);
 
+    @SuppressWarnings("unused")
     @Specialization(guards = {"method.hasPrimitive()", "method == cachedMethod", "primitiveNode != null"}, //
                     limit = "INLINE_CACHE_SIZE", assumptions = {"cachedMethod.getCallTargetStable()"}, rewriteOn = PrimitiveFailed.class)
-    protected final Object doPrimitiveEagerly(final VirtualFrame frame, @SuppressWarnings("unused") final CompiledMethodObject method, final Object receiver,
-                    @SuppressWarnings("unused") @Cached("method") final CompiledMethodObject cachedMethod,
-                    @Cached("cachedMethod.image.primitiveNodeFactory.forIndex(cachedMethod, cachedMethod.primitiveIndex())") final AbstractPrimitiveNode primitiveNode,
-                    @Cached("create(code, argumentCount, primitiveNode.getNumArguments())") final CreatePrimitiveArgumentsNode createArgumentsNode) {
-        final Object[] arguments = createArgumentsNode.execute(frame, receiver);
-        try {
-            return primitiveNode.executeWithArguments(frame, arguments);
-        } catch (final PrimitiveFailed e) {
-            CompilerDirectives.transferToInterpreter(); // FIXME
-            FrameAccess.setStackPointer(frame, code, FrameAccess.getStackPointer(frame, code) + 1);
-            for (int i = 0; i < argumentCount; i++) {
-                FrameStackPushNode.create(code).execute(frame, arguments[1 + i]);
-            }
-            throw e;
-        }
+    protected final Object doPrimitiveEagerly(final VirtualFrame frame, final CompiledMethodObject method, final Object receiver,
+                    @Cached("method") final CompiledMethodObject cachedMethod,
+                    @Cached("cachedMethod.image.primitiveNodeFactory.forIndex(cachedMethod, cachedMethod.primitiveIndex(), argumentCount)") final AbstractPrimitiveNode primitiveNode) {
+        final Object result = primitiveNode.executePrimitive(frame);
+        // TODO: clear values
+        FrameAccess.setStackPointer(frame, code, FrameAccess.getStackPointer(frame, code) - 1 - argumentCount);
+        return result;
     }
 
     @Specialization(guards = {"method == cachedMethod"}, //

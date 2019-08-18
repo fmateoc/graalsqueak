@@ -34,7 +34,7 @@ public final class SendBytecodes {
         @Child private AbstractLookupClassNode lookupClassNode;
         @Child private LookupMethodNode lookupMethodNode = LookupMethodNode.create();
         @Child private DispatchSend2Node dispatchSendNode;
-        @Child private FrameSlotReadNode popReceiverNode;
+        @Child private FrameSlotReadNode receiverNode;
         @Child private FrameStackPushNode pushNode;
 
         private final BranchProfile nlrProfile = BranchProfile.create();
@@ -58,7 +58,7 @@ public final class SendBytecodes {
 
         @Override
         public final void executeVoid(final VirtualFrame frame) {
-            final Object receiver = popReceiver(frame);
+            final Object receiver = getReceiver(frame);
             final ClassObject rcvrClass = lookupClassNode.executeLookup(frame, receiver);
             final Object lookupResult = lookupMethodNode.executeLookup(rcvrClass, selector);
             final Object result;
@@ -85,13 +85,13 @@ public final class SendBytecodes {
             }
         }
 
-        private Object popReceiver(final VirtualFrame frame) {
-            if (popReceiverNode == null) {
+        private Object getReceiver(final VirtualFrame frame) {
+            if (receiverNode == null) {
                 CompilerDirectives.transferToInterpreterAndInvalidate();
                 final int stackPointer = FrameAccess.getStackPointer(frame, code) - 1 - argumentCount;
-                popReceiverNode = insert(FrameSlotReadNode.create(code, stackPointer));
+                receiverNode = insert(FrameSlotReadNode.create(code.getStackSlot(stackPointer)));
             }
-            return popReceiverNode.executeRead(frame);
+            return receiverNode.executeRead(frame);
         }
 
         private FrameStackPushNode getPushNode() {

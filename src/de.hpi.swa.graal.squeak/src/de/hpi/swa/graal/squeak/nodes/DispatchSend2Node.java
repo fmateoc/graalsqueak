@@ -33,14 +33,14 @@ public abstract class DispatchSend2Node extends AbstractNodeWithCode {
 
     public abstract Object executeSend(VirtualFrame frame, NativeObject selector, Object lookupResult, Object receiver, ClassObject rcvrClass);
 
-    @Specialization(guards = {"!code.image.isHeadless() || selector.isAllowedInHeadlessMode()", "lookupResult != null"})
+    @Specialization(guards = {"!code.image.isHeadless() || selector.isAllowedInHeadlessMode()"})
     protected static final Object doDispatch(final VirtualFrame frame, @SuppressWarnings("unused") final NativeObject selector, @SuppressWarnings("unused") final CompiledMethodObject lookupResult,
                     final Object receiver, @SuppressWarnings("unused") final ClassObject rcvrClass,
                     @Cached("create(code, argumentCount)") final DispatchEagerly2Node dispatchNode) {
         return dispatchNode.executeDispatch(frame, lookupResult, receiver);
     }
 
-    @Specialization(guards = {"!code.image.isHeadless() || selector.isAllowedInHeadlessMode()", "lookupResult != null"})
+    @Specialization(guards = {"!code.image.isHeadless() || selector.isAllowedInHeadlessMode()"})
     protected static final Object doDispatchNeedsSender(final VirtualFrame frame, @SuppressWarnings("unused") final NativeObject selector, final CompiledMethodObject lookupResult,
                     final Object receiver, @SuppressWarnings("unused") final ClassObject rcvrClass,
                     @Cached("create(code, argumentCount)") final DispatchEagerly2Node dispatchNode) {
@@ -48,17 +48,18 @@ public abstract class DispatchSend2Node extends AbstractNodeWithCode {
     }
 
     @SuppressWarnings("unused")
-    @Specialization(guards = {"code.image.isHeadless()", "selector.isDebugErrorSelector()", "lookupResult != null"})
+    @Specialization(guards = {"code.image.isHeadless()", "selector.isDebugErrorSelector()"})
     protected final Object doDispatchHeadlessError(final VirtualFrame frame, final NativeObject selector, final CompiledMethodObject lookupResult,
                     final Object receiver, final ClassObject rcvrClass) {
         throw new SqueakError(this, MiscUtils.format("%s>>#%s detected in headless mode. Aborting...", rcvrClass.getSqueakClassName(), selector.asStringUnsafe()));
     }
 
     @SuppressWarnings("unused")
-    @Specialization(guards = {"code.image.isHeadless()", "selector.isDebugSyntaxErrorSelector()", "lookupResult != null"})
+    @Specialization(guards = {"code.image.isHeadless()", "selector.isDebugSyntaxErrorSelector()"})
     protected static final Object doDispatchHeadlessSyntaxError(final VirtualFrame frame, final NativeObject selector, final CompiledMethodObject lookupResult,
-                    final Object receiver, final ClassObject rcvrClass) {
-        throw new SqueakSyntaxError(null); // FIXME: (PointersObject) rcvrAndArgs[1]);
+                    final Object receiver, final ClassObject rcvrClass,
+                    @Cached("createForSend(code, argumentCount)") final FrameStackPopNNode popNNode) {
+        throw new SqueakSyntaxError((PointersObject) popNNode.execute(frame)[1]);
     }
 
     @Specialization(guards = {"lookupResult == null"})
