@@ -63,7 +63,7 @@ public final class SendBytecodes {
             final Object lookupResult = lookupMethodNode.executeLookup(rcvrClass, selector);
             final Object result;
             try {
-                result = dispatchSendNode.executeSend(frame, selector, lookupResult, receiver, rcvrClass);
+                result = dispatchSendNode.executeSend(frame, selector, lookupResult, rcvrClass);
                 assert result != null : "Result of a message send should not be null";
                 if (result != NO_RESULT) {
                     getPushNode().execute(frame, result);
