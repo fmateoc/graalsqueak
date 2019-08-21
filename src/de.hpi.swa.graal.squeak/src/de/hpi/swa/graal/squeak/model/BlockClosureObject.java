@@ -39,8 +39,8 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithHash {
         this.outerContext = outerContext;
         this.receiver = receiver;
         this.copied = copied;
+        startPC = block.getInitialPC();
         this.numArgs = numArgs;
-        /* startPC does not need to be initialized, it's often not needed for a block activation. */
     }
 
     private BlockClosureObject(final BlockClosureObject original) {
