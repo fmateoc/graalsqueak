@@ -26,8 +26,6 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public final class SendBytecodes {
     public abstract static class AbstractSendNode extends AbstractInstrumentableBytecodeNode {
-        public static final Object NO_RESULT = new Object();
-
         protected final NativeObject selector;
         private final int argumentCount;
 
@@ -65,9 +63,8 @@ public final class SendBytecodes {
             try {
                 result = dispatchSendNode.executeSend(frame, selector, lookupResult, rcvrClass);
                 assert result != null : "Result of a message send should not be null";
-                if (result != NO_RESULT) {
-                    getPushNode().execute(frame, result);
-                }
+                // Insert push node lazily as dispatch might context switch or throw.
+                getPushNode().execute(frame, result);
             } catch (final NonLocalReturn nlr) {
                 nlrProfile.enter();
                 if (nlr.getTargetContextOrMarker() == getMarker(frame) || nlr.getTargetContextOrMarker() == getContext(frame)) {

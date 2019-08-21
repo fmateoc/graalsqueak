@@ -46,7 +46,6 @@ import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectChangeClassOfToNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectIdentityNode;
-import de.hpi.swa.graal.squeak.nodes.bytecodes.SendBytecodes.AbstractSendNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.CreateEagerArgumentsNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
@@ -61,7 +60,6 @@ import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.UnaryPrimiti
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.UnaryPrimitiveWithoutFallback;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveNodeFactory;
 import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
-import de.hpi.swa.graal.squeak.nodes.primitives.StackPushForPrimitivesNode;
 import de.hpi.swa.graal.squeak.nodes.process.LinkProcessToListNode;
 import de.hpi.swa.graal.squeak.nodes.process.RemoveProcessFromListNode;
 import de.hpi.swa.graal.squeak.nodes.process.ResumeProcessNode;
@@ -194,11 +192,9 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "receiver.getSqueakClass().isSemaphoreClass()")
-        protected final Object doSignal(final VirtualFrame frame, final PointersObject receiver,
-                        @Cached final StackPushForPrimitivesNode pushNode) {
-            pushNode.executeWrite(frame, receiver); // keep receiver on stack
+        protected final PointersObject doSignal(final VirtualFrame frame, final PointersObject receiver) {
             signalSemaphoreNode.executeSignal(frame, receiver);
-            return AbstractSendNode.NO_RESULT;
+            return receiver;
         }
     }
 
@@ -211,23 +207,19 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"receiver.getSqueakClass().isSemaphoreClass()", "hasExcessSignals(receiver)"})
-        protected static final Object doWaitExcessSignals(final VirtualFrame frame, final PointersObject receiver,
-                        @Shared("pushNode") @Cached final StackPushForPrimitivesNode pushNode) {
-            pushNode.executeWrite(frame, receiver); // keep receiver on stack
+        protected static final PointersObject doWaitExcessSignals(final PointersObject receiver) {
             final long excessSignals = (long) receiver.at0(SEMAPHORE.EXCESS_SIGNALS);
             receiver.atput0(SEMAPHORE.EXCESS_SIGNALS, excessSignals - 1);
-            return AbstractSendNode.NO_RESULT;
+            return receiver;
         }
 
         @Specialization(guards = {"receiver.getSqueakClass().isSemaphoreClass()", "!hasExcessSignals(receiver)"})
-        protected final Object doWait(final VirtualFrame frame, final PointersObject receiver,
-                        @Shared("pushNode") @Cached final StackPushForPrimitivesNode pushNode,
+        protected final PointersObject doWait(final VirtualFrame frame, final PointersObject receiver,
                         @Cached final LinkProcessToListNode linkProcessToListNode,
                         @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
-            pushNode.executeWrite(frame, receiver); // keep receiver on stack
             linkProcessToListNode.executeLink(method.image.getActiveProcess(), receiver);
             wakeHighestPriorityNode.executeWake(frame);
-            return AbstractSendNode.NO_RESULT;
+            return receiver;
         }
 
         protected static final boolean hasExcessSignals(final PointersObject semaphore) {
@@ -246,12 +238,10 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected final Object doResume(final VirtualFrame frame, final PointersObject receiver,
-                        @Cached final StackPushForPrimitivesNode pushNode) {
+        protected final PointersObject doResume(final VirtualFrame frame, final PointersObject receiver) {
             // keep receiver on stack before resuming other process
-            pushNode.executeWrite(frame, receiver);
             resumeProcessNode.executeResume(frame, receiver);
-            return AbstractSendNode.NO_RESULT;
+            return receiver;
         }
     }
 
@@ -264,12 +254,10 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "receiver.isActiveProcess()")
-        protected static final Object doSuspendActiveProcess(final VirtualFrame frame, @SuppressWarnings("unused") final PointersObject receiver,
-                        @Cached final StackPushForPrimitivesNode pushNode,
+        protected static final NilObject doSuspendActiveProcess(final VirtualFrame frame, @SuppressWarnings("unused") final PointersObject receiver,
                         @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
-            pushNode.executeWrite(frame, NilObject.SINGLETON);
             wakeHighestPriorityNode.executeWake(frame);
-            return AbstractSendNode.NO_RESULT; // result already pushed above
+            return NilObject.SINGLETON;
         }
 
         @Specialization(guards = {"!receiver.isActiveProcess()", "!hasNilList(receiver)"})
@@ -618,11 +606,9 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected final Object doYield(final VirtualFrame frame, final PointersObject scheduler,
-                        @Cached final StackPushForPrimitivesNode pushNode) {
-            pushNode.executeWrite(frame, scheduler); // keep receiver on stack
+        protected final PointersObject doYield(final VirtualFrame frame, final PointersObject scheduler) {
             yieldProcessNode.executeYield(frame, scheduler);
-            return AbstractSendNode.NO_RESULT;
+            return scheduler;
         }
     }
 
@@ -655,14 +641,12 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "!mutex.isEmptyList()")
-        protected static final Object doExitNonEmpty(final VirtualFrame frame, final PointersObject mutex,
-                        @Cached final StackPushForPrimitivesNode pushNode,
+        protected static final PointersObject doExitNonEmpty(final VirtualFrame frame, final PointersObject mutex,
                         @Cached("create(method)") final ResumeProcessNode resumeProcessNode) {
-            pushNode.executeWrite(frame, mutex); // keep receiver on stack
             final PointersObject owningProcess = mutex.removeFirstLinkOfList();
             mutex.atput0(MUTEX.OWNER, owningProcess);
             resumeProcessNode.executeResume(frame, owningProcess);
-            return AbstractSendNode.NO_RESULT;
+            return mutex;
         }
     }
 
@@ -686,14 +670,12 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"!ownerIsNil(mutex)", "!activeProcessMutexOwner(mutex)"})
-        protected final Object doEnter(final VirtualFrame frame, final PointersObject mutex, @SuppressWarnings("unused") final NotProvided notProvided,
-                        @Shared("pushNode") @Cached final StackPushForPrimitivesNode pushNode,
+        protected final boolean doEnter(final VirtualFrame frame, final PointersObject mutex, @SuppressWarnings("unused") final NotProvided notProvided,
                         @Shared("linkProcessToListNode") @Cached final LinkProcessToListNode linkProcessToListNode,
                         @Shared("wakeHighestPriorityNode") @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
-            pushNode.executeWrite(frame, BooleanObject.FALSE);
             linkProcessToListNode.executeLink(method.image.getActiveProcess(), mutex);
             wakeHighestPriorityNode.executeWake(frame);
-            return AbstractSendNode.NO_RESULT;
+            return BooleanObject.FALSE;
         }
 
         @Specialization(guards = "ownerIsNil(mutex)")
@@ -709,14 +691,12 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"!ownerIsNil(mutex)", "!isMutexOwner(mutex, effectiveProcess)"})
-        protected static final Object doEnter(final VirtualFrame frame, final PointersObject mutex, @SuppressWarnings("unused") final PointersObject effectiveProcess,
-                        @Shared("pushNode") @Cached final StackPushForPrimitivesNode pushNode,
+        protected static final boolean doEnter(final VirtualFrame frame, final PointersObject mutex, @SuppressWarnings("unused") final PointersObject effectiveProcess,
                         @Shared("linkProcessToListNode") @Cached final LinkProcessToListNode linkProcessToListNode,
                         @Shared("wakeHighestPriorityNode") @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
-            pushNode.executeWrite(frame, BooleanObject.FALSE);
             linkProcessToListNode.executeLink(effectiveProcess, mutex);
             wakeHighestPriorityNode.executeWake(frame);
-            return AbstractSendNode.NO_RESULT;
+            return BooleanObject.FALSE;
         }
 
         protected static final boolean ownerIsNil(final PointersObject mutex) {
@@ -830,17 +810,14 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
 
         @Specialization
         protected static final Object doRelinquish(final VirtualFrame frame, final Object receiver, @SuppressWarnings("unused") final long timeMicroseconds,
-                        @Cached final StackPushForPrimitivesNode pushNode,
                         @Cached("create(method)") final InterruptHandlerNode interruptNode) {
-            /* Keep receiver on stack, interrupt handler could trigger. */
-            pushNode.executeWrite(frame, receiver);
             /*
              * Perform interrupt check (even if interrupt handler is not active), otherwise
              * idleProcess gets stuck. Checking whether the interrupt handler `shouldTrigger()`
              * decreases performance for some reason, forcing interrupt check instead.
              */
             interruptNode.executeTrigger(frame);
-            return AbstractSendNode.NO_RESULT;
+            return receiver;
         }
     }
 
