@@ -1,8 +1,12 @@
 package de.hpi.swa.graal.squeak.nodes.bytecodes;
 
+import java.lang.ref.WeakReference;
+
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.debug.DebuggerTags;
+import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.StandardTags;
 import com.oracle.truffle.api.instrumentation.Tag;
@@ -19,6 +23,8 @@ import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
 import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassNode;
+import de.hpi.swa.graal.squeak.nodes.bytecodes.SendBytecodesFactory.LookupClassNodeGen;
+import de.hpi.swa.graal.squeak.nodes.bytecodes.SendBytecodesFactory.LookupSuperClassNodeGen;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackPopNNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackPushNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.ControlPrimitives.PrimExitToDebuggerNode;
@@ -41,7 +47,7 @@ public final class SendBytecodes {
         private final BranchProfile nvrProfile = BranchProfile.create();
 
         private AbstractSendNode(final CompiledCodeObject code, final int index, final int numBytecodes, final Object sel, final int argcount) {
-            this(code, index, numBytecodes, sel, argcount, new LookupClassNode());
+            this(code, index, numBytecodes, sel, argcount, LookupClassNodeGen.create());
         }
 
         private AbstractSendNode(final CompiledCodeObject code, final int index, final int numBytecodes, final Object sel, final int argcount, final AbstractLookupClassNode lookupClassNode) {
@@ -121,18 +127,37 @@ public final class SendBytecodes {
     }
 
     @NodeInfo(cost = NodeCost.NONE)
-    protected static final class LookupClassNode extends AbstractLookupClassNode {
-        @Child private SqueakObjectClassNode lookupClassNode = SqueakObjectClassNode.create();
+    protected abstract static class LookupClassNode extends AbstractLookupClassNode {
+        @SuppressWarnings("unused")
+        @Specialization(guards = "receiver == weakUnwrap(cachedReceiver)", limit = "1")
+        protected static final ClassObject doCached(final VirtualFrame frame, final Object receiver,
+                        @Cached("weakWrap(receiver)") final WeakReference<Object> cachedReceiver,
+                        @Cached("lookupUncached(receiver)") final ClassObject cachedClass) {
+            return cachedClass;
+        }
 
-        @Override
-        protected ClassObject executeLookup(final VirtualFrame frame, final Object receiver) {
+        protected static final ClassObject lookupUncached(final Object receiver) {
+            return SqueakObjectClassNode.getUncached().executeLookup(receiver);
+        }
+
+        @Specialization
+        protected static final ClassObject doGeneric(final Object receiver,
+                        @Cached final SqueakObjectClassNode lookupClassNode) {
             return lookupClassNode.executeLookup(receiver);
         }
     }
 
-    protected static final class LookupSuperClassNode extends AbstractLookupClassNode {
-        @Override
-        protected ClassObject executeLookup(final VirtualFrame frame, final Object receiver) {
+    protected abstract static class LookupSuperClassNode extends AbstractLookupClassNode {
+        @SuppressWarnings("unused")
+        @Specialization(guards = "receiver == weakUnwrap(cachedReceiver)", limit = "1")
+        protected static final ClassObject doCached(final VirtualFrame frame, final Object receiver,
+                        @Cached("weakWrap(receiver)") final WeakReference<Object> cachedReceiver,
+                        @Cached("doGeneric(frame, receiver)") final ClassObject cachedClass) {
+            return cachedClass;
+        }
+
+        @Specialization
+        protected static final ClassObject doGeneric(final VirtualFrame frame, @SuppressWarnings("unused") final Object receiver) {
             final ClassObject methodClass = FrameAccess.getMethod(frame).getMethodClass();
             final ClassObject superclass = methodClass.getSuperclassOrNull();
             return superclass == null ? methodClass : superclass;
@@ -187,7 +212,7 @@ public final class SendBytecodes {
         }
 
         public SingleExtendedSuperNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int literalIndex, final int numArgs) {
-            super(code, index, numBytecodes, code.getLiteral(literalIndex), numArgs, new LookupSuperClassNode());
+            super(code, index, numBytecodes, code.getLiteral(literalIndex), numArgs, LookupSuperClassNodeGen.create());
         }
 
         @Override

@@ -1,5 +1,7 @@
 package de.hpi.swa.graal.squeak.nodes;
 
+import java.lang.ref.WeakReference;
+
 import com.oracle.truffle.api.TruffleOptions;
 
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
@@ -158,5 +160,13 @@ public final class SqueakGuards {
 
     public static long to0(final long value) {
         return value - 1;
+    }
+
+    public static Object weakUnwrap(final WeakReference<Object> weakRef) {
+        return weakRef.get();
+    }
+
+    public static WeakReference<Object> weakWrap(final Object object) {
+        return new WeakReference<>(object);
     }
 }
