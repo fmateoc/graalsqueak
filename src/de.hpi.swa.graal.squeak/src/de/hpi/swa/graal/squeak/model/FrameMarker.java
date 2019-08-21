@@ -13,6 +13,7 @@ public final class FrameMarker {
     }
 
     public ContextObject getMaterializedContext() {
+        CompilerAsserts.neverPartOfCompilation("FrameMarker resolution should never happen on fast path");
         final Frame targetFrame = FrameAccess.findFrameForMarker(this);
         final CompiledCodeObject blockOrMethod = FrameAccess.getBlockOrMethod(targetFrame);
         final ContextObject context = FrameAccess.getContext(targetFrame, blockOrMethod);
@@ -21,7 +22,7 @@ public final class FrameMarker {
             return context;
         } else {
             assert this == FrameAccess.getMarker(targetFrame, blockOrMethod) : "Frame does not match";
-            return ContextObject.create(targetFrame, blockOrMethod);
+            return ContextObject.create(targetFrame.materialize(), blockOrMethod);
         }
     }
 }
