@@ -88,6 +88,9 @@ public class ExecuteContextNode extends AbstractNodeWithCode implements Instrume
 
     public Object executeFresh(final VirtualFrame frame) {
         FrameAccess.setInstructionPointer(frame, code, 0);
+        if (code.isUnwindMarked()) {
+            getGetOrCreateContextNode().executeGet(frame);
+        }
         final boolean enableStackDepthProtection = enableStackDepthProtection();
         try {
             if (enableStackDepthProtection && code.image.stackDepth++ > STACK_DEPTH_LIMIT) {
