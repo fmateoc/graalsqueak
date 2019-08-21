@@ -8,8 +8,12 @@ import com.oracle.truffle.api.nodes.DirectCallNode;
 import com.oracle.truffle.api.nodes.IndirectCallNode;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
+import com.oracle.truffle.api.profiles.BranchProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
+import de.hpi.swa.graal.squeak.exceptions.ProcessSwitch;
+import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
+import de.hpi.swa.graal.squeak.exceptions.Returns.NonVirtualReturn;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
@@ -39,8 +43,21 @@ public abstract class DispatchEagerly2Node extends AbstractNodeWithCode {
                     limit = "INLINE_CACHE_SIZE", assumptions = {"cachedMethod.getCallTargetStable()"}, rewriteOn = PrimitiveFailed.class)
     protected final Object doPrimitiveEagerly(final VirtualFrame frame, final CompiledMethodObject method,
                     @Cached("method") final CompiledMethodObject cachedMethod,
-                    @Cached("cachedMethod.image.primitiveNodeFactory.forIndex(cachedMethod, cachedMethod.primitiveIndex(), argumentCount)") final AbstractPrimitiveNode primitiveNode) {
-        final Object result = primitiveNode.executePrimitive(frame);
+                    @Cached("cachedMethod.image.primitiveNodeFactory.forIndex(cachedMethod, cachedMethod.primitiveIndex(), argumentCount)") final AbstractPrimitiveNode primitiveNode,
+                    @Cached final BranchProfile exceptionProfile,
+                    @Cached final BranchProfile isClosurePrimitiveProfile) {
+        final Object result;
+        try {
+            result = primitiveNode.executePrimitive(frame);
+        } catch (NonLocalReturn | NonVirtualReturn | ProcessSwitch e) {
+            exceptionProfile.enter();
+            final int primitiveIndex = cachedMethod.primitiveIndex();
+            if (201 <= primitiveIndex && primitiveIndex <= 206 || primitiveIndex == 221 || primitiveIndex == 222) {
+                isClosurePrimitiveProfile.enter();
+                FrameAccess.setStackPointer(frame, code, FrameAccess.getStackPointer(frame, code) - 1 - argumentCount);
+            }
+            throw e;
+        }
         // TODO: clear values
         FrameAccess.setStackPointer(frame, code, FrameAccess.getStackPointer(frame, code) - 1 - argumentCount);
         return result;
