@@ -54,7 +54,7 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
     }
 
     @GenerateNodeFactory
-    @SqueakPrimitive(indices = 195)
+// @SqueakPrimitive(indices = 195)
     protected abstract static class PrimFindNextUnwindContextUpToNode extends AbstractPrimitiveNode implements BinaryPrimitive {
         public PrimFindNextUnwindContextUpToNode(final CompiledMethodObject method) {
             super(method);
@@ -116,7 +116,7 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
     }
 
     @GenerateNodeFactory
-    @SqueakPrimitive(indices = 196)
+// @SqueakPrimitive(indices = 196)
     protected abstract static class PrimTerminateToNode extends AbstractPrimitiveNode implements BinaryPrimitive {
         public PrimTerminateToNode(final CompiledMethodObject method) {
             super(method);
@@ -196,7 +196,7 @@ public class ContextPrimitives extends AbstractPrimitiveFactoryHolder {
     }
 
     @GenerateNodeFactory
-    @SqueakPrimitive(indices = 197)
+// @SqueakPrimitive(indices = 197)
     protected abstract static class PrimNextHandlerContextNode extends AbstractPrimitiveNode implements UnaryPrimitive {
         protected PrimNextHandlerContextNode(final CompiledMethodObject method) {
             super(method);
