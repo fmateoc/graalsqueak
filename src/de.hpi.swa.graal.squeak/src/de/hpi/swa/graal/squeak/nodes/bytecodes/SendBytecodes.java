@@ -9,6 +9,7 @@ import com.oracle.truffle.api.instrumentation.Tag;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
 import com.oracle.truffle.api.profiles.BranchProfile;
+import com.oracle.truffle.api.profiles.ValueProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonVirtualReturn;
@@ -37,6 +38,7 @@ public final class SendBytecodes {
         @Child private FrameStackPopNNode popNNode;
         @Child private FrameStackPushNode pushNode;
 
+        private final ValueProfile classProfile = ValueProfile.createIdentityProfile();
         private final BranchProfile nlrProfile = BranchProfile.create();
         private final BranchProfile nvrProfile = BranchProfile.create();
 
@@ -62,7 +64,7 @@ public final class SendBytecodes {
             final Object result;
             try {
                 final Object[] rcvrAndArgs = popNNode.execute(frame);
-                final ClassObject rcvrClass = lookupClassNode.executeLookup(frame, rcvrAndArgs[0]);
+                final ClassObject rcvrClass = classProfile.profile(lookupClassNode.executeLookup(frame, rcvrAndArgs[0]));
                 final Object lookupResult = lookupMethodNode.executeLookup(rcvrClass, selector);
                 result = dispatchSendNode.executeSend(frame, selector, lookupResult, rcvrClass, rcvrAndArgs);
                 assert result != null : "Result of a message send should not be null";
