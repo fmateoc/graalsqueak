@@ -18,9 +18,11 @@ import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.LoopNode;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
+import com.oracle.truffle.api.profiles.BranchProfile;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
 
+import de.hpi.swa.graal.squeak.exceptions.InstructionPointerModification;
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.exceptions.ProcessSwitch;
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
@@ -58,6 +60,8 @@ public class ExecuteContextNode extends AbstractNodeWithCode implements Instrume
     @Child private FrameStackInitializationNode frameInitializationNode;
     @Child private HandlePrimitiveFailedNode handlePrimitiveFailedNode;
     @Child private MaterializeContextOnMethodExitNode materializeContextOnMethodExitNode;
+
+    private final BranchProfile instructionPointerModificationProfile = BranchProfile.create();
 
     private SourceSection section;
 
@@ -227,7 +231,12 @@ public class ExecuteContextNode extends AbstractNodeWithCode implements Instrume
                 if (node instanceof AbstractSendNode) {
                     FrameAccess.setInstructionPointer(frame, code, pc);
                 }
-                node.executeVoid(frame);
+                try {
+                    node.executeVoid(frame);
+                } catch (final InstructionPointerModification ipm) {
+                    instructionPointerModificationProfile.enter();
+                    pc = ipm.getPcOrRethrow(getContext(frame), code.hasPrimitive());
+                }
                 continue bytecode_loop;
             }
         }
@@ -289,7 +298,12 @@ public class ExecuteContextNode extends AbstractNodeWithCode implements Instrume
                 if (node instanceof AbstractSendNode) {
                     FrameAccess.setInstructionPointer(frame, code, successor);
                 }
-                node.executeVoid(frame);
+                try {
+                    node.executeVoid(frame);
+                } catch (final InstructionPointerModification ipm) {
+                    instructionPointerModificationProfile.enter();
+                    pc = ipm.getPcOrRethrow(getContext(frame), code.hasPrimitive());
+                }
                 pc = successor;
                 continue bytecode_loop_slow;
             }

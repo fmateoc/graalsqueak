@@ -579,6 +579,21 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         return !hasClosure() && getMethod().hasPrimitive() && getInstructionPointerForBytecodeLoop() <= CallPrimitiveNode.NUM_BYTECODES;
     }
 
+    public boolean isActiveOnTruffleStack() {
+        final FrameMarker frameMarker = getFrameMarker();
+        final Object foundMyself = Truffle.getRuntime().iterateFrames((frameInstance) -> {
+            final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+            if (!FrameAccess.isGraalSqueakFrame(current)) {
+                return null;
+            }
+            if (FrameAccess.getMarker(current) == frameMarker) {
+                return true;
+            }
+            return null;
+        });
+        return foundMyself != null;
+    }
+
     public boolean pointsTo(final Object thang) {
         // TODO: make sure this works correctly
         if (truffleFrame != null) {

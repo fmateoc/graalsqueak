@@ -5,7 +5,9 @@ import com.oracle.truffle.api.dsl.GenerateUncached;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.MaterializedFrame;
+import com.oracle.truffle.api.profiles.BranchProfile;
 
+import de.hpi.swa.graal.squeak.exceptions.InstructionPointerModification;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
@@ -101,8 +103,13 @@ public final class ContextObjectNodes {
         }
 
         @Specialization(guards = {"index == INSTRUCTION_POINTER"})
-        protected static final void doInstructionPointer(final ContextObject context, @SuppressWarnings("unused") final long index, final long value) {
+        protected static final void doInstructionPointer(final ContextObject context, @SuppressWarnings("unused") final long index, final long value,
+                        @Cached final BranchProfile instructionPointerModificationProfile) {
             context.setInstructionPointer((int) value);
+            if (context.isActiveOnTruffleStack()) {
+                instructionPointerModificationProfile.enter();
+                throw InstructionPointerModification.create(context);
+            }
         }
 
         @SuppressWarnings("unused")
