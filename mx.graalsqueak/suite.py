@@ -98,9 +98,6 @@ suite = {
         "de.hpi.swa.graal.squeak.shared": {
             "subDir": "src",
             "sourceDirs": ["src"],
-            "dependencies": [
-                "truffle:TRUFFLE_API",
-            ],
             "checkstyle": "de.hpi.swa.graal.squeak",
             "jacoco": "include",
             "javaCompliance": "8+",
@@ -154,9 +151,6 @@ suite = {
             "dependencies": [
                 "de.hpi.swa.graal.squeak.shared",
             ],
-            "distDependencies": [
-                "truffle:TRUFFLE_API",
-            ],
             "path": "graalsqueak-shared.jar",
             "sourcesPath": "graalsqueak-shared.src.zip",
         },
@@ -169,6 +163,7 @@ suite = {
             "distDependencies": [
                 "GRAALSQUEAK_SHARED",
                 "sdk:GRAAL_SDK",
+                "truffle:TRUFFLE_API",
                 "sdk:LAUNCHER_COMMON",
             ],
             "sourcesPath": "graalsqueak-launcher.src.zip",
@@ -181,6 +176,7 @@ suite = {
             ],
             "exclude": ["mx:JUNIT"],
             "distDependencies": [
+                "GRAALSQUEAK_SHARED",
                 "sdk:POLYGLOT_TCK",
             ],
             "sourcesPath": "graalsqueak.tck.src.zip",
