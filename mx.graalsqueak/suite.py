@@ -3,11 +3,11 @@ suite = {
     # ==========================================================================
     #  METADATA
     # ==========================================================================
-    "mxversion": "5.229.3",
+    "mxversion": "5.234.0",
     "name": "graalsqueak",
     "versionConflictResolution": "latest",
 
-    "version": "19.1.1",
+    "version": "19.2.0",
     "release": False,
     "groupId": "de.hpi.swa.graal.squeak",
     "url": "https://github.com/hpi-swa-lab/graalsqueak/",
@@ -25,13 +25,13 @@ suite = {
         "write": "git@github.com:hpi-swa-lab/graalsqueak.git",
     },
 
-    "defaultLicense": "BSD-3-Clause",
-    "licenses": {
-        "BSD-3-Clause": {
-            "name": "The 3-Clause BSD License",
-            "url": "http://opensource.org/licenses/BSD-3-Clause",
-        },
-    },
+    # "defaultLicense": "BSD-3-Clause",
+    # "licenses": {
+    #     "BSD-3-Clause": {
+    #         "name": "The 3-Clause BSD License",
+    #         "url": "http://opensource.org/licenses/BSD-3-Clause",
+    #     },
+    # },
 
     # ==========================================================================
     #  DEPENDENCIES
@@ -40,7 +40,7 @@ suite = {
         "suites": [{
             "name": "truffle",
             "subdir": True,
-            "version": "b03199134754bf35fef43ec9b96e8f5afca6d0a1",
+            "version": "bea1f627630bcb11c03e4df1e2d24e86ef32ee42",
             "urls": [{
                 "url": "https://github.com/oracle/graal",
                 "kind": "git"
@@ -110,7 +110,7 @@ suite = {
             "subDir": "src",
             "sourceDirs": ["src"],
             "dependencies": [
-                "graalsqueak:GRAALSQUEAK_TEST",
+                "graalsqueak:GRAALSQUEAK_SHARED",
                 "sdk:POLYGLOT_TCK",
                 "mx:JUNIT"
             ],
@@ -136,6 +136,7 @@ suite = {
     # ==========================================================================
     "distributions": {
         "GRAALSQUEAK": {
+            "description": "GraalSqueak engine",
             "path": "graalsqueak.jar",
             "dependencies": [
                 "de.hpi.swa.graal.squeak",
@@ -180,7 +181,6 @@ suite = {
             ],
             "exclude": ["mx:JUNIT"],
             "distDependencies": [
-                "GRAALSQUEAK_TEST",
                 "sdk:POLYGLOT_TCK",
             ],
             "sourcesPath": "graalsqueak.tck.src.zip",
@@ -195,10 +195,12 @@ suite = {
                 "./": [
                     "file:mx.graalsqueak/native-image.properties",
                 ],
-            }
+            },
+            "maven": False,
         },
 
         "GRAALSQUEAK_TEST": {
+            "description": "unit tests",
             "path": "graalsqueak_test.jar",
             "javaCompliance": "8+",
             "dependencies": [
@@ -206,6 +208,8 @@ suite = {
             ],
             "exclude": ["mx:JUNIT"],
             "distDependencies": ["GRAALSQUEAK"],
+            "sourcesPath": "graalsqueak.tests.src.zip",
+            "testDistribution": True,
         },
     },
 }

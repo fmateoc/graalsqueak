@@ -413,7 +413,7 @@ def _get_svm_binary_from_graalvm():
 mx_sdk.register_graalvm_component(mx_sdk.GraalVmLanguage(
     suite=_suite,
     name='GraalSqueak',
-    short_name='sq',
+    short_name='st',
     dir_name=LANGUAGE_NAME,
     license_files=[],
     third_party_license_files=[],
