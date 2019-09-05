@@ -348,14 +348,15 @@ def _run_unit_tests(tasks):
 
     with mx_gate.Task('GraalSqueak JUnit and SUnit tests',
                       tasks, tags=['test']) as t:
-        if t:
-            unittest_args = BASE_VM_ARGS_TESTING[:]
-            jacoco_args = mx_gate.get_jacoco_agent_args()
-            if supports_coverage and jacoco_args:
-                unittest_args.extend(jacoco_args)
-            unittest_args.extend([
-                '--suite', 'graalsqueak', '--very-verbose', '--enable-timing'])
-            mx_unittest.unittest(unittest_args)
+        if not t:
+            return
+        unittest_args = BASE_VM_ARGS_TESTING[:]
+        jacoco_args = mx_gate.get_jacoco_agent_args()
+        if supports_coverage and jacoco_args:
+            unittest_args.extend(jacoco_args)
+        unittest_args.extend([
+            '--suite', 'graalsqueak', '--very-verbose', '--enable-timing'])
+        mx_unittest.unittest(unittest_args)
 
     if supports_coverage:
         with mx_gate.Task('CodeCoverageReport', tasks, tags=['test']) as t:
@@ -364,17 +365,19 @@ def _run_unit_tests(tasks):
 
 
 def _run_tck_tests(tasks):
-    if _compiler:
-        with mx_gate.Task('GraalSqueak TCK tests', tasks, tags=['test']) as t:
-            if t:
-                unittest_args = BASE_VM_ARGS_TESTING[:]
-                test_image = _get_path_to_test_image()
-                unittest_args.extend([
-                    '-Dtck.language=squeaksmalltalk',
-                    '-Dpolyglot.squeaksmalltalk.Headless=true',
-                    '-Dpolyglot.squeaksmalltalk.ImagePath=%s' % test_image,
-                    'com.oracle.truffle.tck.tests'])
-                mx_unittest.unittest(unittest_args)
+    if not _compiler:
+        return
+    with mx_gate.Task('GraalSqueak TCK tests', tasks, tags=['test']) as t:
+        if not t:
+            return
+        unittest_args = BASE_VM_ARGS_TESTING[:]
+        test_image = _get_path_to_test_image()
+        unittest_args.extend([
+            '-Dtck.language=squeaksmalltalk',
+            '-Dpolyglot.squeaksmalltalk.Headless=true',
+            '-Dpolyglot.squeaksmalltalk.ImagePath=%s' % test_image,
+            'com.oracle.truffle.tck.tests'])
+        mx_unittest.unittest(unittest_args)
 
 
 def _get_path_to_test_image():

@@ -70,10 +70,9 @@ suite = {
             "subDir": "src",
             "sourceDirs": ["src"],
             "dependencies": [
-                "BOUNCY_CASTLE_CRYPTO_LIB",
                 "graalsqueak:GRAALSQUEAK_SHARED",
+                "BOUNCY_CASTLE_CRYPTO_LIB",
                 "truffle:TRUFFLE_API",
-                "truffle:TRUFFLE_DSL_PROCESSOR",
             ],
             "checkstyleVersion": "8.8",
             "jacoco": "include",
@@ -119,7 +118,10 @@ suite = {
         "de.hpi.swa.graal.squeak.test": {
             "subDir": "src",
             "sourceDirs": ["src"],
-            "dependencies": ["de.hpi.swa.graal.squeak", "mx:JUNIT"],
+            "dependencies": [
+                "de.hpi.swa.graal.squeak",
+                "mx:JUNIT"
+            ],
             "checkstyle": "de.hpi.swa.graal.squeak",
             "jacoco": "include",
             "javaCompliance": "8+",
@@ -141,7 +143,6 @@ suite = {
             "distDependencies": [
                 "GRAALSQUEAK_SHARED",
                 "truffle:TRUFFLE_API",
-                "truffle:TRUFFLE_DSL_PROCESSOR",
             ],
             "exclude": ["mx:JUNIT"],
             "sourcesPath": "graalsqueak.src.zip",
@@ -203,7 +204,7 @@ suite = {
                 "de.hpi.swa.graal.squeak.test",
             ],
             "exclude": ["mx:JUNIT"],
-            "distDependencies": ["GRAALSQUEAK"],
+            "distDependencies": [],
             "sourcesPath": "graalsqueak.tests.src.zip",
             "testDistribution": True,
         },
