@@ -1,0 +1,31 @@
+name: GraalSqueak CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+    - name: Set up mx
+      run: |
+        export MX_PATH=${GITHUB_WORKSPACE}/../mx
+        git clone --depth 1 https://github.com/graalvm/mx.git ${MX_PATH}
+        export PATH=${PATH}:${MX_PATH}
+    - name: Set up OpenJDK8 with support for JVMCI
+      run: |
+        JVMCI_VERSION="jvmci-19.2-b02"
+        JDK8_UPDATE_VERSION="222"
+        JDK_TAR=${GITHUB_WORKSPACE}/jdk.tar.gz
+        curl -sSL --retry 3 -o ${JDK_TAR} https://github.com/graalvm/openjdk8-jvmci-builder/releases/download/${JVMCI_VERSION}/openjdk-8u${JDK8_UPDATE_VERSION}-${JVMCI_VERSION}-linux-amd64.tar.gz
+        tar -C ${GITHUB_WORKSPACE}/ -xzf ${JDK_TAR}
+        export JAVA_HOME=${GITHUB_WORKSPACE}/openjdk1.8.0_${JDK8_UPDATE_VERSION}-${JVMCI_VERSION}
+        export PATH=${JAVA_HOME}/bin:${PATH}
+    - name: Run mx gate with style and fullbuild tags
+      run: mx gate --strict-mode --tags style,fullbuild
+    - name: Build GraalSqueak component for GraalVM
+      run: scripts/make_component.sh
