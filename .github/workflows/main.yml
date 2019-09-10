@@ -28,7 +28,7 @@ jobs:
         JVMCI_VERSION="jvmci-19.2-b02"
         JDK8_UPDATE_VERSION="222"
         export JAVA_HOME=${GITHUB_WORKSPACE}/openjdk1.8.0_${JDK8_UPDATE_VERSION}-${JVMCI_VERSION}
-        mx/mx gate --strict-mode --tags style,fullbuild
+        # mx/mx gate --strict-mode --tags style,fullbuild
     - name: Build GraalSqueak component for GraalVM
       run: scripts/make_component.sh
  
@@ -52,7 +52,11 @@ jobs:
         tar -C ${GITHUB_WORKSPACE}/ -xzf ${JDK_TAR}
         export JAVA_HOME=${GITHUB_WORKSPACE}/openjdk1.8.0_${JDK8_UPDATE_VERSION}-${JVMCI_VERSION}
         export PATH=${JAVA_HOME}/bin:${PATH}
-    - name: Run mx gate with style and fullbuild tags
+    - name: Download test image
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: scripts/download-test-image.sh
+    - name: Run mx gate with build and test tags
       env:
         JDK: graalvm
         GATE: build,test
