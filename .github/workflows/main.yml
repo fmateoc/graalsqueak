@@ -54,7 +54,7 @@ jobs:
         export PATH=${JAVA_HOME}/bin:${PATH}
     - name: Download test image
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN_TMP }}
       run: |
         sudo apt-get install jq
         scripts/download-test-image.sh
