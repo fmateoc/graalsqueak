@@ -55,7 +55,9 @@ jobs:
     - name: Download test image
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: scripts/download-test-image.sh
+      run: |
+        apt-get install jq
+        scripts/download-test-image.sh
     - name: Run mx gate with build and test tags
       env:
         JDK: graalvm
