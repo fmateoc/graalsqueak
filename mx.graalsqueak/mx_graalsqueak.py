@@ -1,11 +1,12 @@
-import os
 import argparse
+import os
 import shutil
 
 import mx
 import mx_gate
 import mx_sdk
 import mx_unittest
+import mx_truffle
 
 
 LANGUAGE_NAME = 'squeaksmalltalk'
@@ -27,6 +28,9 @@ BASE_VM_ARGS_TESTING = [
     # GARBAGE COLLECTOR (optimized for Travis CI)
     '-Xms4G',                   # Initial heap size
     '-XX:MetaspaceSize=32M',    # Initial size of Metaspaces
+
+    # JVMCI
+    '-XX:-UseJVMCIClassLoader',
 ]
 SVM_BINARY = 'graalsqueak-svm'
 SVM_TARGET = os.path.join('bin', SVM_BINARY)
@@ -356,6 +360,11 @@ def _run_unit_tests(tasks):
             unittest_args.extend(jacoco_args)
         unittest_args.extend([
             '--suite', 'graalsqueak', '--very-verbose', '--enable-timing'])
+
+        # Ensure Truffle TCK disabled (workaround needed since GraalVM 19.2.0)
+        mx_unittest._config_participants.remove(
+            mx_truffle._unittest_config_participant_tck)
+
         mx_unittest.unittest(unittest_args)
 
     if supports_coverage:
@@ -365,8 +374,6 @@ def _run_unit_tests(tasks):
 
 
 def _run_tck_tests(tasks):
-    if not _compiler:
-        return
     with mx_gate.Task('GraalSqueak TCK tests', tasks, tags=['test']) as t:
         if not t:
             return

@@ -204,7 +204,7 @@ suite = {
                 "de.hpi.swa.graal.squeak.test",
             ],
             "exclude": ["mx:JUNIT"],
-            "distDependencies": [],
+            "distDependencies": ["GRAALSQUEAK"],
             "sourcesPath": "graalsqueak.tests.src.zip",
             "testDistribution": True,
         },
