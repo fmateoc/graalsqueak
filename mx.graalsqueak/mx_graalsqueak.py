@@ -393,9 +393,9 @@ def _get_jacoco_agent_args():
     agentOptions = {
         'append': 'true',
         'includes': '%s.*' % PACKAGE_NAME,
-        'destfile': mx.gate.JACOCO_EXEC,
+        'destfile': mx_gate.JACOCO_EXEC,
     }
-    return ['-javaagent:' + mx.gate.get_jacoco_agent_path(True) + '=' +
+    return ['-javaagent:' + mx_gate.get_jacoco_agent_path(True) + '=' +
             ','.join([k + '=' + v for k, v in agentOptions.items()])]
 
 
