@@ -343,13 +343,18 @@ def _squeak(args, extra_vm_args=None, env=None, jdk=None, **kwargs):
 
 def _graalsqueak_gate_runner(args, tasks):
     os.environ['MX_GATE'] = 'true'
-    _run_tck_tests(tasks)
-    _run_unit_tests(tasks)
-
-
-def _run_unit_tests(tasks):
     supports_coverage = os.environ.get('JDK') == 'openjdk8'  # see .travis.yml
 
+    _run_tck_tests(tasks, supports_coverage)
+    _run_unit_tests(tasks, supports_coverage)
+
+    if supports_coverage:
+        with mx_gate.Task('CodeCoverageReport', tasks, tags=['test']) as t:
+            if t:
+                mx.command_function('jacocoreport')(['--format', 'xml', '.'])
+
+
+def _run_unit_tests(tasks, supports_coverage):
     with mx_gate.Task('GraalSqueak JUnit and SUnit tests',
                       tasks, tags=['test']) as t:
         if not t:
@@ -366,27 +371,14 @@ def _run_unit_tests(tasks):
 
         mx_unittest.unittest(unittest_args)
 
-    if supports_coverage:
-        with mx_gate.Task('CodeCoverageReport', tasks, tags=['test']) as t:
-            if t:
-                mx.command_function('jacocoreport')(['--format', 'xml', '.'])
 
-
-def _get_jacoco_agent_args():
-    # Modified version of mx_gate.get_jacoco_agent_args()
-    agentOptions = {
-        'includes': '%s.*' % PACKAGE_NAME,
-        'destfile': mx.gate.JACOCO_EXEC,
-    }
-    return ['-javaagent:' + mx.gate.get_jacoco_agent_path(True) + '=' +
-            ','.join([k + '=' + v for k, v in agentOptions.items()])]
-
-
-def _run_tck_tests(tasks):
+def _run_tck_tests(tasks, supports_coverage):
     with mx_gate.Task('GraalSqueak TCK tests', tasks, tags=['test']) as t:
         if not t:
             return
         unittest_args = BASE_VM_ARGS_TESTING[:]
+        if supports_coverage:
+            unittest_args.extend(_get_jacoco_agent_args())
         test_image = _get_path_to_test_image()
         unittest_args.extend([
             '-Dtck.language=squeaksmalltalk',
@@ -394,6 +386,17 @@ def _run_tck_tests(tasks):
             '-Dpolyglot.squeaksmalltalk.ImagePath=%s' % test_image,
             'com.oracle.truffle.tck.tests'])
         mx_unittest.unittest(unittest_args)
+
+
+def _get_jacoco_agent_args():
+    # Modified version of mx_gate.get_jacoco_agent_args()
+    agentOptions = {
+        'append': 'true',
+        'includes': '%s.*' % PACKAGE_NAME,
+        'destfile': mx.gate.JACOCO_EXEC,
+    }
+    return ['-javaagent:' + mx.gate.get_jacoco_agent_path(True) + '=' +
+            ','.join([k + '=' + v for k, v in agentOptions.items()])]
 
 
 def _get_path_to_test_image():
