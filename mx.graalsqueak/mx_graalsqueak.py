@@ -355,9 +355,8 @@ def _run_unit_tests(tasks):
         if not t:
             return
         unittest_args = BASE_VM_ARGS_TESTING[:]
-        jacoco_args = mx_gate.get_jacoco_agent_args()
-        if supports_coverage and jacoco_args:
-            unittest_args.extend(jacoco_args)
+        if supports_coverage:
+            unittest_args.extend(_get_jacoco_agent_args())
         unittest_args.extend([
             '--suite', 'graalsqueak', '--very-verbose', '--enable-timing'])
 
@@ -371,6 +370,16 @@ def _run_unit_tests(tasks):
         with mx_gate.Task('CodeCoverageReport', tasks, tags=['test']) as t:
             if t:
                 mx.command_function('jacocoreport')(['--format', 'xml', '.'])
+
+
+def _get_jacoco_agent_args():
+    # Modified version of mx_gate.get_jacoco_agent_args()
+    agentOptions = {
+        'includes': '%s.*' % PACKAGE_NAME,
+        'destfile': mx.gate.JACOCO_EXEC,
+    }
+    return ['-javaagent:' + mx.gate.get_jacoco_agent_path(True) + '=' +
+            ','.join([k + '=' + v for k, v in agentOptions.items()])]
 
 
 def _run_tck_tests(tasks):
