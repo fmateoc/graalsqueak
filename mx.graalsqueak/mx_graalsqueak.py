@@ -368,6 +368,7 @@ def _run_unit_tests(tasks, supports_coverage):
             if supports_coverage:
                 unittest_args.extend(_get_jacoco_agent_args())
             unittest_args.extend([
+                '-Dgraal.TraceTruffleCompilation=true',
                 '--suite', 'graalsqueak', '--very-verbose', '--enable-timing'])
 
             # Ensure Truffle TCK disabled (workaround needed since GraalVM 19.2.0)
@@ -385,6 +386,7 @@ def _run_tck_tests(tasks, supports_coverage):
                 unittest_args.extend(_get_jacoco_agent_args())
             test_image = _get_path_to_test_image()
             unittest_args.extend([
+                '-Dgraal.TraceTruffleCompilation=true',
                 '-Dtck.language=%s' % LANGUAGE_ID,
                 '-Dpolyglot.%s.Headless=true' % LANGUAGE_ID,
                 '-Dpolyglot.%s.ImagePath=%s' % (LANGUAGE_ID, test_image),
