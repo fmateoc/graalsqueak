@@ -125,7 +125,7 @@ public abstract class SqueakObjectPointersBecomeOneWayNode extends AbstractNode 
                 updateHashNode.executeUpdate(oldClass, newClass, copyHash);
             }
         }
-        if (obj.hasMethodClass()) {
+        if (obj.hasMethodClass(readNode)) {
             final ClassObject oldMethodClass = obj.getMethodClass(readNode);
             for (int i = 0; i < from.length; i++) {
                 if (from[i] == oldMethodClass) {

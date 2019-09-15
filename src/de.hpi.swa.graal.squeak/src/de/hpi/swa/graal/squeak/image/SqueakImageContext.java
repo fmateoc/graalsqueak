@@ -52,6 +52,7 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.SMALLTALK_IMAGE;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.ExecuteTopLevelContextNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.plugins.B2D;
 import de.hpi.swa.graal.squeak.nodes.plugins.BitBlt;
 import de.hpi.swa.graal.squeak.nodes.plugins.JPEGReader;
@@ -169,7 +170,7 @@ public final class SqueakImageContext {
             SqueakImageReader.load(this);
             getOutput().println("Preparing image for headless execution...");
             // Remove active context.
-            getActiveProcess().atputNil0(PROCESS.SUSPENDED_CONTEXT);
+            getActiveProcess(PointersObjectReadNode.getUncached()).atputNil0(PROCESS.SUSPENDED_CONTEXT);
             // Modify StartUpList for headless execution.
             evaluate("{EventSensor. Project} do: [:ea | Smalltalk removeFromStartUpList: ea]");
             try {
@@ -223,7 +224,7 @@ public final class SqueakImageContext {
     }
 
     public ExecuteTopLevelContextNode getActiveContextNode() {
-        final PointersObject activeProcess = getActiveProcess();
+        final PointersObject activeProcess = getActiveProcess(PointersObjectReadNode.getUncached());
         final ContextObject activeContext = (ContextObject) activeProcess.at0(PROCESS.SUSPENDED_CONTEXT);
         activeProcess.atputNil0(PROCESS.SUSPENDED_CONTEXT);
         return ExecuteTopLevelContextNode.create(getLanguage(), activeContext, true);
@@ -352,8 +353,8 @@ public final class SqueakImageContext {
         return scheduler;
     }
 
-    public PointersObject getActiveProcess() {
-        return (PointersObject) getScheduler().at0(PROCESS_SCHEDULER.ACTIVE_PROCESS);
+    public PointersObject getActiveProcess(final PointersObjectReadNode readNode) {
+        return (PointersObject) readNode.executeRead(getScheduler(), PROCESS_SCHEDULER.ACTIVE_PROCESS);
     }
 
     public Object getSpecialObject(final int index) {

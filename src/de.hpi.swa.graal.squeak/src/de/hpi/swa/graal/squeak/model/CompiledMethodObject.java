@@ -110,8 +110,8 @@ public final class CompiledMethodObject extends CompiledCodeObject {
         return (PointersObject) literals[literals.length - 1];
     }
 
-    public boolean hasMethodClass() {
-        return getMethodClassAssociation().at0(CLASS_BINDING.VALUE) != NilObject.SINGLETON;
+    public boolean hasMethodClass(final PointersObjectReadNode readNode) {
+        return readNode.executeRead(getMethodClassAssociation(), CLASS_BINDING.VALUE) != NilObject.SINGLETON;
     }
 
     /** CompiledMethod>>#methodClass. */

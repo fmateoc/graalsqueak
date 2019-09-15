@@ -12,10 +12,15 @@ import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithImage;
 import de.hpi.swa.graal.squeak.nodes.GetOrCreateContextNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
 
 public final class WakeHighestPriorityNode extends AbstractNodeWithImage {
+    @Child private PointersObjectReadNode schedulerReadNode = PointersObjectReadNode.create();
     @Child private ArrayObjectReadNode arrayReadNode = ArrayObjectReadNode.create();
     @Child private ArrayObjectSizeNode arraySizeNode = ArrayObjectSizeNode.create();
+    @Child private PointersObjectReadNode processListReadNode = PointersObjectReadNode.create();
+    @Child private PointersObjectWriteNode processListWriteNode = PointersObjectWriteNode.create();
     private final BranchProfile errorProfile = BranchProfile.create();
     @Child private GetOrCreateContextNode contextNode;
 
@@ -31,7 +36,7 @@ public final class WakeHighestPriorityNode extends AbstractNodeWithImage {
     public void executeWake(final VirtualFrame frame) {
         // Return the highest priority process that is ready to run.
         // Note: It is a fatal VM error if there is no runnable process.
-        final ArrayObject schedLists = (ArrayObject) image.getScheduler().at0(PROCESS_SCHEDULER.PROCESS_LISTS);
+        final ArrayObject schedLists = (ArrayObject) schedulerReadNode.executeRead(image.getScheduler(), PROCESS_SCHEDULER.PROCESS_LISTS);
         long p = arraySizeNode.execute(schedLists) - 1;  // index of last indexable field
         PointersObject processList;
         do {
@@ -40,8 +45,8 @@ public final class WakeHighestPriorityNode extends AbstractNodeWithImage {
                 throw SqueakException.create("scheduler could not find a runnable process");
             }
             processList = (PointersObject) arrayReadNode.execute(schedLists, p--);
-        } while (processList.isEmptyList());
-        final PointersObject newProcess = processList.removeFirstLinkOfList();
-        contextNode.executeGet(frame).transferTo(newProcess);
+        } while (processList.isEmptyList(processListReadNode));
+        final PointersObject newProcess = processList.removeFirstLinkOfList(processListReadNode, processListWriteNode);
+        contextNode.executeGet(frame).transferTo(newProcess, image.getActiveProcess(schedulerReadNode));
     }
 }

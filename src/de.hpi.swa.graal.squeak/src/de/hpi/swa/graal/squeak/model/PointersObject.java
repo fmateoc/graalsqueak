@@ -3,8 +3,11 @@ package de.hpi.swa.graal.squeak.model;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.LINKED_LIST;
+import de.hpi.swa.graal.squeak.model.ObjectLayouts.MUTEX;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
 public final class PointersObject extends AbstractPointersObject {
@@ -27,8 +30,7 @@ public final class PointersObject extends AbstractPointersObject {
     }
 
     private PointersObject(final PointersObject original) {
-        super(original.image, original.getSqueakClass());
-        setPointersUnsafe(original.getPointers().clone());
+        super(original);
     }
 
     @Override
@@ -56,12 +58,24 @@ public final class PointersObject extends AbstractPointersObject {
         setPointers(otherPointers);
     }
 
-    public boolean isActiveProcess() {
-        return this == image.getActiveProcess();
+    public boolean isActiveProcess(final PointersObjectReadNode readNode) {
+        return this == image.getActiveProcess(readNode);
     }
 
-    public boolean isEmptyList() {
-        return at0(LINKED_LIST.FIRST_LINK) == NilObject.SINGLETON;
+    public long getProcessPriority(final PointersObjectReadNode readNode) {
+        return (long) readNode.executeRead(this, PROCESS.PRIORITY);
+    }
+
+    public Object getProcessListOrNil(final PointersObjectReadNode readNode) {
+        return readNode.executeRead(this, PROCESS.LIST);
+    }
+
+    public Object getMutexOwnerOrNil(final PointersObjectReadNode readNode) {
+        return readNode.executeRead(this, MUTEX.OWNER);
+    }
+
+    public boolean isEmptyList(final PointersObjectReadNode readNode) {
+        return readNode.executeRead(this, LINKED_LIST.FIRST_LINK) == NilObject.SINGLETON;
     }
 
     public boolean isDisplay() {
@@ -72,17 +86,17 @@ public final class PointersObject extends AbstractPointersObject {
         return getSqueakClass() == image.pointClass;
     }
 
-    public PointersObject removeFirstLinkOfList() {
+    public PointersObject removeFirstLinkOfList(final PointersObjectReadNode readNode, final PointersObjectWriteNode writeNode) {
         // Remove the first process from the given linked list.
-        final PointersObject first = (PointersObject) at0(LINKED_LIST.FIRST_LINK);
-        final Object last = at0(LINKED_LIST.LAST_LINK);
+        final PointersObject first = (PointersObject) readNode.executeRead(this, LINKED_LIST.FIRST_LINK);
+        final Object last = readNode.executeRead(this, LINKED_LIST.LAST_LINK);
         if (first == last) {
-            atput0(LINKED_LIST.FIRST_LINK, NilObject.SINGLETON);
-            atput0(LINKED_LIST.LAST_LINK, NilObject.SINGLETON);
+            writeNode.executeWrite(this, LINKED_LIST.FIRST_LINK, NilObject.SINGLETON);
+            writeNode.executeWrite(this, LINKED_LIST.LAST_LINK, NilObject.SINGLETON);
         } else {
-            atput0(LINKED_LIST.FIRST_LINK, first.at0(PROCESS.NEXT_LINK));
+            writeNode.executeWrite(this, LINKED_LIST.FIRST_LINK, readNode.executeRead(first, PROCESS.NEXT_LINK));
         }
-        first.atput0(PROCESS.NEXT_LINK, NilObject.SINGLETON);
+        writeNode.executeWrite(first, PROCESS.NEXT_LINK, NilObject.SINGLETON);
         return first;
     }
 

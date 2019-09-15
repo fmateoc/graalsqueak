@@ -21,6 +21,7 @@ import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodesFactory.PointersObjectReadNodeGen;
 import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodesFactory.PointersObjectSizeNodeGen;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodesFactory.PointersObjectWriteNodeGen;
 
 public final class PointersObjectNodes {
     protected static final int CACHE_LIMIT = 3;
@@ -102,6 +103,10 @@ public final class PointersObjectNodes {
     @GenerateUncached
     @ImportStatic(PointersObjectNodes.class)
     public abstract static class PointersObjectWriteNode extends AbstractNode {
+
+        public static PointersObjectWriteNode create() {
+            return PointersObjectWriteNodeGen.create();
+        }
 
         public final void executeWrite(final PointersObject object, final long index, final Object value) {
             try {

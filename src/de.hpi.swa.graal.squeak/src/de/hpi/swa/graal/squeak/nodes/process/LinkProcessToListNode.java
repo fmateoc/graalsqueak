@@ -1,33 +1,36 @@
 package de.hpi.swa.graal.squeak.nodes.process;
 
-import com.oracle.truffle.api.dsl.Fallback;
-import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.profiles.ConditionProfile;
 
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.LINKED_LIST;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
 
-public abstract class LinkProcessToListNode extends AbstractNode {
+public final class LinkProcessToListNode extends AbstractNode {
+    @Child private PointersObjectReadNode readNode = PointersObjectReadNode.create();
+    @Child private PointersObjectWriteNode writeListNode = PointersObjectWriteNode.create();
+    @Child private PointersObjectWriteNode writeProcessNode = PointersObjectWriteNode.create();
+
+    private ConditionProfile isEmptyListProfile = ConditionProfile.createBinaryProfile();
+
     public static LinkProcessToListNode create() {
-        return LinkProcessToListNodeGen.create();
+        return new LinkProcessToListNode();
     }
 
-    public abstract void executeLink(PointersObject process, PointersObject list);
-
-    @Specialization(guards = "list.isEmptyList()")
-    protected void doLinkEmptyList(final PointersObject process, final PointersObject list) {
-        // Add the given process to the given linked list and set the backpointer
-        // of process to its new list.
-        list.atput0(LINKED_LIST.FIRST_LINK, process);
-        list.atput0(LINKED_LIST.LAST_LINK, process);
-        process.atput0(PROCESS.LIST, list);
-    }
-
-    @Fallback
-    protected void doLinkNotEmptyList(final PointersObject process, final PointersObject list) {
-        ((PointersObject) list.at0(LINKED_LIST.LAST_LINK)).atput0(PROCESS.NEXT_LINK, process);
-        list.atput0(LINKED_LIST.LAST_LINK, process);
-        process.atput0(PROCESS.LIST, list);
+    public void executeLink(final PointersObject process, final PointersObject list) {
+        if (isEmptyListProfile.profile(list.isEmptyList(readNode))) {
+            // Add the given process to the given linked list and set the backpointer
+            // of process to its new list.
+            writeListNode.executeWrite(list, LINKED_LIST.FIRST_LINK, process);
+            writeListNode.executeWrite(list, LINKED_LIST.LAST_LINK, process);
+            writeProcessNode.executeWrite(process, PROCESS.LIST, list);
+        } else {
+            writeListNode.executeWrite((PointersObject) readNode.executeRead(list, LINKED_LIST.LAST_LINK), PROCESS.NEXT_LINK, process);
+            writeListNode.executeWrite(list, LINKED_LIST.LAST_LINK, process);
+            writeProcessNode.executeWrite(process, PROCESS.LIST, list);
+        }
     }
 }

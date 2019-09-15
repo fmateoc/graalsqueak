@@ -1,18 +1,21 @@
 package de.hpi.swa.graal.squeak.nodes.process;
 
-import com.oracle.truffle.api.dsl.Cached;
-import com.oracle.truffle.api.dsl.Fallback;
-import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.profiles.ConditionProfile;
 
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
-import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithCode;
 import de.hpi.swa.graal.squeak.nodes.GetOrCreateContextNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
 
-public abstract class ResumeProcessNode extends AbstractNodeWithCode {
+public final class ResumeProcessNode extends AbstractNodeWithCode {
+    @Child private PointersObjectReadNode readNode = PointersObjectReadNode.create();
     @Child private PutToSleepNode putToSleepNode;
+    @Child private GetOrCreateContextNode contextNode;
+
+    private ConditionProfile hasHigherPriorityProfile = ConditionProfile.createBinaryProfile();
 
     protected ResumeProcessNode(final CompiledCodeObject code) {
         super(code);
@@ -20,24 +23,22 @@ public abstract class ResumeProcessNode extends AbstractNodeWithCode {
     }
 
     public static ResumeProcessNode create(final CompiledCodeObject code) {
-        return ResumeProcessNodeGen.create(code);
+        return new ResumeProcessNode(code);
     }
 
-    public abstract void executeResume(VirtualFrame frame, PointersObject newProcess);
-
-    @Specialization(guards = "hasHigherPriority(newProcess)")
-    protected final void doTransferTo(final VirtualFrame frame, final PointersObject newProcess,
-                    @Cached("create(code)") final GetOrCreateContextNode contextNode) {
-        putToSleepNode.executePutToSleep(code.image.getActiveProcess());
-        contextNode.executeGet(frame).transferTo(newProcess);
-    }
-
-    @Fallback
-    protected final void doSleep(final PointersObject newProcess) {
-        putToSleepNode.executePutToSleep(newProcess);
-    }
-
-    protected final boolean hasHigherPriority(final PointersObject newProcess) {
-        return (long) newProcess.at0(PROCESS.PRIORITY) > (long) code.image.getActiveProcess().at0(PROCESS.PRIORITY);
+    public void executeResume(final VirtualFrame frame, final PointersObject newProcess) {
+        final long processPriority = newProcess.getProcessPriority(readNode);
+        final PointersObject activeProcess = code.image.getActiveProcess(readNode);
+        final long activeProcessPriority = activeProcess.getProcessPriority(readNode);
+        if (hasHigherPriorityProfile.profile(processPriority > activeProcessPriority)) {
+            putToSleepNode.executePutToSleep(activeProcess);
+            if (contextNode == null) {
+                CompilerDirectives.transferToInterpreterAndInvalidate();
+                contextNode = insert(GetOrCreateContextNode.create(code));
+            }
+            contextNode.executeGet(frame).transferTo(newProcess, activeProcess);
+        } else {
+            putToSleepNode.executePutToSleep(newProcess);
+        }
     }
 }

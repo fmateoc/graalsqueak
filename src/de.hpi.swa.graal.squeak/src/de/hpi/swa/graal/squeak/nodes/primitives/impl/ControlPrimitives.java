@@ -18,6 +18,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
+import com.oracle.truffle.api.profiles.ConditionProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakQuit;
@@ -43,6 +44,7 @@ import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadN
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectToObjectArrayCopyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectChangeClassOfToNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassNode;
@@ -206,29 +208,36 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 86)
     protected abstract static class PrimWaitNode extends AbstractPrimitiveNode implements UnaryPrimitive {
+        @Child private LinkProcessToListNode linkProcessToListNode;
+        @Child private PointersObjectReadNode activeProcessReadNode;
+        @Child private WakeHighestPriorityNode wakeHighestPriorityNode;
+
+        private ConditionProfile hasExcessSignalsProfile = ConditionProfile.createBinaryProfile();
 
         protected PrimWaitNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        @Specialization(guards = {"receiver.getSqueakClass().isSemaphoreClass()", "hasExcessSignals(receiver)"})
-        protected static final Object doWaitExcessSignals(final VirtualFrame frame, final PointersObject receiver,
-                        @Shared("pushNode") @Cached final StackPushForPrimitivesNode pushNode) {
-            pushNode.executeWrite(frame, receiver); // keep receiver on stack
-            final long excessSignals = (long) receiver.at0(SEMAPHORE.EXCESS_SIGNALS);
-            receiver.atput0(SEMAPHORE.EXCESS_SIGNALS, excessSignals - 1);
-            return AbstractSendNode.NO_RESULT;
-        }
-
-        @Specialization(guards = {"receiver.getSqueakClass().isSemaphoreClass()", "!hasExcessSignals(receiver)"})
-        protected final Object doWait(final VirtualFrame frame, final PointersObject receiver,
-                        @Shared("pushNode") @Cached final StackPushForPrimitivesNode pushNode,
-                        @Cached final LinkProcessToListNode linkProcessToListNode,
-                        @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
-            pushNode.executeWrite(frame, receiver); // keep receiver on stack
-            linkProcessToListNode.executeLink(method.image.getActiveProcess(), receiver);
-            wakeHighestPriorityNode.executeWake(frame);
-            return AbstractSendNode.NO_RESULT;
+        @Specialization(guards = {"receiver.getSqueakClass().isSemaphoreClass()"})
+        protected final Object doWaitExcessSignals(final VirtualFrame frame, final PointersObject receiver,
+                        @Cached final StackPushForPrimitivesNode pushNode) {
+            if (hasExcessSignalsProfile.profile(hasExcessSignals(receiver))) {
+                pushNode.executeWrite(frame, receiver); // keep receiver on stack
+                final long excessSignals = (long) receiver.at0(SEMAPHORE.EXCESS_SIGNALS);
+                receiver.atput0(SEMAPHORE.EXCESS_SIGNALS, excessSignals - 1);
+                return AbstractSendNode.NO_RESULT;
+            } else {
+                pushNode.executeWrite(frame, receiver); // keep receiver on stack
+                if (linkProcessToListNode == null) {
+                    CompilerDirectives.transferToInterpreterAndInvalidate();
+                    linkProcessToListNode = insert(LinkProcessToListNode.create());
+                    activeProcessReadNode = insert(PointersObjectReadNode.create());
+                    wakeHighestPriorityNode = insert(WakeHighestPriorityNode.create(method));
+                }
+                linkProcessToListNode.executeLink(method.image.getActiveProcess(activeProcessReadNode), receiver);
+                wakeHighestPriorityNode.executeWake(frame);
+                return AbstractSendNode.NO_RESULT;
+            }
         }
 
         protected static final boolean hasExcessSignals(final PointersObject semaphore) {
@@ -259,36 +268,45 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 88)
     protected abstract static class PrimSuspendNode extends AbstractPrimitiveNode implements UnaryPrimitive {
+        @Child private PointersObjectReadNode activeProcessReadNode = PointersObjectReadNode.create();
+        @Child private PointersObjectReadNode processListReadNode = PointersObjectReadNode.create();
+        @Child private StackPushForPrimitivesNode pushNode;
+        @Child private WakeHighestPriorityNode wakeHighestPriorityNode;
+        @Child private RemoveProcessFromListNode removeProcessNode;
+
+        private final ConditionProfile isActiveProcessProfile = ConditionProfile.createBinaryProfile();
+        private final ConditionProfile isNilProfile = ConditionProfile.createBinaryProfile();
 
         protected PrimSuspendNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        @Specialization(guards = "receiver.isActiveProcess()")
-        protected static final Object doSuspendActiveProcess(final VirtualFrame frame, @SuppressWarnings("unused") final PointersObject receiver,
-                        @Cached final StackPushForPrimitivesNode pushNode,
-                        @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
-            pushNode.executeWrite(frame, NilObject.SINGLETON);
-            wakeHighestPriorityNode.executeWake(frame);
-            return AbstractSendNode.NO_RESULT; // result already pushed above
-        }
-
-        @Specialization(guards = {"!receiver.isActiveProcess()", "!hasNilList(receiver)"})
-        protected static final PointersObject doSuspendOtherProcess(final PointersObject receiver,
-                        @Cached final RemoveProcessFromListNode removeProcessNode) {
-            final PointersObject oldList = (PointersObject) receiver.at0(PROCESS.LIST);
-            removeProcessNode.executeRemove(receiver, oldList);
-            receiver.atput0(PROCESS.LIST, NilObject.SINGLETON);
-            return oldList;
-        }
-
-        @Specialization(guards = {"!receiver.isActiveProcess()", "hasNilList(receiver)"})
-        protected static final Object doBadReceiver(@SuppressWarnings("unused") final PointersObject receiver) {
-            throw PrimitiveFailed.BAD_RECEIVER;
-        }
-
-        protected static final boolean hasNilList(final PointersObject process) {
-            return process.at0(PROCESS.LIST) == NilObject.SINGLETON;
+        @Specialization
+        protected final Object doSuspend(final VirtualFrame frame, @SuppressWarnings("unused") final PointersObject receiver) {
+            if (isActiveProcessProfile.profile(receiver.isActiveProcess(activeProcessReadNode))) {
+                if (pushNode == null) {
+                    CompilerDirectives.transferToInterpreterAndInvalidate();
+                    pushNode = insert(StackPushForPrimitivesNode.create());
+                    wakeHighestPriorityNode = insert(WakeHighestPriorityNode.create(method));
+                }
+                pushNode.executeWrite(frame, NilObject.SINGLETON);
+                wakeHighestPriorityNode.executeWake(frame);
+                return AbstractSendNode.NO_RESULT; // result already pushed above
+            } else {
+                final Object processListOrNil = receiver.getProcessListOrNil(processListReadNode);
+                if (isNilProfile.profile(processListOrNil == NilObject.SINGLETON)) {
+                    throw PrimitiveFailed.BAD_RECEIVER;
+                } else {
+                    final PointersObject oldList = (PointersObject) receiver.at0(PROCESS.LIST);
+                    if (removeProcessNode == null) {
+                        CompilerDirectives.transferToInterpreterAndInvalidate();
+                        removeProcessNode = insert(RemoveProcessFromListNode.create());
+                    }
+                    removeProcessNode.executeRemove(receiver, oldList);
+                    receiver.atput0(PROCESS.LIST, NilObject.SINGLETON);
+                    return oldList;
+                }
+            }
         }
     }
 
@@ -468,7 +486,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(guards = "receiver.hasMethodClass()")
+        @Specialization(guards = "receiver.hasMethodClass(readNode)")
         protected static final CompiledMethodObject doFlush(final CompiledMethodObject receiver,
                         @Cached final PointersObjectReadNode readNode) {
             receiver.getMethodClass(readNode).invalidateMethodDictStableAssumption();
@@ -646,91 +664,81 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 185)
     protected abstract static class PrimExitCriticalSectionNode extends AbstractPrimitiveNode implements UnaryPrimitive {
+        @Child private PointersObjectWriteNode writeNode;
+        @Child private StackPushForPrimitivesNode pushNode;
+        @Child private ResumeProcessNode resumeProcessNode;
+
         public PrimExitCriticalSectionNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        @Specialization(guards = "mutex.isEmptyList()")
-        protected static final PointersObject doExitEmpty(final PointersObject mutex) {
-            mutex.atputNil0(MUTEX.OWNER);
-            return mutex;
+        @Specialization
+        protected final Object doExit(final VirtualFrame frame, final PointersObject mutex,
+                        @Cached final PointersObjectReadNode readNode,
+                        @Cached("createBinaryProfile()") final ConditionProfile isEmptyListProfile) {
+            if (isEmptyListProfile.profile(mutex.isEmptyList(readNode))) {
+                mutex.atputNil0(MUTEX.OWNER);
+                return mutex;
+            } else {
+                if (pushNode == null) {
+                    CompilerDirectives.transferToInterpreterAndInvalidate();
+                    pushNode = insert(StackPushForPrimitivesNode.create());
+                    writeNode = insert(PointersObjectWriteNode.create());
+                    resumeProcessNode = insert(ResumeProcessNode.create(method));
+                }
+                pushNode.executeWrite(frame, mutex); // keep receiver on stack
+                final PointersObject owningProcess = mutex.removeFirstLinkOfList(readNode, writeNode);
+                mutex.atput0(MUTEX.OWNER, owningProcess);
+                resumeProcessNode.executeResume(frame, owningProcess);
+                return AbstractSendNode.NO_RESULT;
+            }
         }
 
-        @Specialization(guards = "!mutex.isEmptyList()")
-        protected static final Object doExitNonEmpty(final VirtualFrame frame, final PointersObject mutex,
-                        @Cached final StackPushForPrimitivesNode pushNode,
-                        @Cached("create(method)") final ResumeProcessNode resumeProcessNode) {
-            pushNode.executeWrite(frame, mutex); // keep receiver on stack
-            final PointersObject owningProcess = mutex.removeFirstLinkOfList();
-            mutex.atput0(MUTEX.OWNER, owningProcess);
-            resumeProcessNode.executeResume(frame, owningProcess);
-            return AbstractSendNode.NO_RESULT;
-        }
     }
 
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 186)
     protected abstract static class PrimEnterCriticalSectionNode extends AbstractPrimitiveNode implements BinaryPrimitive {
+        @Child private PointersObjectReadNode mutexReadNode = PointersObjectReadNode.create();
+        @Child private PointersObjectWriteNode mutexWriteNode;
+        @Child private PointersObjectReadNode activeProcessReadNode = PointersObjectReadNode.create();
+
+        @Child private StackPushForPrimitivesNode pushNode;
+        @Child private LinkProcessToListNode linkProcessToListNode;
+        @Child private WakeHighestPriorityNode wakeHighestPriorityNode;
+
+        private final ConditionProfile isNilOwner = ConditionProfile.createBinaryProfile();
+        private final ConditionProfile isProcessOwner = ConditionProfile.createBinaryProfile();
+
         public PrimEnterCriticalSectionNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        @Specialization(guards = "ownerIsNil(mutex)")
-        protected final boolean doEnterNilOwner(final PointersObject mutex, @SuppressWarnings("unused") final NotProvided notProvided) {
-            mutex.atput0(MUTEX.OWNER, method.image.getActiveProcess());
-            return BooleanObject.FALSE;
+        @Specialization
+        protected final Object doEnterActiveProcess(final VirtualFrame frame, final PointersObject mutex, @SuppressWarnings("unused") final NotProvided notProvided) {
+            return doEnter(frame, mutex, method.image.getActiveProcess(activeProcessReadNode));
         }
 
-        @SuppressWarnings("unused")
-        @Specialization(guards = "activeProcessMutexOwner(mutex)")
-        protected static final boolean doEnterActiveProcessOwner(final PointersObject mutex, final NotProvided notProvided) {
-            return BooleanObject.TRUE;
-        }
-
-        @Specialization(guards = {"!ownerIsNil(mutex)", "!activeProcessMutexOwner(mutex)"})
-        protected final Object doEnter(final VirtualFrame frame, final PointersObject mutex, @SuppressWarnings("unused") final NotProvided notProvided,
-                        @Shared("pushNode") @Cached final StackPushForPrimitivesNode pushNode,
-                        @Shared("linkProcessToListNode") @Cached final LinkProcessToListNode linkProcessToListNode,
-                        @Shared("wakeHighestPriorityNode") @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
-            pushNode.executeWrite(frame, BooleanObject.FALSE);
-            linkProcessToListNode.executeLink(method.image.getActiveProcess(), mutex);
-            wakeHighestPriorityNode.executeWake(frame);
-            return AbstractSendNode.NO_RESULT;
-        }
-
-        @Specialization(guards = "ownerIsNil(mutex)")
-        protected static final boolean doEnterNilOwner(final PointersObject mutex, @SuppressWarnings("unused") final PointersObject effectiveProcess) {
-            mutex.atput0(MUTEX.OWNER, effectiveProcess);
-            return BooleanObject.FALSE;
-        }
-
-        @SuppressWarnings("unused")
-        @Specialization(guards = "isMutexOwner(mutex, effectiveProcess)")
-        protected static final boolean doEnterActiveProcessOwner(final PointersObject mutex, final PointersObject effectiveProcess) {
-            return BooleanObject.TRUE;
-        }
-
-        @Specialization(guards = {"!ownerIsNil(mutex)", "!isMutexOwner(mutex, effectiveProcess)"})
-        protected static final Object doEnter(final VirtualFrame frame, final PointersObject mutex, @SuppressWarnings("unused") final PointersObject effectiveProcess,
-                        @Shared("pushNode") @Cached final StackPushForPrimitivesNode pushNode,
-                        @Shared("linkProcessToListNode") @Cached final LinkProcessToListNode linkProcessToListNode,
-                        @Shared("wakeHighestPriorityNode") @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
-            pushNode.executeWrite(frame, BooleanObject.FALSE);
-            linkProcessToListNode.executeLink(effectiveProcess, mutex);
-            wakeHighestPriorityNode.executeWake(frame);
-            return AbstractSendNode.NO_RESULT;
-        }
-
-        protected static final boolean ownerIsNil(final PointersObject mutex) {
-            return mutex.at0(MUTEX.OWNER) == NilObject.SINGLETON;
-        }
-
-        protected final boolean activeProcessMutexOwner(final PointersObject mutex) {
-            return mutex.at0(MUTEX.OWNER) == method.image.getActiveProcess();
-        }
-
-        protected static final boolean isMutexOwner(final PointersObject mutex, final PointersObject effectiveProcess) {
-            return mutex.at0(MUTEX.OWNER) == effectiveProcess;
+        @Specialization
+        protected final Object doEnter(final VirtualFrame frame, final PointersObject mutex, final PointersObject effectiveProcess) {
+            final Object ownerOrNil = mutex.getMutexOwnerOrNil(mutexReadNode);
+            if (isNilOwner.profile(ownerOrNil == NilObject.SINGLETON)) {
+                mutex.atput0(MUTEX.OWNER, effectiveProcess);
+                return BooleanObject.FALSE;
+            } else if (isProcessOwner.profile(ownerOrNil == effectiveProcess)) {
+                return BooleanObject.TRUE;
+            } else {
+                if (pushNode == null) {
+                    CompilerDirectives.transferToInterpreterAndInvalidate();
+                    pushNode = insert(StackPushForPrimitivesNode.create());
+                    linkProcessToListNode = insert(LinkProcessToListNode.create());
+                    wakeHighestPriorityNode = insert(WakeHighestPriorityNode.create(method));
+                }
+                pushNode.executeWrite(frame, BooleanObject.FALSE);
+                linkProcessToListNode.executeLink(effectiveProcess, mutex);
+                wakeHighestPriorityNode.executeWake(frame);
+                return AbstractSendNode.NO_RESULT;
+            }
         }
     }
 
@@ -738,33 +746,32 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 187)
     protected abstract static class PrimTestAndSetOwnershipOfCriticalSectionNode extends AbstractPrimitiveNode implements UnaryPrimitive {
+        @Child private PointersObjectReadNode mutexReadNode = PointersObjectReadNode.create();
+        @Child private PointersObjectWriteNode mutexWriteNode;
+        @Child private PointersObjectReadNode activeProcessReadNode = PointersObjectReadNode.create();
+
+        private final ConditionProfile isNilOwner = ConditionProfile.createBinaryProfile();
+        private final ConditionProfile isActiveProcessOwner = ConditionProfile.createBinaryProfile();
 
         public PrimTestAndSetOwnershipOfCriticalSectionNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        @Specialization(guards = {"ownerIsNil(rcvrMutex)"})
-        protected final boolean doNilOwner(final PointersObject rcvrMutex) {
-            rcvrMutex.atput0(MUTEX.OWNER, method.image.getActiveProcess());
-            return BooleanObject.FALSE;
-        }
-
-        @Specialization(guards = {"ownerIsActiveProcess(rcvrMutex)"})
-        protected static final boolean doOwnerIsActiveProcess(@SuppressWarnings("unused") final PointersObject rcvrMutex) {
-            return BooleanObject.TRUE;
-        }
-
-        @Specialization(guards = {"!ownerIsNil(rcvrMutex)", "!ownerIsActiveProcess(rcvrMutex)"})
-        protected static final Object doFallback(@SuppressWarnings("unused") final PointersObject rcvrMutex) {
-            return NilObject.SINGLETON;
-        }
-
-        protected static final boolean ownerIsNil(final PointersObject mutex) {
-            return mutex.at0(MUTEX.OWNER) == NilObject.SINGLETON;
-        }
-
-        protected final boolean ownerIsActiveProcess(final PointersObject mutex) {
-            return mutex.at0(MUTEX.OWNER) == method.image.getActiveProcess();
+        @Specialization
+        protected final Object doTestAndSet(final PointersObject rcvrMutex) {
+            final Object owner = rcvrMutex.getMutexOwnerOrNil(mutexReadNode);
+            if (isNilOwner.profile(owner == NilObject.SINGLETON)) {
+                if (mutexWriteNode == null) {
+                    CompilerDirectives.transferToInterpreterAndInvalidate();
+                    mutexWriteNode = insert(PointersObjectWriteNode.create());
+                }
+                mutexWriteNode.executeWrite(rcvrMutex, MUTEX.OWNER, method.image.getActiveProcess(activeProcessReadNode));
+                return BooleanObject.FALSE;
+            } else if (isActiveProcessOwner.profile(owner == method.image.getActiveProcess(activeProcessReadNode))) {
+                return BooleanObject.TRUE;
+            } else {
+                return NilObject.SINGLETON;
+            }
         }
     }
 

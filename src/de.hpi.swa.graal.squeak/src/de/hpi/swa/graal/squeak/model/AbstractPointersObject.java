@@ -23,6 +23,11 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         storage = sqClass.shape.newInstance();
     }
 
+    protected AbstractPointersObject(final AbstractPointersObject original) {
+        super(original.image, original.getSqueakClass());
+        storage = original.storage.copy(original.storage.getShape());
+    }
+
     public final Object getPointer(final long index) {
         return storage.get(index);
     }

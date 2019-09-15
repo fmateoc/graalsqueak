@@ -12,6 +12,10 @@ import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 
 public abstract class RemoveProcessFromListNode extends AbstractNode {
 
+    public static RemoveProcessFromListNode create() {
+        return RemoveProcessFromListNodeGen.create();
+    }
+
     public final void executeRemove(final PointersObject process, final PointersObject list) {
         final Object first = list.at0(LINKED_LIST.FIRST_LINK);
         final Object last = list.at0(LINKED_LIST.LAST_LINK);
