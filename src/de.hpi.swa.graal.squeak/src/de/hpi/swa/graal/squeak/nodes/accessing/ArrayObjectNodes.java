@@ -68,21 +68,21 @@ public final class ArrayObjectNodes {
         protected static final Object doArrayOfChars(final ArrayObject obj, final long index,
                         @Shared("nilProfile") @Cached("createBinaryProfile()") final ConditionProfile nilProfile) {
             final char value = obj.getCharStorage()[(int) index];
-            return nilProfile.profile(value == ArrayObject.CHAR_NIL_TAG) ? NilObject.SINGLETON : value;
+            return nilProfile.profile(ArrayObject.isCharNilTag(value)) ? NilObject.SINGLETON : value;
         }
 
         @Specialization(guards = "obj.isLongType()")
         protected static final Object doArrayOfLongs(final ArrayObject obj, final long index,
                         @Shared("nilProfile") @Cached("createBinaryProfile()") final ConditionProfile nilProfile) {
             final long value = obj.getLongStorage()[(int) index];
-            return nilProfile.profile(value == ArrayObject.LONG_NIL_TAG) ? NilObject.SINGLETON : value;
+            return nilProfile.profile(ArrayObject.isLongNilTag(value)) ? NilObject.SINGLETON : value;
         }
 
         @Specialization(guards = "obj.isDoubleType()")
         protected static final Object doArrayOfDoubles(final ArrayObject obj, final long index,
                         @Shared("nilProfile") @Cached("createBinaryProfile()") final ConditionProfile nilProfile) {
             final double value = obj.getDoubleStorage()[(int) index];
-            return nilProfile.profile(Double.doubleToRawLongBits(value) == ArrayObject.DOUBLE_NIL_TAG_LONG) ? NilObject.SINGLETON : value;
+            return nilProfile.profile(ArrayObject.isDoubleNilTag(value)) ? NilObject.SINGLETON : value;
         }
 
         @Specialization(guards = "obj.isNativeObjectType()")
@@ -223,46 +223,50 @@ public final class ArrayObjectNodes {
         }
 
         @Specialization(guards = "obj.isCharType()")
-        protected static final Object[] doArrayOfChars(final ArrayObject obj) {
+        protected static final Object[] doArrayOfChars(final ArrayObject obj,
+                        @Cached("createBinaryProfile()") final ConditionProfile isNilTagProfile) {
             final char[] chars = obj.getCharStorage();
             final int length = chars.length;
             final Object[] objects = new Object[length];
             for (int i = 0; i < length; i++) {
                 final char value = chars[i];
-                objects[i] = ArrayObject.toObjectFromChar(value);
+                objects[i] = ArrayObject.toObjectFromChar(value, isNilTagProfile);
             }
             return objects;
         }
 
         @Specialization(guards = "obj.isLongType()")
-        protected static final Object[] doArrayOfLongs(final ArrayObject obj) {
+        protected static final Object[] doArrayOfLongs(final ArrayObject obj,
+                        @Cached("createBinaryProfile()") final ConditionProfile isNilTagProfile) {
             final long[] longs = obj.getLongStorage();
             final int length = longs.length;
             final Object[] objects = new Object[length];
             for (int i = 0; i < length; i++) {
-                objects[i] = ArrayObject.toObjectFromLong(longs[i]);
+                objects[i] = ArrayObject.toObjectFromLong(longs[i], isNilTagProfile);
             }
             return objects;
         }
 
         @Specialization(guards = "obj.isDoubleType()")
-        protected static final Object[] doArrayOfDoubles(final ArrayObject obj) {
+        protected static final Object[] doArrayOfDoubles(final ArrayObject obj,
+                        @Cached("createBinaryProfile()") final ConditionProfile isNilTagProfile) {
             final double[] doubles = obj.getDoubleStorage();
             final int length = doubles.length;
             final Object[] objects = new Object[length];
             for (int i = 0; i < length; i++) {
-                objects[i] = ArrayObject.toObjectFromDouble(doubles[i]);
+                objects[i] = ArrayObject.toObjectFromDouble(doubles[i], isNilTagProfile);
             }
             return objects;
         }
 
         @Specialization(guards = "obj.isNativeObjectType()")
-        protected static final Object[] doArrayOfNatives(final ArrayObject obj) {
+        protected static final Object[] doArrayOfNatives(final ArrayObject obj,
+                        @Cached("createBinaryProfile()") final ConditionProfile isNilTagProfile) {
             final NativeObject[] nativeObjects = obj.getNativeObjectStorage();
             final int length = nativeObjects.length;
             final Object[] objects = new Object[length];
             for (int i = 0; i < length; i++) {
-                objects[i] = ArrayObject.toObjectFromNativeObject(nativeObjects[i]);
+                objects[i] = ArrayObject.toObjectFromNativeObject(nativeObjects[i], isNilTagProfile);
             }
             return objects;
         }
@@ -326,40 +330,37 @@ public final class ArrayObjectNodes {
         @SuppressWarnings("unused")
         @Specialization(guards = {"obj.isEmptyType()"})
         protected static final void doEmptyArrayToChar(final ArrayObject obj, final long index, final char value,
-                        @Cached final BranchProfile nilTagProfile) {
-            if (ArrayObject.isCharNilTag(value)) {
-                nilTagProfile.enter();
+                        @Cached("createBinaryProfile()") final ConditionProfile isNilTagProfile) {
+            if (isNilTagProfile.profile(ArrayObject.isCharNilTag(value))) {
                 doEmptyArrayToObject(obj, index, value);
-                return;
+            } else {
+                obj.transitionFromEmptyToChars();
+                obj.getCharStorage()[(int) index] = value;
             }
-            obj.transitionFromEmptyToChars();
-            doArrayOfChars(obj, index, value);
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"obj.isEmptyType()"})
         protected static final void doEmptyArrayToLong(final ArrayObject obj, final long index, final long value,
-                        @Cached final BranchProfile nilTagProfile) {
-            if (ArrayObject.isLongNilTag(value)) {
-                nilTagProfile.enter();
+                        @Cached("createBinaryProfile()") final ConditionProfile isNilTagProfile) {
+            if (isNilTagProfile.profile(ArrayObject.isLongNilTag(value))) {
                 doEmptyArrayToObject(obj, index, value);
-                return;
+            } else {
+                obj.transitionFromEmptyToLongs();
+                obj.getLongStorage()[(int) index] = value;
             }
-            obj.transitionFromEmptyToLongs();
-            doArrayOfLongs(obj, index, value);
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = {"obj.isEmptyType()"})
         protected static final void doEmptyArrayToDouble(final ArrayObject obj, final long index, final double value,
-                        @Cached final BranchProfile nilTagProfile) {
-            if (ArrayObject.isDoubleNilTag(value)) {
-                nilTagProfile.enter();
+                        @Cached("createBinaryProfile()") final ConditionProfile isNilTagProfile) {
+            if (isNilTagProfile.profile(ArrayObject.isDoubleNilTag(value))) {
                 doEmptyArrayToObject(obj, index, value);
-                return;
+            } else {
+                obj.transitionFromEmptyToDoubles();
+                obj.getDoubleStorage()[(int) index] = value;
             }
-            obj.transitionFromEmptyToDoubles();
-            doArrayOfDoubles(obj, index, value);
         }
 
         @SuppressWarnings("unused")
@@ -385,16 +386,16 @@ public final class ArrayObjectNodes {
             doArrayOfObjects(obj, index, value);
         }
 
-        @Specialization(guards = {"obj.isCharType()", "!isCharNilTag(value)"})
-        protected static final void doArrayOfChars(final ArrayObject obj, final long index, final char value) {
-            obj.getCharStorage()[(int) index] = value;
-        }
-
-        @Specialization(guards = {"obj.isCharType()", "isCharNilTag(value)"})
-        protected static final void doArrayOfCharsNilTagClash(final ArrayObject obj, final long index, final char value) {
-            /** `value` happens to be char nil tag, need to despecialize to be able store it. */
-            obj.transitionFromCharsToObjects();
-            doArrayOfObjects(obj, index, value);
+        @Specialization(guards = {"obj.isCharType()"})
+        protected static final void doArrayOfCharsNilTagClash(final ArrayObject obj, final long index, final char value,
+                        @Cached("createBinaryProfile()") final ConditionProfile isNilTagProfile) {
+            if (isNilTagProfile.profile(ArrayObject.isCharNilTag(value))) {
+                /** `value` happens to be char nil tag, need to despecialize to be able store it. */
+                obj.transitionFromCharsToObjects(isNilTagProfile);
+                doArrayOfObjects(obj, index, value);
+            } else {
+                obj.getCharStorage()[(int) index] = value;
+            }
         }
 
         @Specialization(guards = "obj.isCharType()")
@@ -403,21 +404,22 @@ public final class ArrayObjectNodes {
         }
 
         @Specialization(guards = {"obj.isCharType()", "!isCharacter(value)", "!isNil(value)"})
-        protected static final void doArrayOfChars(final ArrayObject obj, final long index, final Object value) {
-            obj.transitionFromCharsToObjects();
+        protected static final void doArrayOfChars(final ArrayObject obj, final long index, final Object value,
+                        @Cached("createBinaryProfile()") final ConditionProfile isNilTagProfile) {
+            obj.transitionFromCharsToObjects(isNilTagProfile);
             doArrayOfObjects(obj, index, value);
         }
 
-        @Specialization(guards = {"obj.isLongType()", "!isLongNilTag(value)"})
-        protected static final void doArrayOfLongs(final ArrayObject obj, final long index, final long value) {
-            obj.getLongStorage()[(int) index] = value;
-        }
-
-        @Specialization(guards = {"obj.isLongType()", "isLongNilTag(value)"})
-        protected static final void doArrayOfLongsNilTagClash(final ArrayObject obj, final long index, final long value) {
-            /** `value` happens to be long nil tag, need to despecialize to be able store it. */
-            obj.transitionFromLongsToObjects();
-            doArrayOfObjects(obj, index, value);
+        @Specialization(guards = {"obj.isLongType()"})
+        protected static final void doArrayOfLongsNilTagClash(final ArrayObject obj, final long index, final long value,
+                        @Cached("createBinaryProfile()") final ConditionProfile isNilTagProfile) {
+            if (isNilTagProfile.profile(ArrayObject.isLongNilTag(value))) {
+                /** `value` happens to be long nil tag, need to despecialize to be able store it. */
+                obj.transitionFromLongsToObjects(isNilTagProfile);
+                doArrayOfObjects(obj, index, value);
+            } else {
+                obj.getLongStorage()[(int) index] = value;
+            }
         }
 
         @Specialization(guards = "obj.isLongType()")
@@ -426,21 +428,22 @@ public final class ArrayObjectNodes {
         }
 
         @Specialization(guards = {"obj.isLongType()", "!isLong(value)", "!isNil(value)"})
-        protected static final void doArrayOfLongs(final ArrayObject obj, final long index, final Object value) {
-            obj.transitionFromLongsToObjects();
+        protected static final void doArrayOfLongs(final ArrayObject obj, final long index, final Object value,
+                        @Cached("createBinaryProfile()") final ConditionProfile isNilTagProfile) {
+            obj.transitionFromLongsToObjects(isNilTagProfile);
             doArrayOfObjects(obj, index, value);
         }
 
-        @Specialization(guards = {"obj.isDoubleType()", "!isDoubleNilTag(value)"})
-        protected static final void doArrayOfDoubles(final ArrayObject obj, final long index, final double value) {
-            obj.getDoubleStorage()[(int) index] = value;
-        }
-
-        @Specialization(guards = {"obj.isDoubleType()", "isDoubleNilTag(value)"})
-        protected static final void doArrayOfDoublesNilTagClash(final ArrayObject obj, final long index, final double value) {
-            // `value` happens to be double nil tag, need to despecialize to be able store it.
-            obj.transitionFromDoublesToObjects();
-            doArrayOfObjects(obj, index, value);
+        @Specialization(guards = {"obj.isDoubleType()"})
+        protected static final void doArrayOfDoublesNilTagClash(final ArrayObject obj, final long index, final double value,
+                        @Cached("createBinaryProfile()") final ConditionProfile isNilTagProfile) {
+            if (isNilTagProfile.profile(ArrayObject.isDoubleNilTag(value))) {
+                // `value` happens to be double nil tag, need to despecialize to be able store it.
+                obj.transitionFromDoublesToObjects(isNilTagProfile);
+                doArrayOfObjects(obj, index, value);
+            } else {
+                obj.getDoubleStorage()[(int) index] = value;
+            }
         }
 
         @Specialization(guards = "obj.isDoubleType()")
@@ -449,8 +452,9 @@ public final class ArrayObjectNodes {
         }
 
         @Specialization(guards = {"obj.isDoubleType()", "!isDouble(value)", "!isNil(value)"})
-        protected static final void doArrayOfDoubles(final ArrayObject obj, final long index, final Object value) {
-            obj.transitionFromDoublesToObjects();
+        protected static final void doArrayOfDoubles(final ArrayObject obj, final long index, final Object value,
+                        @Cached("createBinaryProfile()") final ConditionProfile isNilTagProfile) {
+            obj.transitionFromDoublesToObjects(isNilTagProfile);
             doArrayOfObjects(obj, index, value);
         }
 
@@ -465,8 +469,9 @@ public final class ArrayObjectNodes {
         }
 
         @Specialization(guards = {"obj.isNativeObjectType()", "!isNativeObject(value)", "!isNil(value)"})
-        protected static final void doArrayOfNativeObjects(final ArrayObject obj, final long index, final Object value) {
-            obj.transitionFromNativesToObjects();
+        protected static final void doArrayOfNativeObjects(final ArrayObject obj, final long index, final Object value,
+                        @Cached("createBinaryProfile()") final ConditionProfile isNilTagProfile) {
+            obj.transitionFromNativesToObjects(isNilTagProfile);
             doArrayOfObjects(obj, index, value);
         }
 

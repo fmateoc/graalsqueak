@@ -8,6 +8,7 @@ import com.oracle.truffle.api.dsl.Cached.Exclusive;
 import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.interop.InvalidArrayIndexException;
 import com.oracle.truffle.api.library.ExportMessage;
+import com.oracle.truffle.api.profiles.ConditionProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
@@ -228,20 +229,20 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         }
     }
 
-    public static Object toObjectFromChar(final char value) {
-        return isCharNilTag(value) ? NilObject.SINGLETON : value;
+    public static Object toObjectFromChar(final char value, final ConditionProfile isNilTagProfile) {
+        return isNilTagProfile.profile(isCharNilTag(value)) ? NilObject.SINGLETON : value;
     }
 
-    public static Object toObjectFromLong(final long value) {
-        return isLongNilTag(value) ? NilObject.SINGLETON : value;
+    public static Object toObjectFromLong(final long value, final ConditionProfile isNilTagProfile) {
+        return isNilTagProfile.profile(isLongNilTag(value)) ? NilObject.SINGLETON : value;
     }
 
-    public static Object toObjectFromDouble(final double value) {
-        return isDoubleNilTag(value) ? NilObject.SINGLETON : value;
+    public static Object toObjectFromDouble(final double value, final ConditionProfile isNilTagProfile) {
+        return isNilTagProfile.profile(isDoubleNilTag(value)) ? NilObject.SINGLETON : value;
     }
 
-    public static Object toObjectFromNativeObject(final NativeObject value) {
-        return isNativeObjectNilTag(value) ? NilObject.SINGLETON : value;
+    public static Object toObjectFromNativeObject(final NativeObject value, final ConditionProfile isNilTagProfile) {
+        return isNilTagProfile.profile(isNativeObjectNilTag(value)) ? NilObject.SINGLETON : value;
     }
 
     public void transitionFromBooleansToObjects() {
@@ -254,22 +255,22 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         storage = objects;
     }
 
-    public void transitionFromCharsToObjects() {
+    public void transitionFromCharsToObjects(final ConditionProfile isNilTagProfile) {
         LOG.finer("transition from Chars to Objects");
         final char[] chars = getCharStorage();
         final Object[] objects = new Object[chars.length];
         for (int i = 0; i < chars.length; i++) {
-            objects[i] = toObjectFromChar(chars[i]);
+            objects[i] = toObjectFromChar(chars[i], isNilTagProfile);
         }
         storage = objects;
     }
 
-    public void transitionFromDoublesToObjects() {
+    public void transitionFromDoublesToObjects(final ConditionProfile isNilTagProfile) {
         LOG.finer("transition from Doubles to Objects");
         final double[] doubles = getDoubleStorage();
         final Object[] objects = new Object[doubles.length];
         for (int i = 0; i < doubles.length; i++) {
-            objects[i] = toObjectFromDouble(doubles[i]);
+            objects[i] = toObjectFromDouble(doubles[i], isNilTagProfile);
         }
         storage = objects;
     }
@@ -298,29 +299,31 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     public void transitionFromEmptyToNatives() {
-        storage = new NativeObject[getEmptyStorage()];
+        final NativeObject[] nativeObjects = new NativeObject[getEmptyStorage()];
+        Arrays.fill(nativeObjects, NATIVE_OBJECT_NIL_TAG);
+        storage = nativeObjects;
     }
 
     public void transitionFromEmptyToObjects() {
         storage = ArrayUtils.withAll(getEmptyLength(), NilObject.SINGLETON);
     }
 
-    public void transitionFromLongsToObjects() {
+    public void transitionFromLongsToObjects(final ConditionProfile isNilTagProfile) {
         LOG.finer("transition from Longs to Objects");
         final long[] longs = getLongStorage();
         final Object[] objects = new Object[longs.length];
         for (int i = 0; i < longs.length; i++) {
-            objects[i] = toObjectFromLong(longs[i]);
+            objects[i] = toObjectFromLong(longs[i], isNilTagProfile);
         }
         storage = objects;
     }
 
-    public void transitionFromNativesToObjects() {
+    public void transitionFromNativesToObjects(final ConditionProfile isNilTagProfile) {
         LOG.finer("transition from NativeObjects to Objects");
         final NativeObject[] natives = getNativeObjectStorage();
         final Object[] objects = new Object[natives.length];
         for (int i = 0; i < natives.length; i++) {
-            objects[i] = toObjectFromNativeObject(natives[i]);
+            objects[i] = toObjectFromNativeObject(natives[i], isNilTagProfile);
         }
         storage = objects;
     }
