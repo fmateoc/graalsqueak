@@ -1,8 +1,10 @@
 package de.hpi.swa.graal.squeak.nodes.bytecodes;
 
 import com.oracle.truffle.api.CompilerAsserts;
+import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.profiles.ConditionProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
@@ -33,12 +35,6 @@ public final class ReturnBytecodes {
             throw SqueakException.create("executeReturn() should be called instead");
         }
 
-        public final Object executeReturn(final VirtualFrame frame) {
-            return executeReturnSpecialized(frame, FrameAccess.getClosure(frame));
-        }
-
-        protected abstract Object executeReturnSpecialized(VirtualFrame frame, Object closure);
-
         @SuppressWarnings("unused")
         protected Object getReturnValue(final VirtualFrame frame) {
             throw SqueakException.create("Needs to be overriden");
@@ -51,13 +47,19 @@ public final class ReturnBytecodes {
             super(code, index);
         }
 
+        public final Object executeReturn(final VirtualFrame frame) {
+            return executeReturnSpecialized(frame, FrameAccess.getClosure(frame));
+        }
+
+        protected abstract Object executeReturnSpecialized(VirtualFrame frame, BlockClosureObject closure);
+
         @Specialization(guards = {"closure == null", "!hasModifiedSender(frame)"})
-        protected final Object doLocalReturn(final VirtualFrame frame, @SuppressWarnings("unused") final Object closure) {
+        protected final Object doLocalReturn(final VirtualFrame frame, @SuppressWarnings("unused") final BlockClosureObject closure) {
             return getReturnValue(frame);
         }
 
         @Specialization(guards = {"closure == null", "hasModifiedSender(frame)"})
-        protected final Object doNonLocalReturn(final VirtualFrame frame, @SuppressWarnings("unused") final Object closure) {
+        protected final Object doNonLocalReturn(final VirtualFrame frame, @SuppressWarnings("unused") final BlockClosureObject closure) {
             assert FrameAccess.getSender(frame) instanceof ContextObject : "Sender must be a materialized ContextObject";
             throw new NonLocalReturn(getReturnValue(frame), FrameAccess.getSender(frame));
         }
@@ -127,20 +129,23 @@ public final class ReturnBytecodes {
             return ReturnTopFromBlockNodeGen.create(code, index);
         }
 
+        public abstract Object executeReturn(VirtualFrame frame);
+
         @Specialization(guards = {"!hasModifiedSender(frame)"})
-        protected final Object doLocalReturn(final VirtualFrame frame, @SuppressWarnings("unused") final Object closureOrNull) {
+        protected final Object doLocalReturn(final VirtualFrame frame) {
             return getReturnValue(frame);
         }
 
-        @Specialization(guards = {"closureOrNull == null", "hasModifiedSender(frame)"})
-        protected final Object doNonLocalReturn(final VirtualFrame frame, @SuppressWarnings("unused") final Object closureOrNull) {
-            assert FrameAccess.getSender(frame) instanceof ContextObject : "Sender must be a materialized ContextObject";
-            throw new NonLocalReturn(getReturnValue(frame), FrameAccess.getSender(frame));
-        }
-
-        @Specialization(guards = {"closureOrNull != null", "hasModifiedSender(frame)"})
-        protected final Object doNonLocalReturn(final VirtualFrame frame, final BlockClosureObject closureOrNull) {
-            throw new NonLocalReturn(getReturnValue(frame), closureOrNull.getHomeContext().getFrameSender());
+        @Specialization(guards = {"hasModifiedSender(frame)"})
+        protected final Object doNonLocalReturn(final VirtualFrame frame,
+                        @Cached("createBinaryProfile()") final ConditionProfile noClosureProfile) {
+            final BlockClosureObject closureOrNull = FrameAccess.getClosure(frame);
+            if (noClosureProfile.profile(closureOrNull == null)) {
+                assert FrameAccess.getSender(frame) instanceof ContextObject : "Sender must be a materialized ContextObject";
+                throw new NonLocalReturn(getReturnValue(frame), FrameAccess.getSender(frame));
+            } else {
+                throw new NonLocalReturn(getReturnValue(frame), closureOrNull.getHomeContext().getFrameSender());
+            }
         }
 
         @Override
