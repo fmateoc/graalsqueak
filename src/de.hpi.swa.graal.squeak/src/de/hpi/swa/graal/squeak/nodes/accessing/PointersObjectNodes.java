@@ -108,6 +108,10 @@ public final class PointersObjectNodes {
             return PointersObjectWriteNodeGen.create();
         }
 
+        public static PointersObjectWriteNode getUncached() {
+            return PointersObjectWriteNodeGen.getUncached();
+        }
+
         public final void executeWrite(final PointersObject object, final long index, final Object value) {
             try {
                 executeWrite(object.getStorage(), index, value);

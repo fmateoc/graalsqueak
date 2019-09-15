@@ -1,5 +1,6 @@
 package de.hpi.swa.graal.squeak.nodes;
 
+import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
@@ -17,6 +18,7 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.METACLASS;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
 
 public abstract class NewObjectNode extends AbstractNodeWithImage {
 
@@ -57,9 +59,10 @@ public abstract class NewObjectNode extends AbstractNodeWithImage {
     }
 
     @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!classObject.isMetaClass()", "!classObject.instancesAreClasses()"})
-    protected final PointersObject doClassPointers(final ClassObject classObject, final int extraSize) {
+    protected final PointersObject doClassPointers(final ClassObject classObject, final int extraSize,
+                    @Cached final PointersObjectWriteNode writeNode) {
         assert extraSize == 0;
-        return new PointersObject(image, classObject, classObject.getBasicInstanceSize());
+        return new PointersObject(image, classObject, classObject.getBasicInstanceSize(), writeNode);
     }
 
     @Specialization(guards = "classObject.isIndexableWithNoInstVars()")
@@ -85,8 +88,9 @@ public abstract class NewObjectNode extends AbstractNodeWithImage {
     }
 
     @Specialization(guards = {"classObject.isIndexableWithInstVars()", "!classObject.isMethodContextClass()", "!classObject.isBlockClosureClass()"})
-    protected final PointersObject doPointers(final ClassObject classObject, final int extraSize) {
-        return new PointersObject(image, classObject, classObject.getBasicInstanceSize() + extraSize);
+    protected final PointersObject doPointers(final ClassObject classObject, final int extraSize,
+                    @Cached final PointersObjectWriteNode writeNode) {
+        return new PointersObject(image, classObject, classObject.getBasicInstanceSize() + extraSize, writeNode);
     }
 
     @Specialization(guards = "classObject.isWeak()")

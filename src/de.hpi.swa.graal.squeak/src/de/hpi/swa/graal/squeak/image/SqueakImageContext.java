@@ -53,6 +53,7 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.ExecuteTopLevelContextNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.plugins.B2D;
 import de.hpi.swa.graal.squeak.nodes.plugins.BitBlt;
 import de.hpi.swa.graal.squeak.nodes.plugins.JPEGReader;
@@ -498,8 +499,8 @@ public final class SqueakImageContext {
         return ArrayObject.createWithStorage(this, arrayClass, ArrayUtils.EMPTY_ARRAY);
     }
 
-    public PointersObject newMessage(final NativeObject selector, final ClassObject rcvrClass, final Object[] arguments) {
-        final PointersObject message = new PointersObject(this, messageClass, messageClass.getBasicInstanceSize());
+    public PointersObject newMessage(final PointersObjectWriteNode writeNode, final NativeObject selector, final ClassObject rcvrClass, final Object[] arguments) {
+        final PointersObject message = new PointersObject(this, messageClass, messageClass.getBasicInstanceSize(), writeNode);
         message.atput0(MESSAGE.SELECTOR, selector);
         message.atput0(MESSAGE.ARGUMENTS, asArrayOfObjects(arguments));
         if (message.instsize() > MESSAGE.LOOKUP_CLASS) { // Early versions do not have lookupClass.

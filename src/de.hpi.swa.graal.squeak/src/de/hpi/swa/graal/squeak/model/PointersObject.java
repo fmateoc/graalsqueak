@@ -8,7 +8,6 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
-import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
 public final class PointersObject extends AbstractPointersObject {
 
@@ -25,8 +24,15 @@ public final class PointersObject extends AbstractPointersObject {
         setPointersUnsafe(pointers);
     }
 
-    public PointersObject(final SqueakImageContext image, final ClassObject classObject, final int size) {
-        this(image, classObject, ArrayUtils.withAll(size, NilObject.SINGLETON));
+    public PointersObject(final SqueakImageContext image, final ClassObject classObject, final int size, final PointersObjectWriteNode writeNode) {
+        super(image, classObject);
+        for (int i = 0; i < size; i++) {
+            writeNode.executeWrite(this, i, NilObject.SINGLETON);
+        }
+    }
+
+    public PointersObject(final SqueakImageContext image, final ClassObject classObject) {
+        super(image, classObject);
     }
 
     private PointersObject(final PointersObject original) {
