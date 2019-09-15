@@ -24,6 +24,7 @@ import de.hpi.swa.graal.squeak.nodes.accessing.BlockClosureObjectNodes.BlockClos
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ClassObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.WeakPointersObjectNodes.WeakPointersObjectReadNode;
 
 @GenerateUncached
@@ -42,8 +43,9 @@ public abstract class SqueakObjectAt0Node extends AbstractNode {
     }
 
     @Specialization
-    protected static final Object doPointers(final PointersObject obj, final long index) {
-        return obj.at0((int) index);
+    protected static final Object doPointers(final PointersObject obj, final long index,
+                    @Cached final PointersObjectReadNode readNode) {
+        return readNode.executeRead(obj, index);
     }
 
     @Specialization

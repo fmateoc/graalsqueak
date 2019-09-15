@@ -22,6 +22,7 @@ import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectTraceableToObjectArrayNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
 
 public abstract class SqueakObjectPointersBecomeOneWayNode extends AbstractNode {
     @Child private UpdateSqueakObjectHashNode updateHashNode = UpdateSqueakObjectHashNode.create();
@@ -115,7 +116,8 @@ public abstract class SqueakObjectPointersBecomeOneWayNode extends AbstractNode 
     }
 
     @Specialization
-    protected final void doMethod(final CompiledMethodObject obj, final Object[] from, final Object[] to, final boolean copyHash) {
+    protected final void doMethod(final CompiledMethodObject obj, final Object[] from, final Object[] to, final boolean copyHash,
+                    @Cached final PointersObjectReadNode readNode) {
         final ClassObject oldClass = obj.image.compiledMethodClass;
         for (int i = 0; i < from.length; i++) {
             if (from[i] == oldClass) {
@@ -124,7 +126,7 @@ public abstract class SqueakObjectPointersBecomeOneWayNode extends AbstractNode 
             }
         }
         if (obj.hasMethodClass()) {
-            final ClassObject oldMethodClass = obj.getMethodClass();
+            final ClassObject oldMethodClass = obj.getMethodClass(readNode);
             for (int i = 0; i < from.length; i++) {
                 if (from[i] == oldMethodClass) {
                     final ClassObject newMethodClass = (ClassObject) to[i];

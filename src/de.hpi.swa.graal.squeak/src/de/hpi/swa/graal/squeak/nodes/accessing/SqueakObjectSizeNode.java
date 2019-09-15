@@ -21,6 +21,7 @@ import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectSizeNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectSizeNode;
 
 @GenerateUncached
 @NodeInfo(cost = NodeCost.NONE)
@@ -53,8 +54,8 @@ public abstract class SqueakObjectSizeNode extends AbstractNode {
     }
 
     @Specialization
-    protected static final int doAbstractPointers(final AbstractPointersObject obj) {
-        return obj.size();
+    protected static final int doAbstractPointers(final AbstractPointersObject obj, @Cached final PointersObjectSizeNode sizeNode) {
+        return sizeNode.executeSize(obj);
     }
 
     @Specialization

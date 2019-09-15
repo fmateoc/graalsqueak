@@ -8,6 +8,9 @@ import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.METHOD_DICT;
+import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectSizeNode;
 
 @ReportPolymorphism
 public abstract class LookupMethodNode extends AbstractNode {
@@ -25,18 +28,24 @@ public abstract class LookupMethodNode extends AbstractNode {
     protected static final Object doCached(final ClassObject classObject, final NativeObject selector,
                     @Cached("classObject") final ClassObject cachedClass,
                     @Cached("selector") final NativeObject cachedSelector,
-                    @Cached("doGeneric(cachedClass, cachedSelector)") final Object cachedMethod) {
+                    @Cached("lookupUncached(cachedClass, cachedSelector)") final Object cachedMethod) {
         return cachedMethod;
     }
 
+    protected static final Object lookupUncached(final ClassObject classObject, final NativeObject selector) {
+        return doGeneric(classObject, selector, PointersObjectSizeNode.getUncached(), PointersObjectReadNode.getUncached());
+    }
+
     @Specialization(replaces = "doCached")
-    protected static final Object doGeneric(final ClassObject classObject, final NativeObject selector) {
+    protected static final Object doGeneric(final ClassObject classObject, final NativeObject selector,
+                    @Cached final PointersObjectSizeNode sizeNode,
+                    @Cached final PointersObjectReadNode readNode) {
         ClassObject lookupClass = classObject;
         while (lookupClass != null) {
-            final Object[] methodDictPointers = lookupClass.getMethodDict().getPointers();
-            for (int i = METHOD_DICT.NAMES; i < methodDictPointers.length; i++) {
-                if (selector == methodDictPointers[i]) {
-                    return ((ArrayObject) methodDictPointers[METHOD_DICT.VALUES]).getObjectStorage()[i - METHOD_DICT.NAMES];
+            final PointersObject methodDict = lookupClass.getMethodDict();
+            for (int i = METHOD_DICT.NAMES; i < sizeNode.executeSize(methodDict); i++) {
+                if (selector == readNode.executeRead(methodDict, i)) {
+                    return ((ArrayObject) readNode.executeRead(methodDict, METHOD_DICT.VALUES)).getObjectStorage()[i - METHOD_DICT.NAMES];
                 }
             }
             lookupClass = lookupClass.getSuperclassOrNull();

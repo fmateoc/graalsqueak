@@ -13,6 +13,7 @@ import de.hpi.swa.graal.squeak.interop.WrapToSqueakNode;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.ADDITIONAL_METHOD_STATE;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CLASS_BINDING;
 import de.hpi.swa.graal.squeak.nodes.DispatchUneagerlyNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
 
 @ExportLibrary(InteropLibrary.class)
 public final class CompiledMethodObject extends CompiledCodeObject {
@@ -58,7 +59,7 @@ public final class CompiledMethodObject extends CompiledCodeObject {
         CompilerAsserts.neverPartOfCompilation();
         String className = "UnknownClass";
         String selector = "unknownSelector";
-        final ClassObject methodClass = getMethodClass();
+        final ClassObject methodClass = getMethodClass(PointersObjectReadNode.getUncached());
         if (methodClass != null) {
             className = methodClass.getClassName();
         }
@@ -114,8 +115,8 @@ public final class CompiledMethodObject extends CompiledCodeObject {
     }
 
     /** CompiledMethod>>#methodClass. */
-    public ClassObject getMethodClass() {
-        return (ClassObject) getMethodClassAssociation().at0(CLASS_BINDING.VALUE);
+    public ClassObject getMethodClass(final PointersObjectReadNode readNode) {
+        return (ClassObject) readNode.executeRead(getMethodClassAssociation(), CLASS_BINDING.VALUE);
     }
 
     /** CompiledMethod>>#methodClass:. */

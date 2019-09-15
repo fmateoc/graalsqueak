@@ -42,6 +42,7 @@ import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectToObjectArrayCopyNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectChangeClassOfToNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassNode;
@@ -468,8 +469,9 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "receiver.hasMethodClass()")
-        protected static final CompiledMethodObject doFlush(final CompiledMethodObject receiver) {
-            receiver.getMethodClass().invalidateMethodDictStableAssumption();
+        protected static final CompiledMethodObject doFlush(final CompiledMethodObject receiver,
+                        @Cached final PointersObjectReadNode readNode) {
+            receiver.getMethodClass(readNode).invalidateMethodDictStableAssumption();
             return receiver;
         }
     }

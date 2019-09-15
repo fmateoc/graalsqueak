@@ -17,6 +17,9 @@ import com.oracle.truffle.api.interop.UnsupportedTypeException;
 import com.oracle.truffle.api.library.CachedLibrary;
 import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
+import com.oracle.truffle.api.object.Layout;
+import com.oracle.truffle.api.object.ObjectType;
+import com.oracle.truffle.api.object.Shape;
 import com.oracle.truffle.api.utilities.CyclicAssumption;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
@@ -35,6 +38,9 @@ import de.hpi.swa.graal.squeak.util.ArrayUtils;
  */
 @ExportLibrary(InteropLibrary.class)
 public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
+    private static final Layout LAYOUT = Layout.createLayout();
+    public final Shape shape = LAYOUT.createShape(new ObjectType());
+
     private final CyclicAssumption classHierarchyStable = new CyclicAssumption("Class hierarchy stability");
     private final CyclicAssumption methodDictStable = new CyclicAssumption("Method dictionary stability");
     private final CyclicAssumption classFormatStable = new CyclicAssumption("Class format stability");

@@ -24,6 +24,7 @@ import de.hpi.swa.graal.squeak.nodes.accessing.BlockClosureObjectNodes.BlockClos
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ClassObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.WeakPointersObjectNodes.WeakPointersObjectWriteNode;
 
 @GenerateUncached
@@ -49,8 +50,9 @@ public abstract class SqueakObjectAtPut0Node extends AbstractNode {
     }
 
     @Specialization
-    protected static final void doPointers(final PointersObject obj, final long index, final Object value) {
-        obj.atput0(index, value);
+    protected static final void doPointers(final PointersObject obj, final long index, final Object value,
+                    @Cached final PointersObjectWriteNode writeNode) {
+        writeNode.executeWrite(obj, index, value);
     }
 
     @Specialization

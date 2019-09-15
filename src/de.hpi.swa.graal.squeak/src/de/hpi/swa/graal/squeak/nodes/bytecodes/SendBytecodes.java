@@ -19,6 +19,7 @@ import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
 import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackPopNNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackPushNode;
@@ -132,11 +133,13 @@ public final class SendBytecodes {
     }
 
     protected static final class LookupSuperClassNode extends AbstractLookupClassNode {
+        @Child private PointersObjectReadNode readNode = PointersObjectReadNode.create();
+
         private ConditionProfile hasSuperclassProfile = ConditionProfile.createBinaryProfile();
 
         @Override
         protected ClassObject executeLookup(final VirtualFrame frame, final Object receiver) {
-            final ClassObject methodClass = FrameAccess.getMethod(frame).getMethodClass();
+            final ClassObject methodClass = FrameAccess.getMethod(frame).getMethodClass(readNode);
             final ClassObject superclass = methodClass.getSuperclassOrNull();
             return hasSuperclassProfile.profile(superclass == null) ? methodClass : superclass;
         }
