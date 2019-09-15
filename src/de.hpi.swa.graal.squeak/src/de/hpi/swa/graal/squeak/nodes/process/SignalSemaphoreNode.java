@@ -11,13 +11,13 @@ import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SEMAPHORE;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithCode;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 
 public abstract class SignalSemaphoreNode extends AbstractNodeWithCode {
-    @Child private PointersObjectReadNode semaReadNode;
-    @Child private PointersObjectWriteNode semaWriteNode;
-    @Child private PointersObjectWriteNode writeNode;
+    @Child private AbstractPointersObjectReadNode semaReadNode;
+    @Child private AbstractPointersObjectWriteNode semaWriteNode;
+    @Child private AbstractPointersObjectWriteNode writeNode;
     @Child private ResumeProcessNode resumeProcessNode;
 
     protected SignalSemaphoreNode(final CompiledCodeObject code) {
@@ -32,20 +32,20 @@ public abstract class SignalSemaphoreNode extends AbstractNodeWithCode {
 
     @Specialization(guards = {"semaphore.getSqueakClass().isSemaphoreClass()"})
     public final void doSignalEmpty(final VirtualFrame frame, final PointersObject semaphore,
-                    @Cached final PointersObjectReadNode readNode,
+                    @Cached final AbstractPointersObjectReadNode readNode,
                     @Cached("createBinaryProfile()") final ConditionProfile isEmptyListProfile) {
         if (isEmptyListProfile.profile(semaphore.isEmptyList(readNode))) {
             if (semaReadNode == null) {
                 CompilerDirectives.transferToInterpreterAndInvalidate();
-                semaReadNode = insert(PointersObjectReadNode.create());
-                semaWriteNode = insert(PointersObjectWriteNode.create());
+                semaReadNode = insert(AbstractPointersObjectReadNode.create());
+                semaWriteNode = insert(AbstractPointersObjectWriteNode.create());
             }
             semaWriteNode.executeWrite(semaphore, SEMAPHORE.EXCESS_SIGNALS, (long) semaReadNode.executeRead(semaphore, SEMAPHORE.EXCESS_SIGNALS) + 1);
         } else {
             if (resumeProcessNode == null) {
                 CompilerDirectives.transferToInterpreterAndInvalidate();
                 resumeProcessNode = insert(ResumeProcessNode.create(code));
-                writeNode = insert(PointersObjectWriteNode.create());
+                writeNode = insert(AbstractPointersObjectWriteNode.create());
             }
             resumeProcessNode.executeResume(frame, semaphore.removeFirstLinkOfList(readNode, writeNode));
         }

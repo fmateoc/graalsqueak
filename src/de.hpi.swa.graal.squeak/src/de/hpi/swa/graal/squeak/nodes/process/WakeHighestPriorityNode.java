@@ -12,15 +12,15 @@ import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithImage;
 import de.hpi.swa.graal.squeak.nodes.GetOrCreateContextNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 
 public final class WakeHighestPriorityNode extends AbstractNodeWithImage {
-    @Child private PointersObjectReadNode schedulerReadNode = PointersObjectReadNode.create();
+    @Child private AbstractPointersObjectReadNode schedulerReadNode = AbstractPointersObjectReadNode.create();
     @Child private ArrayObjectReadNode arrayReadNode = ArrayObjectReadNode.create();
     @Child private ArrayObjectSizeNode arraySizeNode = ArrayObjectSizeNode.create();
-    @Child private PointersObjectReadNode processListReadNode = PointersObjectReadNode.create();
-    @Child private PointersObjectWriteNode processListWriteNode = PointersObjectWriteNode.create();
+    @Child private AbstractPointersObjectReadNode processListReadNode = AbstractPointersObjectReadNode.create();
+    @Child private AbstractPointersObjectWriteNode processListWriteNode = AbstractPointersObjectWriteNode.create();
     private final BranchProfile errorProfile = BranchProfile.create();
     @Child private GetOrCreateContextNode contextNode;
 

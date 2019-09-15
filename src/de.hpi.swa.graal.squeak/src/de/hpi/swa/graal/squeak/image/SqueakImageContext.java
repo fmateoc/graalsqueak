@@ -52,8 +52,8 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.SMALLTALK_IMAGE;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.ExecuteTopLevelContextNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.plugins.B2D;
 import de.hpi.swa.graal.squeak.nodes.plugins.BitBlt;
 import de.hpi.swa.graal.squeak.nodes.plugins.JPEGReader;
@@ -171,7 +171,7 @@ public final class SqueakImageContext {
             SqueakImageReader.load(this);
             getOutput().println("Preparing image for headless execution...");
             // Remove active context.
-            getActiveProcess(PointersObjectReadNode.getUncached()).atputNil0(PROCESS.SUSPENDED_CONTEXT);
+            getActiveProcess(AbstractPointersObjectReadNode.getUncached()).atputNil0(PROCESS.SUSPENDED_CONTEXT);
             // Modify StartUpList for headless execution.
             evaluate("{EventSensor. Project} do: [:ea | Smalltalk removeFromStartUpList: ea]");
             try {
@@ -225,7 +225,7 @@ public final class SqueakImageContext {
     }
 
     public ExecuteTopLevelContextNode getActiveContextNode() {
-        final PointersObject activeProcess = getActiveProcess(PointersObjectReadNode.getUncached());
+        final PointersObject activeProcess = getActiveProcess(AbstractPointersObjectReadNode.getUncached());
         final ContextObject activeContext = (ContextObject) activeProcess.at0(PROCESS.SUSPENDED_CONTEXT);
         activeProcess.atputNil0(PROCESS.SUSPENDED_CONTEXT);
         return ExecuteTopLevelContextNode.create(getLanguage(), activeContext, true);
@@ -354,7 +354,7 @@ public final class SqueakImageContext {
         return scheduler;
     }
 
-    public PointersObject getActiveProcess(final PointersObjectReadNode readNode) {
+    public PointersObject getActiveProcess(final AbstractPointersObjectReadNode readNode) {
         return (PointersObject) readNode.executeRead(getScheduler(), PROCESS_SCHEDULER.ACTIVE_PROCESS);
     }
 
@@ -499,7 +499,7 @@ public final class SqueakImageContext {
         return ArrayObject.createWithStorage(this, arrayClass, ArrayUtils.EMPTY_ARRAY);
     }
 
-    public PointersObject newMessage(final PointersObjectWriteNode writeNode, final NativeObject selector, final ClassObject rcvrClass, final Object[] arguments) {
+    public PointersObject newMessage(final AbstractPointersObjectWriteNode writeNode, final NativeObject selector, final ClassObject rcvrClass, final Object[] arguments) {
         final PointersObject message = new PointersObject(this, messageClass, messageClass.getBasicInstanceSize(), writeNode);
         message.atput0(MESSAGE.SELECTOR, selector);
         message.atput0(MESSAGE.ARGUMENTS, asArrayOfObjects(arguments));

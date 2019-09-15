@@ -17,27 +17,26 @@ import com.oracle.truffle.api.object.Shape;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.AbstractPointersObject;
-import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodesFactory.PointersObjectReadNodeGen;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodesFactory.PointersObjectSizeNodeGen;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodesFactory.PointersObjectWriteNodeGen;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodesFactory.AbstractPointersObjectReadNodeGen;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodesFactory.AbstractPointersObjectSizeNodeGen;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodesFactory.AbstractPointersObjectWriteNodeGen;
 
-public final class PointersObjectNodes {
+public final class AbstractPointersObjectNodes {
     protected static final int CACHE_LIMIT = 3;
 
     @GenerateUncached
-    @ImportStatic(PointersObjectNodes.class)
-    public abstract static class PointersObjectReadNode extends AbstractNode {
-        public static PointersObjectReadNode create() {
-            return PointersObjectReadNodeGen.create();
+    @ImportStatic(AbstractPointersObjectNodes.class)
+    public abstract static class AbstractPointersObjectReadNode extends AbstractNode {
+        public static AbstractPointersObjectReadNode create() {
+            return AbstractPointersObjectReadNodeGen.create();
         }
 
-        public static PointersObjectReadNode getUncached() {
-            return PointersObjectReadNodeGen.getUncached();
+        public static AbstractPointersObjectReadNode getUncached() {
+            return AbstractPointersObjectReadNodeGen.getUncached();
         }
 
-        public final Object executeRead(final PointersObject object, final long index) {
+        public final Object executeRead(final AbstractPointersObject object, final long index) {
             try {
                 return executeRead(object.getStorage(), index);
             } catch (final UnknownIdentifierException e) {
@@ -101,18 +100,18 @@ public final class PointersObjectNodes {
     }
 
     @GenerateUncached
-    @ImportStatic(PointersObjectNodes.class)
-    public abstract static class PointersObjectWriteNode extends AbstractNode {
+    @ImportStatic(AbstractPointersObjectNodes.class)
+    public abstract static class AbstractPointersObjectWriteNode extends AbstractNode {
 
-        public static PointersObjectWriteNode create() {
-            return PointersObjectWriteNodeGen.create();
+        public static AbstractPointersObjectWriteNode create() {
+            return AbstractPointersObjectWriteNodeGen.create();
         }
 
-        public static PointersObjectWriteNode getUncached() {
-            return PointersObjectWriteNodeGen.getUncached();
+        public static AbstractPointersObjectWriteNode getUncached() {
+            return AbstractPointersObjectWriteNodeGen.getUncached();
         }
 
-        public final void executeWrite(final PointersObject object, final long index, final Object value) {
+        public final void executeWrite(final AbstractPointersObject object, final long index, final Object value) {
             try {
                 executeWrite(object.getStorage(), index, value);
             } catch (final UnknownIdentifierException e) {
@@ -256,11 +255,11 @@ public final class PointersObjectNodes {
     }
 
     @GenerateUncached
-    @ImportStatic(PointersObjectNodes.class)
-    public abstract static class PointersObjectSizeNode extends AbstractNode {
+    @ImportStatic(AbstractPointersObjectNodes.class)
+    public abstract static class AbstractPointersObjectSizeNode extends AbstractNode {
 
-        public static PointersObjectSizeNode getUncached() {
-            return PointersObjectSizeNodeGen.getUncached();
+        public static AbstractPointersObjectSizeNode getUncached() {
+            return AbstractPointersObjectSizeNodeGen.getUncached();
         }
 
         public final int executeSize(final AbstractPointersObject object) {

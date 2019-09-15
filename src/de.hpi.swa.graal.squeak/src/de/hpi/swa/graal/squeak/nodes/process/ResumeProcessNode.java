@@ -8,10 +8,10 @@ import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithCode;
 import de.hpi.swa.graal.squeak.nodes.GetOrCreateContextNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
 
 public final class ResumeProcessNode extends AbstractNodeWithCode {
-    @Child private PointersObjectReadNode readNode = PointersObjectReadNode.create();
+    @Child private AbstractPointersObjectReadNode readNode = AbstractPointersObjectReadNode.create();
     @Child private PutToSleepNode putToSleepNode;
     @Child private GetOrCreateContextNode contextNode;
 

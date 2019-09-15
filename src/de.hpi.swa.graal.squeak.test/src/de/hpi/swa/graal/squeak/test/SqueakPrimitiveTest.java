@@ -15,7 +15,7 @@ import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.BooleanObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 
 public class SqueakPrimitiveTest extends AbstractSqueakTestCaseWithDummyImage {
     @Test
@@ -35,7 +35,7 @@ public class SqueakPrimitiveTest extends AbstractSqueakTestCaseWithDummyImage {
         for (int i = 1; i < 8; i++) {
             assertNotSame(NilObject.SINGLETON, rcvr.at0(i));
         }
-        final Object result = runQuinaryPrimitive(105, rcvr, 1L, 6L, new PointersObject(image, image.nilClass, 10, PointersObjectWriteNode.getUncached()), 1L);
+        final Object result = runQuinaryPrimitive(105, rcvr, 1L, 6L, new PointersObject(image, image.nilClass, 10, AbstractPointersObjectWriteNode.getUncached()), 1L);
         assertSame(result, rcvr);
         for (int i = 0; i < 6; i++) {
             assertSame(NilObject.SINGLETON, rcvr.at0(i));

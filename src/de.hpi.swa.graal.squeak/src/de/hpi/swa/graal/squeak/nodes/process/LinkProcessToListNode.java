@@ -6,13 +6,13 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.LINKED_LIST;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 
 public final class LinkProcessToListNode extends AbstractNode {
-    @Child private PointersObjectReadNode readNode = PointersObjectReadNode.create();
-    @Child private PointersObjectWriteNode writeListNode = PointersObjectWriteNode.create();
-    @Child private PointersObjectWriteNode writeProcessNode = PointersObjectWriteNode.create();
+    @Child private AbstractPointersObjectReadNode readNode = AbstractPointersObjectReadNode.create();
+    @Child private AbstractPointersObjectWriteNode writeListNode = AbstractPointersObjectWriteNode.create();
+    @Child private AbstractPointersObjectWriteNode writeProcessNode = AbstractPointersObjectWriteNode.create();
 
     private ConditionProfile isEmptyListProfile = ConditionProfile.createBinaryProfile();
 

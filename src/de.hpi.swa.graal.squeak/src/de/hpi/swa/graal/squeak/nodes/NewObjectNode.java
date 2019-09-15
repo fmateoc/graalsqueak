@@ -18,7 +18,7 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.METACLASS;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 
 public abstract class NewObjectNode extends AbstractNodeWithImage {
 
@@ -60,7 +60,7 @@ public abstract class NewObjectNode extends AbstractNodeWithImage {
 
     @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!classObject.isMetaClass()", "!classObject.instancesAreClasses()"})
     protected final PointersObject doClassPointers(final ClassObject classObject, final int extraSize,
-                    @Cached final PointersObjectWriteNode writeNode) {
+                    @Cached final AbstractPointersObjectWriteNode writeNode) {
         assert extraSize == 0;
         return new PointersObject(image, classObject, classObject.getBasicInstanceSize(), writeNode);
     }
@@ -89,7 +89,7 @@ public abstract class NewObjectNode extends AbstractNodeWithImage {
 
     @Specialization(guards = {"classObject.isIndexableWithInstVars()", "!classObject.isMethodContextClass()", "!classObject.isBlockClosureClass()"})
     protected final PointersObject doPointers(final ClassObject classObject, final int extraSize,
-                    @Cached final PointersObjectWriteNode writeNode) {
+                    @Cached final AbstractPointersObjectWriteNode writeNode) {
         return new PointersObject(image, classObject, classObject.getBasicInstanceSize() + extraSize, writeNode);
     }
 

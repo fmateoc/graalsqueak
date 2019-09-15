@@ -40,11 +40,11 @@ import de.hpi.swa.graal.squeak.nodes.DispatchEagerlyNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
 import de.hpi.swa.graal.squeak.nodes.InheritsFromNode;
 import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectToObjectArrayCopyNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectChangeClassOfToNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassNode;
@@ -209,7 +209,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
     @SqueakPrimitive(indices = 86)
     protected abstract static class PrimWaitNode extends AbstractPrimitiveNode implements UnaryPrimitive {
         @Child private LinkProcessToListNode linkProcessToListNode;
-        @Child private PointersObjectReadNode activeProcessReadNode;
+        @Child private AbstractPointersObjectReadNode activeProcessReadNode;
         @Child private WakeHighestPriorityNode wakeHighestPriorityNode;
 
         private ConditionProfile hasExcessSignalsProfile = ConditionProfile.createBinaryProfile();
@@ -231,7 +231,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                 if (linkProcessToListNode == null) {
                     CompilerDirectives.transferToInterpreterAndInvalidate();
                     linkProcessToListNode = insert(LinkProcessToListNode.create());
-                    activeProcessReadNode = insert(PointersObjectReadNode.create());
+                    activeProcessReadNode = insert(AbstractPointersObjectReadNode.create());
                     wakeHighestPriorityNode = insert(WakeHighestPriorityNode.create(method));
                 }
                 linkProcessToListNode.executeLink(method.image.getActiveProcess(activeProcessReadNode), receiver);
@@ -268,8 +268,8 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 88)
     protected abstract static class PrimSuspendNode extends AbstractPrimitiveNode implements UnaryPrimitive {
-        @Child private PointersObjectReadNode activeProcessReadNode = PointersObjectReadNode.create();
-        @Child private PointersObjectReadNode processListReadNode = PointersObjectReadNode.create();
+        @Child private AbstractPointersObjectReadNode activeProcessReadNode = AbstractPointersObjectReadNode.create();
+        @Child private AbstractPointersObjectReadNode processListReadNode = AbstractPointersObjectReadNode.create();
         @Child private StackPushForPrimitivesNode pushNode;
         @Child private WakeHighestPriorityNode wakeHighestPriorityNode;
         @Child private RemoveProcessFromListNode removeProcessNode;
@@ -486,9 +486,9 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(guards = "receiver.hasMethodClass(readNode)")
+        @Specialization(guards = "receiver.hasMethodClass(readNode)", limit = "1")
         protected static final CompiledMethodObject doFlush(final CompiledMethodObject receiver,
-                        @Cached final PointersObjectReadNode readNode) {
+                        @Cached final AbstractPointersObjectReadNode readNode) {
             receiver.getMethodClass(readNode).invalidateMethodDictStableAssumption();
             return receiver;
         }
@@ -664,7 +664,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 185)
     protected abstract static class PrimExitCriticalSectionNode extends AbstractPrimitiveNode implements UnaryPrimitive {
-        @Child private PointersObjectWriteNode writeNode;
+        @Child private AbstractPointersObjectWriteNode writeNode;
         @Child private StackPushForPrimitivesNode pushNode;
         @Child private ResumeProcessNode resumeProcessNode;
 
@@ -674,7 +674,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
 
         @Specialization
         protected final Object doExit(final VirtualFrame frame, final PointersObject mutex,
-                        @Cached final PointersObjectReadNode readNode,
+                        @Cached final AbstractPointersObjectReadNode readNode,
                         @Cached("createBinaryProfile()") final ConditionProfile isEmptyListProfile) {
             if (isEmptyListProfile.profile(mutex.isEmptyList(readNode))) {
                 mutex.atputNil0(MUTEX.OWNER);
@@ -683,7 +683,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                 if (pushNode == null) {
                     CompilerDirectives.transferToInterpreterAndInvalidate();
                     pushNode = insert(StackPushForPrimitivesNode.create());
-                    writeNode = insert(PointersObjectWriteNode.create());
+                    writeNode = insert(AbstractPointersObjectWriteNode.create());
                     resumeProcessNode = insert(ResumeProcessNode.create(method));
                 }
                 pushNode.executeWrite(frame, mutex); // keep receiver on stack
@@ -699,9 +699,9 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 186)
     protected abstract static class PrimEnterCriticalSectionNode extends AbstractPrimitiveNode implements BinaryPrimitive {
-        @Child private PointersObjectReadNode mutexReadNode = PointersObjectReadNode.create();
-        @Child private PointersObjectWriteNode mutexWriteNode;
-        @Child private PointersObjectReadNode activeProcessReadNode = PointersObjectReadNode.create();
+        @Child private AbstractPointersObjectReadNode mutexReadNode = AbstractPointersObjectReadNode.create();
+        @Child private AbstractPointersObjectWriteNode mutexWriteNode;
+        @Child private AbstractPointersObjectReadNode activeProcessReadNode = AbstractPointersObjectReadNode.create();
 
         @Child private StackPushForPrimitivesNode pushNode;
         @Child private LinkProcessToListNode linkProcessToListNode;
@@ -746,9 +746,9 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 187)
     protected abstract static class PrimTestAndSetOwnershipOfCriticalSectionNode extends AbstractPrimitiveNode implements UnaryPrimitive {
-        @Child private PointersObjectReadNode mutexReadNode = PointersObjectReadNode.create();
-        @Child private PointersObjectWriteNode mutexWriteNode;
-        @Child private PointersObjectReadNode activeProcessReadNode = PointersObjectReadNode.create();
+        @Child private AbstractPointersObjectReadNode mutexReadNode = AbstractPointersObjectReadNode.create();
+        @Child private AbstractPointersObjectWriteNode mutexWriteNode;
+        @Child private AbstractPointersObjectReadNode activeProcessReadNode = AbstractPointersObjectReadNode.create();
 
         private final ConditionProfile isNilOwner = ConditionProfile.createBinaryProfile();
         private final ConditionProfile isActiveProcessOwner = ConditionProfile.createBinaryProfile();
@@ -763,7 +763,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             if (isNilOwner.profile(owner == NilObject.SINGLETON)) {
                 if (mutexWriteNode == null) {
                     CompilerDirectives.transferToInterpreterAndInvalidate();
-                    mutexWriteNode = insert(PointersObjectWriteNode.create());
+                    mutexWriteNode = insert(AbstractPointersObjectWriteNode.create());
                 }
                 mutexWriteNode.executeWrite(rcvrMutex, MUTEX.OWNER, method.image.getActiveProcess(activeProcessReadNode));
                 return BooleanObject.FALSE;

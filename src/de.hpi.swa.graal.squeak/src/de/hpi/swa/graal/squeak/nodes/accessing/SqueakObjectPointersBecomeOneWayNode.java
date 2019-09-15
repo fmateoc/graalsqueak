@@ -22,7 +22,7 @@ import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectTraceableToObjectArrayNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectWriteNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
 
 public abstract class SqueakObjectPointersBecomeOneWayNode extends AbstractNode {
     @Child private UpdateSqueakObjectHashNode updateHashNode = UpdateSqueakObjectHashNode.create();
@@ -117,7 +117,7 @@ public abstract class SqueakObjectPointersBecomeOneWayNode extends AbstractNode 
 
     @Specialization
     protected final void doMethod(final CompiledMethodObject obj, final Object[] from, final Object[] to, final boolean copyHash,
-                    @Cached final PointersObjectReadNode readNode) {
+                    @Cached final AbstractPointersObjectReadNode readNode) {
         final ClassObject oldClass = obj.image.compiledMethodClass;
         for (int i = 0; i < from.length; i++) {
             if (from[i] == oldClass) {

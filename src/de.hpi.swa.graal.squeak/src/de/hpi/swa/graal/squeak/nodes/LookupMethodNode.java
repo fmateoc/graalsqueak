@@ -9,8 +9,8 @@ import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.METHOD_DICT;
 import de.hpi.swa.graal.squeak.model.PointersObject;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.PointersObjectNodes.PointersObjectSizeNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectSizeNode;
 
 @ReportPolymorphism
 public abstract class LookupMethodNode extends AbstractNode {
@@ -33,13 +33,13 @@ public abstract class LookupMethodNode extends AbstractNode {
     }
 
     protected static final Object lookupUncached(final ClassObject classObject, final NativeObject selector) {
-        return doGeneric(classObject, selector, PointersObjectSizeNode.getUncached(), PointersObjectReadNode.getUncached());
+        return doGeneric(classObject, selector, AbstractPointersObjectSizeNode.getUncached(), AbstractPointersObjectReadNode.getUncached());
     }
 
     @Specialization(replaces = "doCached")
     protected static final Object doGeneric(final ClassObject classObject, final NativeObject selector,
-                    @Cached final PointersObjectSizeNode sizeNode,
-                    @Cached final PointersObjectReadNode readNode) {
+                    @Cached final AbstractPointersObjectSizeNode sizeNode,
+                    @Cached final AbstractPointersObjectReadNode readNode) {
         ClassObject lookupClass = classObject;
         while (lookupClass != null) {
             final PointersObject methodDict = lookupClass.getMethodDict();

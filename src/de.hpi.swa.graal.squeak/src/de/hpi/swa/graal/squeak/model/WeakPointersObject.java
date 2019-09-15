@@ -40,8 +40,8 @@ public final class WeakPointersObject extends AbstractPointersObject {
         return "WeakPointersObject: " + getSqueakClass();
     }
 
-    public void setWeakPointer(final int index, final Object value) {
-        setPointer(index, new WeakReference<>(value, image.weakPointersQueue));
+    public WeakReference<Object> asWeakRef(final Object value) {
+        return new WeakReference<>(value, image.weakPointersQueue);
     }
 
     public WeakPointersObject shallowCopy() {
