@@ -4125,11 +4125,10 @@ public final class BitBlt {
         if (destBits != null) {
             return Integer.toUnsignedLong(destBits[i]);
         } else {
-            final int offset = i * ArrayConversionUtils.INTEGER_BYTE_SIZE;
             if (destMSB) {
-                return Integer.toUnsignedLong((destBytes[offset + 3] & 0xFF) << 24 | (destBytes[offset + 2] & 0xFF) << 16 | (destBytes[offset + 1] & 0xFF) << 8 | destBytes[offset + 0] & 0xFF);
+                return Integer.toUnsignedLong(ArrayConversionUtils.getInt(destBytes, i));
             } else {
-                return Integer.toUnsignedLong((destBytes[offset + 0] & 0xFF) << 24 | (destBytes[offset + 1] & 0xFF) << 16 | (destBytes[offset + 2] & 0xFF) << 8 | destBytes[offset + 3] & 0xFF);
+                return Integer.toUnsignedLong(Integer.reverseBytes(ArrayConversionUtils.getInt(destBytes, i)));
             }
         }
     }
@@ -4150,11 +4149,7 @@ public final class BitBlt {
         if (destBits != null) {
             destBits[i] = (int) value;
         } else {
-            final int offset = i * ArrayConversionUtils.INTEGER_BYTE_SIZE;
-            destBytes[offset + 3] = (byte) (value >> 24);
-            destBytes[offset + 2] = (byte) (value >> 16);
-            destBytes[offset + 1] = (byte) (value >> 8);
-            destBytes[offset + 0] = (byte) value;
+            ArrayConversionUtils.putInt(destBytes, i, (int) value);
         }
     }
 

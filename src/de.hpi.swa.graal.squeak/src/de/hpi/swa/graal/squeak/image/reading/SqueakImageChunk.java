@@ -251,10 +251,7 @@ public final class SqueakImageChunk {
                 final int size = data.length / ArrayConversionUtils.INTEGER_BYTE_SIZE;
                 words = new long[size];
                 for (int i = 0; i < size; i++) {
-                    words[i] = (data[i * 4 + 3] & 0xFF) << 24 |
-                                    (data[i * 4 + 2] & 0xFF) << 16 |
-                                    (data[i * 4 + 1] & 0xFF) << 8 |
-                                    data[i * 4 + 0] & 0xFF;
+                    words[i] = ArrayConversionUtils.getInt(data, i);
                 }
             }
         }
