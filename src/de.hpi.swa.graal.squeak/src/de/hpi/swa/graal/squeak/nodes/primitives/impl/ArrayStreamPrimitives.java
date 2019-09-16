@@ -18,6 +18,7 @@ import de.hpi.swa.graal.squeak.model.CharacterObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
+import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectInstSizeNode;
@@ -50,10 +51,12 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         protected static final Object doSqueakObject(final Object receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided,
                         @Shared("at0Node") @Cached final SqueakObjectAt0Node at0Node,
                         @Shared("instSizeNode") @Cached final SqueakObjectInstSizeNode instSizeNode,
+                        @Shared("sizeNode") @Cached final SqueakObjectSizeNode sizeNode,
                         @Cached final BranchProfile outOfBounceProfile) {
-            try {
-                return at0Node.execute(receiver, index - 1 + instSizeNode.execute(receiver));
-            } catch (final IndexOutOfBoundsException e) {
+            final int instSize = instSizeNode.execute(receiver);
+            if (SqueakGuards.inBounds1(index + instSize, sizeNode.execute(receiver))) {
+                return at0Node.execute(receiver, index - 1 + instSize);
+            } else {
                 outOfBounceProfile.enter();
                 throw PrimitiveFailed.BAD_INDEX;
             }
@@ -64,8 +67,9 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         protected static final Object doSqueakObject(@SuppressWarnings("unused") final Object receiver, final Object target, final long index,
                         @Shared("at0Node") @Cached final SqueakObjectAt0Node at0Node,
                         @Shared("instSizeNode") @Cached final SqueakObjectInstSizeNode instSizeNode,
+                        @Shared("sizeNode") @Cached final SqueakObjectSizeNode sizeNode,
                         @Cached final BranchProfile outOfBounceProfile) {
-            return doSqueakObject(target, index, NotProvided.SINGLETON, at0Node, instSizeNode, outOfBounceProfile);
+            return doSqueakObject(target, index, NotProvided.SINGLETON, at0Node, instSizeNode, sizeNode, outOfBounceProfile);
         }
     }
 
@@ -82,11 +86,13 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
                         @SuppressWarnings("unused") final NotProvided notProvided,
                         @Shared("atput0Node") @Cached final SqueakObjectAtPut0Node atput0Node,
                         @Shared("instSizeNode") @Cached final SqueakObjectInstSizeNode instSizeNode,
+                        @Shared("sizeNode") @Cached final SqueakObjectSizeNode sizeNode,
                         @Cached final BranchProfile outOfBounceProfile) {
-            try {
+            final int instSize = instSizeNode.execute(receiver);
+            if (SqueakGuards.inBounds1(index + instSize, sizeNode.execute(receiver))) {
                 atput0Node.execute(receiver, index - 1 + instSizeNode.execute(receiver), value);
                 return value;
-            } catch (final IndexOutOfBoundsException e) {
+            } else {
                 outOfBounceProfile.enter();
                 throw PrimitiveFailed.BAD_INDEX;
             }
@@ -97,8 +103,9 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         protected static final Object doSqueakObject(@SuppressWarnings("unused") final Object receiver, final AbstractSqueakObject target, final long index, final Object value,
                         @Shared("atput0Node") @Cached final SqueakObjectAtPut0Node atput0Node,
                         @Shared("instSizeNode") @Cached final SqueakObjectInstSizeNode instSizeNode,
+                        @Shared("sizeNode") @Cached final SqueakObjectSizeNode sizeNode,
                         @Cached final BranchProfile outOfBounceProfile) {
-            return doSqueakObject(target, index, value, NotProvided.SINGLETON, atput0Node, instSizeNode, outOfBounceProfile);
+            return doSqueakObject(target, index, value, NotProvided.SINGLETON, atput0Node, instSizeNode, sizeNode, outOfBounceProfile);
         }
     }
 
