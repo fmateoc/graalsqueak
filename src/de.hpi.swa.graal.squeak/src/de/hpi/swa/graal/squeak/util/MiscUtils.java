@@ -6,7 +6,6 @@ import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.RuntimeMXBean;
-import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
@@ -15,15 +14,12 @@ import java.util.Properties;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
-import sun.misc.Unsafe;
 
 public final class MiscUtils {
     private static final CompilationMXBean COMPILATION_BEAN = ManagementFactory.getCompilationMXBean();
     private static final MemoryMXBean MEMORY_BEAN = ManagementFactory.getMemoryMXBean();
     private static final RuntimeMXBean RUNTIME_BEAN = ManagementFactory.getRuntimeMXBean();
     private static final List<GarbageCollectorMXBean> GC_BEANS = ManagementFactory.getGarbageCollectorMXBeans();
-
-    public static final Unsafe UNSAFE = initUnsafe();
 
     // The delta between Squeak Epoch (January 1st 1901) and POSIX Epoch (January 1st 1970)
     public static final long EPOCH_DELTA_SECONDS = (69L * 365 + 17) * 24 * 3600;
@@ -34,22 +30,6 @@ public final class MiscUtils {
     public static final long USEC_TO_NANO = 1000;
 
     private MiscUtils() {
-    }
-
-    private static Unsafe initUnsafe() {
-        try {
-            // Fast path when we are trusted.
-            return Unsafe.getUnsafe();
-        } catch (final SecurityException se) {
-            // Slow path when we are not trusted.
-            try {
-                final Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
-                theUnsafe.setAccessible(true);
-                return (Unsafe) theUnsafe.get(Unsafe.class);
-            } catch (final Exception e) {
-                throw new RuntimeException("exception while trying to get Unsafe", e);
-            }
-        }
     }
 
     public static int[] bitSplitter(final long param, final int[] lengths) {

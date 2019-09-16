@@ -4,6 +4,7 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
+import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
 public abstract class AbstractPointersObject extends AbstractSqueakObjectWithClassAndHash {
     @CompilationFinal(dimensions = 0) private Object[] pointers;
@@ -20,16 +21,16 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         super(image, hash, sqClass);
     }
 
-    public final Object getPointer(final int index) {
-        return pointers[index];
+    public final Object getPointer(final long index) {
+        return UnsafeUtils.getObject(pointers, index);
     }
 
     public final Object[] getPointers() {
         return pointers;
     }
 
-    public final void setPointer(final int index, final Object value) {
-        pointers[index] = value;
+    public final void setPointer(final long index, final Object value) {
+        UnsafeUtils.putObject(pointers, index, value);
     }
 
     public final void setPointersUnsafe(final Object[] pointers) {

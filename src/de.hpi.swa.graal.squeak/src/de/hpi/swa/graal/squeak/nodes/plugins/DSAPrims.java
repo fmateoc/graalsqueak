@@ -14,7 +14,7 @@ import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.TernaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.UnaryPrimitiveWithoutFallback;
 import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
-import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
+import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
 public final class DSAPrims extends AbstractPrimitiveFactoryHolder {
     @GenerateNodeFactory
@@ -29,7 +29,7 @@ public final class DSAPrims extends AbstractPrimitiveFactoryHolder {
             final int[] words = expanded.getIntStorage();
             final byte[] bytes = buf.getByteStorage();
             for (int i = 0; i <= 15; i++) {
-                words[i] = ArrayConversionUtils.getIntReversed(bytes, i);
+                words[i] = UnsafeUtils.getIntReversed(bytes, i);
             }
             for (int i = 16; i <= 79; i += 1) {
                 final long value = Integer.toUnsignedLong(words[i - 3] ^ words[i - 8] ^ words[i - 14] ^ words[i - 16]);

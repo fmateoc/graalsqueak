@@ -195,6 +195,10 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         return (short[]) storage;
     }
 
+    public Object getStorage() {
+        return storage;
+    }
+
     public boolean hasSameFormat(final ClassObject other) {
         return getSqueakClass().getFormat() == other.getFormat();
     }

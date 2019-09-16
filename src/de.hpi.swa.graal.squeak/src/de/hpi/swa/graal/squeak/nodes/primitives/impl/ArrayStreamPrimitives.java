@@ -28,7 +28,7 @@ import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.BinaryPrimit
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.QuaternaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.TernaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
-import de.hpi.swa.graal.squeak.util.MiscUtils;
+import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 import sun.misc.Unsafe;
 
 public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder {
@@ -187,7 +187,7 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
 
         @Specialization(guards = {"receiver.isIntType()", "inBounds0(minusOneAndCutInHalf(index), receiver.getIntLength())"})
         protected static final long doNativeInts(final NativeObject receiver, final long index) {
-            return Short.toUnsignedLong(MiscUtils.UNSAFE.getShort(receiver.getIntStorage(), Unsafe.ARRAY_INT_BASE_OFFSET + (index - 1) * Unsafe.ARRAY_SHORT_INDEX_SCALE));
+            return Short.toUnsignedLong(UnsafeUtils.UNSAFE.getShort(receiver.getIntStorage(), Unsafe.ARRAY_INT_BASE_OFFSET + (index - 1) * Unsafe.ARRAY_SHORT_INDEX_SCALE));
         }
 
         protected static final int minusOneAndCutInHalf(final long index) {
@@ -205,7 +205,7 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
 
         @Specialization(guards = {"receiver.isIntType()", "inShortRange(value)"})
         protected static final long doNativeInts(final NativeObject receiver, final long index, final long value) {
-            MiscUtils.UNSAFE.putShort(receiver.getIntStorage(), Unsafe.ARRAY_INT_BASE_OFFSET + (index - 1) * Unsafe.ARRAY_SHORT_INDEX_SCALE, (short) value);
+            UnsafeUtils.UNSAFE.putShort(receiver.getIntStorage(), Unsafe.ARRAY_INT_BASE_OFFSET + (index - 1) * Unsafe.ARRAY_SHORT_INDEX_SCALE, (short) value);
             return value;
         }
 

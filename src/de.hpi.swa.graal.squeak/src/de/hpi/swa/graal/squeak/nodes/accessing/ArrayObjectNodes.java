@@ -21,6 +21,7 @@ import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodesFactory.ArrayObje
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodesFactory.ArrayObjectTraceableToObjectArrayNodeGen;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodesFactory.ArrayObjectWriteNodeGen;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
+import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
 public final class ArrayObjectNodes {
 
@@ -53,7 +54,7 @@ public final class ArrayObjectNodes {
         protected static final Object doArrayOfBooleans(final ArrayObject obj, final long index,
                         @Cached("createBinaryProfile()") final ConditionProfile falseProfile,
                         @Cached("createBinaryProfile()") final ConditionProfile trueProfile) {
-            final byte value = obj.getBooleanStorage()[(int) index];
+            final byte value = UnsafeUtils.getByte(obj.getStorage(), index);
             if (falseProfile.profile(value == ArrayObject.BOOLEAN_FALSE_TAG)) {
                 return BooleanObject.FALSE;
             } else if (trueProfile.profile(value == ArrayObject.BOOLEAN_TRUE_TAG)) {
@@ -67,21 +68,21 @@ public final class ArrayObjectNodes {
         @Specialization(guards = "obj.isCharType()")
         protected static final Object doArrayOfChars(final ArrayObject obj, final long index,
                         @Shared("nilProfile") @Cached("createBinaryProfile()") final ConditionProfile nilProfile) {
-            final char value = obj.getCharStorage()[(int) index];
+            final char value = UnsafeUtils.getChar(obj.getStorage(), index);
             return nilProfile.profile(value == ArrayObject.CHAR_NIL_TAG) ? NilObject.SINGLETON : value;
         }
 
         @Specialization(guards = "obj.isLongType()")
         protected static final Object doArrayOfLongs(final ArrayObject obj, final long index,
                         @Shared("nilProfile") @Cached("createBinaryProfile()") final ConditionProfile nilProfile) {
-            final long value = obj.getLongStorage()[(int) index];
+            final long value = UnsafeUtils.getLong(obj.getStorage(), index);
             return nilProfile.profile(value == ArrayObject.LONG_NIL_TAG) ? NilObject.SINGLETON : value;
         }
 
         @Specialization(guards = "obj.isDoubleType()")
         protected static final Object doArrayOfDoubles(final ArrayObject obj, final long index,
                         @Shared("nilProfile") @Cached("createBinaryProfile()") final ConditionProfile nilProfile) {
-            final double value = obj.getDoubleStorage()[(int) index];
+            final double value = UnsafeUtils.getDouble(obj.getStorage(), index);
             return nilProfile.profile(Double.doubleToRawLongBits(value) == ArrayObject.DOUBLE_NIL_TAG_LONG) ? NilObject.SINGLETON : value;
         }
 
@@ -94,7 +95,7 @@ public final class ArrayObjectNodes {
         @Specialization(guards = "obj.isObjectType()")
         protected static final Object doArrayOfObjects(final ArrayObject obj, final long index) {
             assert obj.getObjectStorage()[(int) index] != null : "Unexpected `null` value";
-            return obj.getObjectStorage()[(int) index];
+            return UnsafeUtils.getObject(obj.getStorage(), index);
         }
     }
 
@@ -371,12 +372,12 @@ public final class ArrayObjectNodes {
 
         @Specialization(guards = "obj.isBooleanType()")
         protected static final void doArrayOfBooleans(final ArrayObject obj, final long index, final boolean value) {
-            obj.getBooleanStorage()[(int) index] = value ? ArrayObject.BOOLEAN_TRUE_TAG : ArrayObject.BOOLEAN_FALSE_TAG;
+            UnsafeUtils.putByte(obj.getStorage(), index, value ? ArrayObject.BOOLEAN_TRUE_TAG : ArrayObject.BOOLEAN_FALSE_TAG);
         }
 
         @Specialization(guards = "obj.isBooleanType()")
         protected static final void doArrayOfBooleans(final ArrayObject obj, final long index, @SuppressWarnings("unused") final NilObject value) {
-            obj.getBooleanStorage()[(int) index] = ArrayObject.BOOLEAN_NIL_TAG;
+            UnsafeUtils.putByte(obj.getStorage(), index, ArrayObject.BOOLEAN_NIL_TAG);
         }
 
         @Specialization(guards = {"obj.isBooleanType()", "!isBoolean(value)", "!isNil(value)"})
@@ -387,7 +388,7 @@ public final class ArrayObjectNodes {
 
         @Specialization(guards = {"obj.isCharType()", "!isCharNilTag(value)"})
         protected static final void doArrayOfChars(final ArrayObject obj, final long index, final char value) {
-            obj.getCharStorage()[(int) index] = value;
+            UnsafeUtils.putChar(obj.getStorage(), index, value);
         }
 
         @Specialization(guards = {"obj.isCharType()", "isCharNilTag(value)"})
@@ -399,7 +400,7 @@ public final class ArrayObjectNodes {
 
         @Specialization(guards = "obj.isCharType()")
         protected static final void doArrayOfChars(final ArrayObject obj, final long index, @SuppressWarnings("unused") final NilObject value) {
-            obj.getCharStorage()[(int) index] = ArrayObject.CHAR_NIL_TAG;
+            UnsafeUtils.putChar(obj.getStorage(), index, ArrayObject.CHAR_NIL_TAG);
         }
 
         @Specialization(guards = {"obj.isCharType()", "!isCharacter(value)", "!isNil(value)"})
@@ -410,7 +411,7 @@ public final class ArrayObjectNodes {
 
         @Specialization(guards = {"obj.isLongType()", "!isLongNilTag(value)"})
         protected static final void doArrayOfLongs(final ArrayObject obj, final long index, final long value) {
-            obj.getLongStorage()[(int) index] = value;
+            UnsafeUtils.putLong(obj.getStorage(), index, value);
         }
 
         @Specialization(guards = {"obj.isLongType()", "isLongNilTag(value)"})
@@ -422,7 +423,7 @@ public final class ArrayObjectNodes {
 
         @Specialization(guards = "obj.isLongType()")
         protected static final void doArrayOfLongs(final ArrayObject obj, final long index, @SuppressWarnings("unused") final NilObject value) {
-            obj.getLongStorage()[(int) index] = ArrayObject.LONG_NIL_TAG;
+            UnsafeUtils.putLong(obj.getStorage(), index, ArrayObject.LONG_NIL_TAG);
         }
 
         @Specialization(guards = {"obj.isLongType()", "!isLong(value)", "!isNil(value)"})
@@ -433,7 +434,7 @@ public final class ArrayObjectNodes {
 
         @Specialization(guards = {"obj.isDoubleType()", "!isDoubleNilTag(value)"})
         protected static final void doArrayOfDoubles(final ArrayObject obj, final long index, final double value) {
-            obj.getDoubleStorage()[(int) index] = value;
+            UnsafeUtils.putDouble(obj.getStorage(), index, value);
         }
 
         @Specialization(guards = {"obj.isDoubleType()", "isDoubleNilTag(value)"})
@@ -445,7 +446,7 @@ public final class ArrayObjectNodes {
 
         @Specialization(guards = "obj.isDoubleType()")
         protected static final void doArrayOfDoubles(final ArrayObject obj, final long index, @SuppressWarnings("unused") final NilObject value) {
-            obj.getDoubleStorage()[(int) index] = ArrayObject.DOUBLE_NIL_TAG;
+            UnsafeUtils.putDouble(obj.getStorage(), index, ArrayObject.DOUBLE_NIL_TAG);
         }
 
         @Specialization(guards = {"obj.isDoubleType()", "!isDouble(value)", "!isNil(value)"})
@@ -472,7 +473,7 @@ public final class ArrayObjectNodes {
 
         @Specialization(guards = "obj.isObjectType()")
         protected static final void doArrayOfObjects(final ArrayObject obj, final long index, final Object value) {
-            obj.getObjectStorage()[(int) index] = value;
+            UnsafeUtils.putObject(obj.getStorage(), index, value);
         }
     }
 }

@@ -163,6 +163,10 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         return (Object[]) storage;
     }
 
+    public Object getStorage() {
+        return storage;
+    }
+
     public Class<? extends Object> getStorageType() {
         return storage.getClass();
     }

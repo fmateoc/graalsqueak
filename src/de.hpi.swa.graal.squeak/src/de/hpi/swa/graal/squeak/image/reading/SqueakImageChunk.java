@@ -20,6 +20,7 @@ import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
+import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
 public final class SqueakImageChunk {
     private static final long SMALLFLOAT_MASK = 896L << 52 + 1;
@@ -251,7 +252,7 @@ public final class SqueakImageChunk {
                 final int size = data.length / ArrayConversionUtils.INTEGER_BYTE_SIZE;
                 words = new long[size];
                 for (int i = 0; i < size; i++) {
-                    words[i] = ArrayConversionUtils.getInt(data, i);
+                    words[i] = UnsafeUtils.getInt(data, i);
                 }
             }
         }
