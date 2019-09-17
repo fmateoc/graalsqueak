@@ -1,7 +1,10 @@
 package de.hpi.swa.graal.squeak.nodes.bytecodes;
 
+import java.lang.ref.WeakReference;
+
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.debug.DebuggerTags;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.StandardTags;
@@ -38,6 +41,7 @@ public final class SendBytecodes {
         @Child private FrameStackPopNNode popNNode;
         @Child private FrameStackPushNode pushNode;
 
+        private final WeakIdentity rcvrProfile = WeakIdentity.create();
         private final BranchProfile nlrProfile = BranchProfile.create();
         private final BranchProfile nvrProfile = BranchProfile.create();
 
@@ -63,7 +67,7 @@ public final class SendBytecodes {
             final Object result;
             try {
                 final Object[] rcvrAndArgs = popNNode.execute(frame);
-                final ClassObject rcvrClass = lookupClassNode.executeLookup(frame, rcvrAndArgs[0]);
+                final ClassObject rcvrClass = lookupClassNode.executeLookup(frame, rcvrProfile.profile(rcvrAndArgs[0]));
                 final Object lookupResult = lookupMethodNode.executeLookup(rcvrClass, selector);
                 result = dispatchSendNode.executeSend(frame, selector, lookupResult, rcvrClass, rcvrAndArgs);
                 assert result != null : "Result of a message send should not be null";
@@ -197,6 +201,55 @@ public final class SendBytecodes {
         public String toString() {
             CompilerAsserts.neverPartOfCompilation();
             return "sendSuper: " + selector.asStringUnsafe();
+        }
+    }
+
+    protected static final class WeakIdentity {
+        private static final WeakReference<Object> UNINITIALIZED = new WeakReference<>(null);
+        private static final WeakReference<Object> GENERIC = new WeakReference<>(null);
+
+        @CompilationFinal protected WeakReference<Object> cachedWeakRef = UNINITIALIZED;
+
+        WeakIdentity() {
+        }
+
+        @SuppressWarnings("unchecked")
+        public <T> T profile(final T newValue) {
+            // Field needs to be cached in local variable for thread safety and startup speed.
+            final WeakReference<Object> cached = cachedWeakRef;
+            if (cached != GENERIC) {
+                final Object cachedValue = cached.get();
+                if (cachedValue == newValue) {
+                    CompilerAsserts.partialEvaluationConstant(cachedValue);
+                    return (T) cachedValue;
+                } else {
+                    CompilerDirectives.transferToInterpreterAndInvalidate();
+                    if (cachedWeakRef == UNINITIALIZED) {
+                        cachedWeakRef = new WeakReference<>(newValue);
+                    } else {
+                        // In case referent is `null`, profile is also set to GENERIC.
+                        cachedWeakRef = GENERIC;
+                    }
+                }
+            }
+            return newValue;
+        }
+
+        public boolean isGeneric() {
+            return getCachedValue() == GENERIC;
+        }
+
+        public boolean isUninitialized() {
+            return getCachedValue() == UNINITIALIZED;
+        }
+
+        public Object getCachedValue() {
+            return cachedWeakRef.get();
+        }
+
+        /* Needed for lazy class loading. */
+        static WeakIdentity create() {
+            return new WeakIdentity();
         }
     }
 }
