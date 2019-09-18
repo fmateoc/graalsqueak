@@ -22,6 +22,7 @@ import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
@@ -87,7 +88,7 @@ public final class SqueakImageChunk {
                 if (squeakClass.instancesAreClasses()) {
                     object = new ClassObject(image, hash, squeakClass);
                 } else {
-                    object = new PointersObject(image, hash, squeakClass);
+                    object = new PointersNonVariableObject(image, hash, squeakClass);
                 }
             } else if (format == 2) { // indexable fields
                 object = new ArrayObject(image, hash, squeakClass);
@@ -102,7 +103,7 @@ public final class SqueakImageChunk {
             } else if (format == 4) { // indexable weak fields
                 object = new WeakPointersObject(image, hash, squeakClass);
             } else if (format == 5) { // fixed weak fields
-                object = new PointersObject(image, hash, squeakClass);
+                throw SqueakException.create("Ephemerons not (yet) supported");
             } else if (format <= 8) {
                 assert false : "Should never happen (unused format)";
             } else if (format == 9) { // 64-bit integers

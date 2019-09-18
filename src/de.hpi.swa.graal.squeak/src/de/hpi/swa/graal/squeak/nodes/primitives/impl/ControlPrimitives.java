@@ -39,11 +39,12 @@ import de.hpi.swa.graal.squeak.model.NotProvided;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.MUTEX;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SEMAPHORE;
-import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.nodes.DispatchEagerlyNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
 import de.hpi.swa.graal.squeak.nodes.InheritsFromNode;
 import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectToObjectArrayCopyNode;
@@ -199,7 +200,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "receiver.getSqueakClass().isSemaphoreClass()")
-        protected final Object doSignal(final VirtualFrame frame, final PointersObject receiver,
+        protected final Object doSignal(final VirtualFrame frame, final PointersNonVariableObject receiver,
                         @Cached final StackPushForPrimitivesNode pushNode) {
             pushNode.executeWrite(frame, receiver); // keep receiver on stack
             signalSemaphoreNode.executeSignal(frame, receiver);
@@ -216,7 +217,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"receiver.getSqueakClass().isSemaphoreClass()", "hasExcessSignals(receiver)"})
-        protected static final Object doWaitExcessSignals(final VirtualFrame frame, final PointersObject receiver,
+        protected static final Object doWaitExcessSignals(final VirtualFrame frame, final PointersNonVariableObject receiver,
                         @Shared("pushNode") @Cached final StackPushForPrimitivesNode pushNode) {
             pushNode.executeWrite(frame, receiver); // keep receiver on stack
             final long excessSignals = (long) receiver.at0(SEMAPHORE.EXCESS_SIGNALS);
@@ -225,7 +226,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"receiver.getSqueakClass().isSemaphoreClass()", "!hasExcessSignals(receiver)"})
-        protected final Object doWait(final VirtualFrame frame, final PointersObject receiver,
+        protected final Object doWait(final VirtualFrame frame, final PointersNonVariableObject receiver,
                         @Shared("pushNode") @Cached final StackPushForPrimitivesNode pushNode,
                         @Cached final LinkProcessToListNode linkProcessToListNode,
                         @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
@@ -235,7 +236,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             return AbstractSendNode.NO_RESULT;
         }
 
-        protected static final boolean hasExcessSignals(final PointersObject semaphore) {
+        protected static final boolean hasExcessSignals(final PointersNonVariableObject semaphore) {
             return (long) semaphore.at0(SEMAPHORE.EXCESS_SIGNALS) > 0;
         }
     }
@@ -251,7 +252,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected final Object doResume(final VirtualFrame frame, final PointersObject receiver,
+        protected final Object doResume(final VirtualFrame frame, final PointersNonVariableObject receiver,
                         @Cached final StackPushForPrimitivesNode pushNode) {
             // keep receiver on stack before resuming other process
             pushNode.executeWrite(frame, receiver);
@@ -269,7 +270,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "receiver.isActiveProcess()")
-        protected static final Object doSuspendActiveProcess(final VirtualFrame frame, @SuppressWarnings("unused") final PointersObject receiver,
+        protected static final Object doSuspendActiveProcess(final VirtualFrame frame, @SuppressWarnings("unused") final PointersNonVariableObject receiver,
                         @Cached final StackPushForPrimitivesNode pushNode,
                         @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
             pushNode.executeWrite(frame, NilObject.SINGLETON);
@@ -278,20 +279,20 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"!receiver.isActiveProcess()", "!hasNilList(receiver)"})
-        protected static final PointersObject doSuspendOtherProcess(final PointersObject receiver,
+        protected static final PointersNonVariableObject doSuspendOtherProcess(final PointersNonVariableObject receiver,
                         @Cached final RemoveProcessFromListNode removeProcessNode) {
-            final PointersObject oldList = (PointersObject) receiver.at0(PROCESS.LIST);
+            final PointersNonVariableObject oldList = (PointersNonVariableObject) receiver.at0(PROCESS.LIST);
             removeProcessNode.executeRemove(receiver, oldList);
             receiver.atput0(PROCESS.LIST, NilObject.SINGLETON);
             return oldList;
         }
 
         @Specialization(guards = {"!receiver.isActiveProcess()", "hasNilList(receiver)"})
-        protected static final Object doBadReceiver(@SuppressWarnings("unused") final PointersObject receiver) {
+        protected static final Object doBadReceiver(@SuppressWarnings("unused") final PointersNonVariableObject receiver) {
             throw PrimitiveFailed.BAD_RECEIVER;
         }
 
-        protected static final boolean hasNilList(final PointersObject process) {
+        protected static final boolean hasNilList(final PointersNonVariableObject process) {
             return process.at0(PROCESS.LIST) == NilObject.SINGLETON;
         }
     }
@@ -473,8 +474,9 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "receiver.hasMethodClass()")
-        protected static final CompiledMethodObject doFlush(final CompiledMethodObject receiver) {
-            receiver.getMethodClass().invalidateMethodDictStableAssumption();
+        protected static final CompiledMethodObject doFlush(final CompiledMethodObject receiver,
+                        @Cached final AbstractPointersObjectReadNode readNode) {
+            receiver.getMethodClass(readNode).invalidateMethodDictStableAssumption();
             return receiver;
         }
     }
@@ -623,7 +625,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected final Object doYield(final VirtualFrame frame, final PointersObject scheduler,
+        protected final Object doYield(final VirtualFrame frame, final PointersNonVariableObject scheduler,
                         @Cached final StackPushForPrimitivesNode pushNode) {
             pushNode.executeWrite(frame, scheduler); // keep receiver on stack
             yieldProcessNode.executeYield(frame, scheduler);
@@ -654,17 +656,17 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "mutex.isEmptyList()")
-        protected static final PointersObject doExitEmpty(final PointersObject mutex) {
+        protected static final PointersNonVariableObject doExitEmpty(final PointersNonVariableObject mutex) {
             mutex.atputNil0(MUTEX.OWNER);
             return mutex;
         }
 
         @Specialization(guards = "!mutex.isEmptyList()")
-        protected static final Object doExitNonEmpty(final VirtualFrame frame, final PointersObject mutex,
+        protected static final Object doExitNonEmpty(final VirtualFrame frame, final PointersNonVariableObject mutex,
                         @Cached final StackPushForPrimitivesNode pushNode,
                         @Cached("create(method)") final ResumeProcessNode resumeProcessNode) {
             pushNode.executeWrite(frame, mutex); // keep receiver on stack
-            final PointersObject owningProcess = mutex.removeFirstLinkOfList();
+            final PointersNonVariableObject owningProcess = mutex.removeFirstLinkOfList();
             mutex.atput0(MUTEX.OWNER, owningProcess);
             resumeProcessNode.executeResume(frame, owningProcess);
             return AbstractSendNode.NO_RESULT;
@@ -679,19 +681,19 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "ownerIsNil(mutex)")
-        protected final boolean doEnterNilOwner(final PointersObject mutex, @SuppressWarnings("unused") final NotProvided notProvided) {
+        protected final boolean doEnterNilOwner(final PointersNonVariableObject mutex, @SuppressWarnings("unused") final NotProvided notProvided) {
             mutex.atput0(MUTEX.OWNER, method.image.getActiveProcess());
             return BooleanObject.FALSE;
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = "activeProcessMutexOwner(mutex)")
-        protected static final boolean doEnterActiveProcessOwner(final PointersObject mutex, final NotProvided notProvided) {
+        protected static final boolean doEnterActiveProcessOwner(final PointersNonVariableObject mutex, final NotProvided notProvided) {
             return BooleanObject.TRUE;
         }
 
         @Specialization(guards = {"!ownerIsNil(mutex)", "!activeProcessMutexOwner(mutex)"})
-        protected final Object doEnter(final VirtualFrame frame, final PointersObject mutex, @SuppressWarnings("unused") final NotProvided notProvided,
+        protected final Object doEnter(final VirtualFrame frame, final PointersNonVariableObject mutex, @SuppressWarnings("unused") final NotProvided notProvided,
                         @Shared("pushNode") @Cached final StackPushForPrimitivesNode pushNode,
                         @Shared("linkProcessToListNode") @Cached final LinkProcessToListNode linkProcessToListNode,
                         @Shared("wakeHighestPriorityNode") @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
@@ -702,19 +704,19 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "ownerIsNil(mutex)")
-        protected static final boolean doEnterNilOwner(final PointersObject mutex, @SuppressWarnings("unused") final PointersObject effectiveProcess) {
+        protected static final boolean doEnterNilOwner(final PointersNonVariableObject mutex, @SuppressWarnings("unused") final PointersNonVariableObject effectiveProcess) {
             mutex.atput0(MUTEX.OWNER, effectiveProcess);
             return BooleanObject.FALSE;
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = "isMutexOwner(mutex, effectiveProcess)")
-        protected static final boolean doEnterActiveProcessOwner(final PointersObject mutex, final PointersObject effectiveProcess) {
+        protected static final boolean doEnterActiveProcessOwner(final PointersNonVariableObject mutex, final PointersNonVariableObject effectiveProcess) {
             return BooleanObject.TRUE;
         }
 
         @Specialization(guards = {"!ownerIsNil(mutex)", "!isMutexOwner(mutex, effectiveProcess)"})
-        protected static final Object doEnter(final VirtualFrame frame, final PointersObject mutex, @SuppressWarnings("unused") final PointersObject effectiveProcess,
+        protected static final Object doEnter(final VirtualFrame frame, final PointersNonVariableObject mutex, @SuppressWarnings("unused") final PointersNonVariableObject effectiveProcess,
                         @Shared("pushNode") @Cached final StackPushForPrimitivesNode pushNode,
                         @Shared("linkProcessToListNode") @Cached final LinkProcessToListNode linkProcessToListNode,
                         @Shared("wakeHighestPriorityNode") @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
@@ -724,15 +726,15 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             return AbstractSendNode.NO_RESULT;
         }
 
-        protected static final boolean ownerIsNil(final PointersObject mutex) {
+        protected static final boolean ownerIsNil(final PointersNonVariableObject mutex) {
             return mutex.at0(MUTEX.OWNER) == NilObject.SINGLETON;
         }
 
-        protected final boolean activeProcessMutexOwner(final PointersObject mutex) {
+        protected final boolean activeProcessMutexOwner(final PointersNonVariableObject mutex) {
             return mutex.at0(MUTEX.OWNER) == method.image.getActiveProcess();
         }
 
-        protected static final boolean isMutexOwner(final PointersObject mutex, final PointersObject effectiveProcess) {
+        protected static final boolean isMutexOwner(final PointersNonVariableObject mutex, final PointersNonVariableObject effectiveProcess) {
             return mutex.at0(MUTEX.OWNER) == effectiveProcess;
         }
     }
@@ -747,26 +749,26 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"ownerIsNil(rcvrMutex)"})
-        protected final boolean doNilOwner(final PointersObject rcvrMutex) {
+        protected final boolean doNilOwner(final PointersNonVariableObject rcvrMutex) {
             rcvrMutex.atput0(MUTEX.OWNER, method.image.getActiveProcess());
             return BooleanObject.FALSE;
         }
 
         @Specialization(guards = {"ownerIsActiveProcess(rcvrMutex)"})
-        protected static final boolean doOwnerIsActiveProcess(@SuppressWarnings("unused") final PointersObject rcvrMutex) {
+        protected static final boolean doOwnerIsActiveProcess(@SuppressWarnings("unused") final PointersNonVariableObject rcvrMutex) {
             return BooleanObject.TRUE;
         }
 
         @Specialization(guards = {"!ownerIsNil(rcvrMutex)", "!ownerIsActiveProcess(rcvrMutex)"})
-        protected static final Object doFallback(@SuppressWarnings("unused") final PointersObject rcvrMutex) {
+        protected static final Object doFallback(@SuppressWarnings("unused") final PointersNonVariableObject rcvrMutex) {
             return NilObject.SINGLETON;
         }
 
-        protected static final boolean ownerIsNil(final PointersObject mutex) {
+        protected static final boolean ownerIsNil(final PointersNonVariableObject mutex) {
             return mutex.at0(MUTEX.OWNER) == NilObject.SINGLETON;
         }
 
-        protected final boolean ownerIsActiveProcess(final PointersObject mutex) {
+        protected final boolean ownerIsActiveProcess(final PointersNonVariableObject mutex) {
             return mutex.at0(MUTEX.OWNER) == method.image.getActiveProcess();
         }
     }

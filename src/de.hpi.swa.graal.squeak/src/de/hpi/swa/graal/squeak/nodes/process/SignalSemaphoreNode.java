@@ -11,7 +11,7 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SEMAPHORE;
-import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 
 public abstract class SignalSemaphoreNode extends AbstractNode {
@@ -28,12 +28,12 @@ public abstract class SignalSemaphoreNode extends AbstractNode {
     public abstract void executeSignal(VirtualFrame frame, Object semaphore);
 
     @Specialization(guards = {"semaphore.getSqueakClass().isSemaphoreClass()", "semaphore.isEmptyList()"})
-    public static final void doSignalEmpty(final PointersObject semaphore) {
+    public static final void doSignalEmpty(final PointersNonVariableObject semaphore) {
         semaphore.atput0(SEMAPHORE.EXCESS_SIGNALS, (long) semaphore.at0(SEMAPHORE.EXCESS_SIGNALS) + 1);
     }
 
     @Specialization(guards = {"semaphore.getSqueakClass().isSemaphoreClass()", "!semaphore.isEmptyList()"})
-    public final void doSignal(final VirtualFrame frame, final PointersObject semaphore) {
+    public final void doSignal(final VirtualFrame frame, final PointersNonVariableObject semaphore) {
         resumeProcessNode.executeResume(frame, semaphore.removeFirstLinkOfList());
     }
 

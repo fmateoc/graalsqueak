@@ -5,11 +5,11 @@
  */
 package de.hpi.swa.graal.squeak.io;
 
-import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 
 public interface SqueakDisplayInterface {
 
-    void showDisplayBitsLeftTopRightBottom(PointersObject destForm, int left, int top, int right, int bottom);
+    void showDisplayBitsLeftTopRightBottom(PointersNonVariableObject destForm, int left, int top, int right, int bottom);
 
     void showDisplayRect(int left, int right, int top, int bottom);
 
@@ -21,7 +21,7 @@ public interface SqueakDisplayInterface {
 
     void setFullscreen(boolean enable);
 
-    void open(PointersObject sqDisplay);
+    void open(PointersNonVariableObject sqDisplay);
 
     boolean isVisible();
 

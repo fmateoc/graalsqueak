@@ -21,6 +21,7 @@ import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
@@ -67,6 +68,11 @@ public abstract class SqueakObjectHashNode extends AbstractNode {
 
     @Specialization
     protected static final long doContext(final ContextObject obj) {
+        return obj.getSqueakHash();
+    }
+
+    @Specialization
+    protected static final long doPointers(final PointersNonVariableObject obj) {
         return obj.getSqueakHash();
     }
 

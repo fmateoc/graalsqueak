@@ -21,6 +21,7 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
@@ -83,7 +84,7 @@ public abstract class SqueakObjectPointersBecomeOneWayNode extends AbstractNode 
         ClassObject newSuperclass = obj.getSuperclassOrNull();
         PointersObject newMethodDict = obj.getMethodDict();
         ArrayObject newInstanceVariables = obj.getInstanceVariablesOrNull();
-        PointersObject newOrganization = obj.getOrganizationOrNull();
+        PointersNonVariableObject newOrganization = obj.getOrganizationOrNull();
         for (int i = 0; i < from.length; i++) {
             final Object fromPointer = from[i];
             if (fromPointer == newSuperclass) {
@@ -99,7 +100,7 @@ public abstract class SqueakObjectPointersBecomeOneWayNode extends AbstractNode 
                 updateHashNode.executeUpdate(fromPointer, newInstanceVariables, copyHash);
             }
             if (fromPointer == newOrganization) {
-                newOrganization = to[i] == NilObject.SINGLETON ? null : (PointersObject) to[i];
+                newOrganization = to[i] == NilObject.SINGLETON ? null : (PointersNonVariableObject) to[i];
                 updateHashNode.executeUpdate(fromPointer, newOrganization, copyHash);
             }
         }
@@ -181,13 +182,18 @@ public abstract class SqueakObjectPointersBecomeOneWayNode extends AbstractNode 
     }
 
     @Specialization
+    protected final void doPointers(final PointersNonVariableObject obj, final Object[] from, final Object[] to, final boolean copyHash) {
+        obj.layoutValuesBecomeOneWay(updateHashNode, from, to, copyHash);
+    }
+
+    @Specialization
     protected final void doPointers(final PointersObject obj, final Object[] from, final Object[] to, final boolean copyHash) {
-        pointersBecomeOneWay(obj.getPointers(), from, to, copyHash);
+        obj.pointersBecomeOneWay(updateHashNode, from, to, copyHash);
     }
 
     @Specialization
     protected final void doWeakPointers(final WeakPointersObject obj, final Object[] from, final Object[] to, final boolean copyHash) {
-        pointersBecomeOneWay(obj.getPointers(), from, to, copyHash);
+        obj.pointersBecomeOneWay(updateHashNode, from, to, copyHash);
     }
 
     private void pointersBecomeOneWay(final Object[] original, final Object[] from, final Object[] to, final boolean copyHash) {

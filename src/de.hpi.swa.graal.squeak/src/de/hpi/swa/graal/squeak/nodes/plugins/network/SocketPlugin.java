@@ -29,7 +29,7 @@ import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
-import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.BinaryPrimitive;
@@ -668,7 +668,7 @@ public final class SocketPlugin extends AbstractPrimitiveFactoryHolder {
         @SuppressWarnings("unused")
         @TruffleBoundary
         @Specialization
-        protected long doWork(final PointersObject receiver,
+        protected long doWork(final PointersNonVariableObject receiver,
                         final long netType,
                         final long socketType,
                         final long rcvBufSize,
@@ -725,7 +725,7 @@ public final class SocketPlugin extends AbstractPrimitiveFactoryHolder {
 
         @SuppressWarnings("unused")
         @Specialization
-        protected static long doWork(final PointersObject receiver,
+        protected static long doWork(final PointersNonVariableObject receiver,
                         final long netType,
                         final long socketType,
                         final long rcvBufSize,

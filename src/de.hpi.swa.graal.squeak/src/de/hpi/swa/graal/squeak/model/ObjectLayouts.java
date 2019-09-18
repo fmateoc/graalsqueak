@@ -117,12 +117,12 @@ public final class ObjectLayouts {
     }
 
     public static final class DICTIONARY {
-        public static HashMap<String, Object> toJavaMap(final PointersObject dictionary) {
+        public static HashMap<String, Object> toJavaMap(final PointersNonVariableObject dictionary) {
             final ArrayObject classBindings = (ArrayObject) dictionary.at0(HASHED_COLLECTION.ARRAY);
             final HashMap<String, Object> keyValues = new HashMap<>();
             for (final Object classBinding : classBindings.getObjectStorage()) {
                 if (classBinding != NilObject.SINGLETON) {
-                    final PointersObject classBindingPointer = (PointersObject) classBinding;
+                    final PointersNonVariableObject classBindingPointer = (PointersNonVariableObject) classBinding;
                     keyValues.put(((NativeObject) classBindingPointer.at0(CLASS_BINDING.KEY)).asStringUnsafe(), classBindingPointer.at0(CLASS_BINDING.VALUE));
                 }
             }

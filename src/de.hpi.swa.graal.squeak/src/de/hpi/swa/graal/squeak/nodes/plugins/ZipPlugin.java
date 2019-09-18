@@ -14,7 +14,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
-import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.QuaternaryPrimitive;
@@ -33,7 +33,7 @@ public final class ZipPlugin extends AbstractPrimitiveFactoryHolder {
 
         @Specialization(guards = {"receiver.size() >= 15"})
         @TruffleBoundary(transferToInterpreterOnException = false)
-        protected final boolean doDeflateBlock(final PointersObject receiver, final long lastIndex, final long chainLength, final long goodMatch) {
+        protected final boolean doDeflateBlock(final PointersNonVariableObject receiver, final long lastIndex, final long chainLength, final long goodMatch) {
             return method.image.zip.primitiveDeflateBlock(receiver, (int) lastIndex, (int) chainLength, (int) goodMatch);
         }
     }
@@ -63,7 +63,7 @@ public final class ZipPlugin extends AbstractPrimitiveFactoryHolder {
 
         @Specialization(guards = {"method.image.zip.readStreamHasCorrectSize(receiver)", "llTable.isIntType()", "dTable.isIntType()"})
         @TruffleBoundary(transferToInterpreterOnException = false)
-        protected final PointersObject doInflateDecompressBlock(final PointersObject receiver, final NativeObject llTable, final NativeObject dTable) {
+        protected final PointersNonVariableObject doInflateDecompressBlock(final PointersNonVariableObject receiver, final NativeObject llTable, final NativeObject dTable) {
             method.image.zip.primitiveInflateDecompressBlock(receiver, llTable, dTable);
             return receiver;
         }
@@ -109,8 +109,8 @@ public final class ZipPlugin extends AbstractPrimitiveFactoryHolder {
 
         @Specialization(guards = {"method.image.zip.writeStreamHasCorrectSize(receiver)", "distTree.size()>= 2", "litTree.size() >= 2", "litStream.size() >= 3", "distStream.size() >= 3"})
         @TruffleBoundary(transferToInterpreterOnException = false)
-        protected final long doZipSendBlock(final PointersObject receiver, final PointersObject litStream, final PointersObject distStream, final PointersObject litTree,
-                        final PointersObject distTree) {
+        protected final long doZipSendBlock(final PointersNonVariableObject receiver, final PointersNonVariableObject litStream, final PointersNonVariableObject distStream,
+                        final PointersNonVariableObject litTree, final PointersNonVariableObject distTree) {
             return method.image.zip.primitiveZipSendBlock(receiver, litStream, distStream, litTree, distTree);
         }
     }

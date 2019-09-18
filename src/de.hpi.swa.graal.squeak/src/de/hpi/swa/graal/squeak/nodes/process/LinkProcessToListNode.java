@@ -10,7 +10,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.LINKED_LIST;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
-import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 
 public abstract class LinkProcessToListNode extends AbstractNode {
@@ -18,10 +18,10 @@ public abstract class LinkProcessToListNode extends AbstractNode {
         return LinkProcessToListNodeGen.create();
     }
 
-    public abstract void executeLink(PointersObject process, PointersObject list);
+    public abstract void executeLink(PointersNonVariableObject process, PointersNonVariableObject list);
 
     @Specialization(guards = "list.isEmptyList()")
-    protected void doLinkEmptyList(final PointersObject process, final PointersObject list) {
+    protected void doLinkEmptyList(final PointersNonVariableObject process, final PointersNonVariableObject list) {
         // Add the given process to the given linked list and set the backpointer
         // of process to its new list.
         list.atput0(LINKED_LIST.FIRST_LINK, process);
@@ -30,8 +30,8 @@ public abstract class LinkProcessToListNode extends AbstractNode {
     }
 
     @Fallback
-    protected void doLinkNotEmptyList(final PointersObject process, final PointersObject list) {
-        ((PointersObject) list.at0(LINKED_LIST.LAST_LINK)).atput0(PROCESS.NEXT_LINK, process);
+    protected void doLinkNotEmptyList(final PointersNonVariableObject process, final PointersNonVariableObject list) {
+        ((PointersNonVariableObject) list.at0(LINKED_LIST.LAST_LINK)).atput0(PROCESS.NEXT_LINK, process);
         list.atput0(LINKED_LIST.LAST_LINK, process);
         process.atput0(PROCESS.LIST, list);
     }

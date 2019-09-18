@@ -11,7 +11,6 @@ import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.profiles.BranchProfile;
 
-import de.hpi.swa.graal.squeak.exceptions.Returns;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
@@ -20,16 +19,18 @@ import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
-import de.hpi.swa.graal.squeak.model.NilObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.PointersObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.WeakPointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.BlockClosureObjectNodes.BlockClosureObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ClassObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ContextObjectNodes.ContextObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectWriteNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.WeakPointersObjectNodes.WeakPointersObjectWriteNode;
 
 @GenerateUncached
 @ImportStatic(NativeObject.class)
@@ -54,8 +55,15 @@ public abstract class SqueakObjectAtPut0Node extends AbstractNode {
     }
 
     @Specialization
-    protected static final void doPointers(final PointersObject obj, final long index, final Object value) {
-        obj.atput0(index, value);
+    protected static final void doPointers(final PointersNonVariableObject obj, final long index, final Object value,
+                    @Cached final AbstractPointersObjectWriteNode writeNode) {
+        writeNode.execute(obj, (int) index, value);
+    }
+
+    @Specialization
+    protected static final void doPointers(final PointersObject obj, final long index, final Object value,
+                    @Cached final PointersObjectWriteNode writeNode) {
+        writeNode.execute(obj, (int) index, value);
     }
 
     @Specialization
@@ -66,7 +74,7 @@ public abstract class SqueakObjectAtPut0Node extends AbstractNode {
     @Specialization
     protected static final void doWeakPointers(final WeakPointersObject obj, final long index, final Object value,
                     @Cached final WeakPointersObjectWriteNode writeNode) {
-        writeNode.execute(obj, index, value);
+        writeNode.execute(obj, (int) index, value);
     }
 
     @Specialization
@@ -95,24 +103,15 @@ public abstract class SqueakObjectAtPut0Node extends AbstractNode {
     @Specialization
     protected static final void doFloat(final FloatObject obj, final long index, final long value,
                     @Cached final BranchProfile indexZeroProfile,
-                    @Cached final BranchProfile indexOneProfile,
-                    @Cached final BranchProfile outOfBoundsProfile) {
+                    @Cached final BranchProfile indexOneProfile) {
         assert 0 <= value && value <= NativeObject.INTEGER_MAX : "`value` out of range";
         if (index == 0) {
             indexZeroProfile.enter();
             obj.setHigh(value);
-        } else if (index == 1) {
+        } else {
+            assert index == 1;
             indexOneProfile.enter();
             obj.setLow(value);
-        } else {
-            outOfBoundsProfile.enter();
-            throw Returns.OUT_OF_BOUNDS;
         }
-    }
-
-    @SuppressWarnings("unused")
-    @Specialization
-    protected static final void doNil(final NilObject obj, final long index, final long value) {
-        throw NilObject.NOT_INDEXABLE;
     }
 }

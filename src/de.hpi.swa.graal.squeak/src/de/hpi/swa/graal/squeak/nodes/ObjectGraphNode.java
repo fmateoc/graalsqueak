@@ -28,7 +28,9 @@ import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectPointersBecomeOneWayNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
@@ -180,8 +182,12 @@ public final class ObjectGraphNode extends AbstractNodeWithImage {
                 ((CompiledMethodObject) object).traceObjects(this);
             } else if (object instanceof ArrayObject) {
                 ((ArrayObject) object).traceObjects(this);
+            } else if (object instanceof PointersNonVariableObject) {
+                ((PointersNonVariableObject) object).traceObjects(this);
             } else if (object instanceof PointersObject) {
                 ((PointersObject) object).traceObjects(this);
+            } else if (object instanceof WeakPointersObject) {
+                ((WeakPointersObject) object).traceObjects(this);
             }
         }
     }

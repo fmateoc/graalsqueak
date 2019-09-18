@@ -16,6 +16,7 @@ import org.graalvm.polyglot.Value;
 
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 
@@ -38,7 +39,7 @@ public final class SqueakTranscriptForwarder extends PrintStream {
     public void write(final byte[] b) throws IOException {
         try {
             if (transcriptBlock != null) {
-                transcriptBlock.execute(new String(b));
+                transcriptBlock.execute(toString(b));
             }
         } catch (final Exception e) {
             e.printStackTrace();
@@ -51,12 +52,17 @@ public final class SqueakTranscriptForwarder extends PrintStream {
     public void write(final byte[] b, final int off, final int len) {
         try {
             if (transcriptBlock != null) {
-                transcriptBlock.execute(new String(Arrays.copyOfRange(b, off, off + len)));
+                transcriptBlock.execute(toString(Arrays.copyOfRange(b, off, off + len)));
             }
         } catch (final Exception e) {
             e.printStackTrace();
         } finally {
             super.write(b, off, len);
         }
+    }
+
+    @TruffleBoundary
+    private static String toString(final byte[] b) {
+        return new String(b);
     }
 }

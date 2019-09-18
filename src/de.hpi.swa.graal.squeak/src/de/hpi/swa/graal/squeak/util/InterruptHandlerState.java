@@ -18,7 +18,7 @@ import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
-import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 
 public final class InterruptHandlerState {
     private static final int INTERRUPT_CHECKS_EVERY_N_MILLISECONDS = 3;
@@ -40,8 +40,8 @@ public final class InterruptHandlerState {
      */
     private boolean shouldTrigger = false;
 
-    @CompilationFinal private PointersObject interruptSemaphore;
-    private PointersObject timerSemaphore;
+    @CompilationFinal private PointersNonVariableObject interruptSemaphore;
+    private PointersNonVariableObject timerSemaphore;
 
     private InterruptHandlerState(final SqueakImageContext image) {
         this.image = image;
@@ -60,14 +60,14 @@ public final class InterruptHandlerState {
             return;
         }
         final Object interruptSema = image.getSpecialObject(SPECIAL_OBJECT.THE_INTERRUPT_SEMAPHORE);
-        if (interruptSema instanceof PointersObject) {
-            setInterruptSemaphore((PointersObject) interruptSema);
+        if (interruptSema instanceof PointersNonVariableObject) {
+            setInterruptSemaphore((PointersNonVariableObject) interruptSema);
         } else {
             assert interruptSema == NilObject.SINGLETON;
         }
         final Object timerSema = image.getSpecialObject(SPECIAL_OBJECT.THE_TIMER_SEMAPHORE);
-        if (timerSema instanceof PointersObject) {
-            setTimerSemaphore((PointersObject) timerSema);
+        if (timerSema instanceof PointersNonVariableObject) {
+            setTimerSemaphore((PointersNonVariableObject) timerSema);
         } else {
             assert timerSema == NilObject.SINGLETON;
         }
@@ -150,20 +150,20 @@ public final class InterruptHandlerState {
         }
     }
 
-    public PointersObject getInterruptSemaphore() {
+    public PointersNonVariableObject getInterruptSemaphore() {
         return interruptSemaphore;
     }
 
-    public void setInterruptSemaphore(final PointersObject interruptSemaphore) {
+    public void setInterruptSemaphore(final PointersNonVariableObject interruptSemaphore) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
         this.interruptSemaphore = interruptSemaphore;
     }
 
-    public PointersObject getTimerSemaphore() {
+    public PointersNonVariableObject getTimerSemaphore() {
         return timerSemaphore;
     }
 
-    public void setTimerSemaphore(final PointersObject timerSemaphore) {
+    public void setTimerSemaphore(final PointersNonVariableObject timerSemaphore) {
         this.timerSemaphore = timerSemaphore;
     }
 

@@ -32,8 +32,8 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.CLASS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CLASS_DESCRIPTION;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.METACLASS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.METHOD_DICT;
-import de.hpi.swa.graal.squeak.nodes.NewObjectNode;
 import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectNewNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
 /*
@@ -51,8 +51,10 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     @CompilationFinal private PointersObject methodDict;
     @CompilationFinal private long format = -1;
     private ArrayObject instanceVariables;
-    private PointersObject organization;
+    private PointersNonVariableObject organization;
     private Object[] pointers;
+
+    private ObjectLayout layout;
 
     public ClassObject(final SqueakImageContext image) {
         super(image);
@@ -86,6 +88,19 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     public ClassObject(final SqueakImageContext image, final ClassObject classObject, final int size) {
         this(image, classObject, ArrayUtils.withAll(Math.max(size - CLASS_DESCRIPTION.SIZE, 0), NilObject.SINGLETON));
         // `size - CLASS_DESCRIPTION.SIZE` is negative when instantiating "Behavior".
+    }
+
+    public ObjectLayout getLayout() {
+        if (layout == null) {
+            CompilerDirectives.transferToInterpreter();
+            layout = new ObjectLayout(this, getBasicInstanceSize());
+        }
+        return layout;
+    }
+
+    public void updateLayout(final ObjectLayout newLayout) {
+        assert layout == null || !layout.isValid() : "Old layout not invalidated";
+        layout = newLayout;
     }
 
     @Override
@@ -232,7 +247,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
             methodDict = (PointersObject) chunkPointers[CLASS_DESCRIPTION.METHOD_DICT];
             format = (long) chunkPointers[CLASS_DESCRIPTION.FORMAT];
             instanceVariables = chunkPointers[CLASS_DESCRIPTION.INSTANCE_VARIABLES] == NilObject.SINGLETON ? null : (ArrayObject) chunkPointers[CLASS_DESCRIPTION.INSTANCE_VARIABLES];
-            organization = chunkPointers[CLASS_DESCRIPTION.ORGANIZATION] == NilObject.SINGLETON ? null : (PointersObject) chunkPointers[CLASS_DESCRIPTION.ORGANIZATION];
+            organization = chunkPointers[CLASS_DESCRIPTION.ORGANIZATION] == NilObject.SINGLETON ? null : (PointersNonVariableObject) chunkPointers[CLASS_DESCRIPTION.ORGANIZATION];
             pointers = Arrays.copyOfRange(chunkPointers, CLASS_DESCRIPTION.SIZE, chunkPointers.length);
             if (size() > 7) {
                 final String className = getClassNameUnsafe();
@@ -318,11 +333,11 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         return NilObject.nullToNil(organization);
     }
 
-    public PointersObject getOrganizationOrNull() {
+    public PointersNonVariableObject getOrganizationOrNull() {
         return organization;
     }
 
-    public void setOrganization(final PointersObject organization) {
+    public void setOrganization(final PointersNonVariableObject organization) {
         this.organization = organization;
     }
 
@@ -416,7 +431,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         final PointersObject otherMethodDict = other.methodDict;
         final long otherFormat = other.format;
         final ArrayObject otherInstanceVariables = other.instanceVariables;
-        final PointersObject otherOrganization = other.organization;
+        final PointersNonVariableObject otherOrganization = other.organization;
         final Object[] otherPointers = other.pointers;
 
         other.setSuperclass(superclass);
@@ -509,7 +524,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     @ExportMessage
     protected Object instantiate(final Object[] arguments,
                     @CachedLibrary(limit = "2") final InteropLibrary functions,
-                    @Cached(value = "create(this.image)", allowUncached = true) final NewObjectNode newObjectNode)
+                    @Cached(value = "create(this.image)", allowUncached = true) final SqueakObjectNewNode newObjectNode)
                     throws UnsupportedTypeException, ArityException {
         final int numArguments = arguments.length;
         switch (numArguments) {

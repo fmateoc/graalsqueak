@@ -55,8 +55,9 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS_SCHEDULER;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SMALLTALK_IMAGE;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
-import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.nodes.ExecuteTopLevelContextNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.plugins.B2D;
 import de.hpi.swa.graal.squeak.nodes.plugins.BitBlt;
 import de.hpi.swa.graal.squeak.nodes.plugins.JPEGReader;
@@ -76,12 +77,12 @@ public final class SqueakImageContext {
     /* Special objects */
     public final ClassObject trueClass = new ClassObject(this);
     public final ClassObject falseClass = new ClassObject(this);
-    public final PointersObject schedulerAssociation = new PointersObject(this);
+    public final PointersNonVariableObject schedulerAssociation = new PointersNonVariableObject(this);
     public final ClassObject bitmapClass = new ClassObject(this);
     public final ClassObject smallIntegerClass = new ClassObject(this);
     public final ClassObject byteStringClass = new ClassObject(this);
     public final ClassObject arrayClass = new ClassObject(this);
-    public final PointersObject smalltalk = new PointersObject(this);
+    public final PointersNonVariableObject smalltalk = new PointersNonVariableObject(this);
     public final ClassObject floatClass = new ClassObject(this);
     public final ClassObject methodContextClass = new ClassObject(this);
     public final ClassObject pointClass = new ClassObject(this);
@@ -141,7 +142,7 @@ public final class SqueakImageContext {
 
     @CompilationFinal private ClassObject compilerClass = null;
     @CompilationFinal private ClassObject parserClass = null;
-    @CompilationFinal private PointersObject scheduler = null;
+    @CompilationFinal private PointersNonVariableObject scheduler = null;
     @CompilationFinal private ClassObject wideStringClass = null;
 
     /* Plugins */
@@ -229,7 +230,7 @@ public final class SqueakImageContext {
     }
 
     public ExecuteTopLevelContextNode getActiveContextNode() {
-        final PointersObject activeProcess = getActiveProcess();
+        final PointersNonVariableObject activeProcess = getActiveProcess();
         final ContextObject activeContext = (ContextObject) activeProcess.at0(PROCESS.SUSPENDED_CONTEXT);
         activeProcess.atputNil0(PROCESS.SUSPENDED_CONTEXT);
         return ExecuteTopLevelContextNode.create(getLanguage(), activeContext, true);
@@ -334,7 +335,7 @@ public final class SqueakImageContext {
             // TODO: find a better way to find wideStringClass or do this on image side instead?
             final CompiledMethodObject method = (CompiledMethodObject) LookupMethodByStringNode.getUncached().executeLookup(byteArrayClass, "asWideString");
             if (method != null) {
-                final PointersObject assoc = (PointersObject) method.getLiteral(1);
+                final PointersNonVariableObject assoc = (PointersNonVariableObject) method.getLiteral(1);
                 wideStringClass = (ClassObject) assoc.at0(ASSOCIATION.VALUE);
             } else {
                 /* Image only uses a single String class (e.g. Cuis 5.0). */
@@ -358,16 +359,16 @@ public final class SqueakImageContext {
         return truffleObjectClass != null;
     }
 
-    public PointersObject getScheduler() {
+    public PointersNonVariableObject getScheduler() {
         if (scheduler == null) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
-            scheduler = (PointersObject) schedulerAssociation.at0(ASSOCIATION.VALUE);
+            scheduler = (PointersNonVariableObject) schedulerAssociation.at0(ASSOCIATION.VALUE);
         }
         return scheduler;
     }
 
-    public PointersObject getActiveProcess() {
-        return (PointersObject) getScheduler().at0(PROCESS_SCHEDULER.ACTIVE_PROCESS);
+    public PointersNonVariableObject getActiveProcess() {
+        return (PointersNonVariableObject) getScheduler().at0(PROCESS_SCHEDULER.ACTIVE_PROCESS);
     }
 
     public Object getSpecialObject(final int index) {
@@ -458,8 +459,8 @@ public final class SqueakImageContext {
     }
 
     public Object getGlobals() {
-        final PointersObject environment = (PointersObject) smalltalk.at0(SMALLTALK_IMAGE.GLOBALS);
-        final PointersObject bindings = (PointersObject) environment.at0(ENVIRONMENT.BINDINGS);
+        final PointersNonVariableObject environment = (PointersNonVariableObject) smalltalk.at0(SMALLTALK_IMAGE.GLOBALS);
+        final PointersNonVariableObject bindings = (PointersNonVariableObject) environment.at0(ENVIRONMENT.BINDINGS);
         return new InteropMap(bindings);
     }
 
@@ -499,20 +500,20 @@ public final class SqueakImageContext {
         return new LargeIntegerObject(this, i);
     }
 
-    public PointersObject asPoint(final Object xPos, final Object yPos) {
-        return new PointersObject(this, pointClass, new Object[]{xPos, yPos});
+    public PointersNonVariableObject asPoint(final AbstractPointersObjectWriteNode writeNode, final Object xPos, final Object yPos) {
+        return PointersNonVariableObject.create(writeNode, pointClass, xPos, yPos);
     }
 
-    public PointersObject asPoint(final DisplayPoint point) {
-        return asPoint((long) point.getWidth(), (long) point.getHeight());
+    public PointersNonVariableObject asPoint(final AbstractPointersObjectWriteNode writeNode, final DisplayPoint point) {
+        return asPoint(writeNode, (long) point.getWidth(), (long) point.getHeight());
     }
 
     public ArrayObject newEmptyArray() {
         return ArrayObject.createWithStorage(this, arrayClass, ArrayUtils.EMPTY_ARRAY);
     }
 
-    public PointersObject newMessage(final NativeObject selector, final ClassObject rcvrClass, final Object[] arguments) {
-        final PointersObject message = new PointersObject(this, messageClass, messageClass.getBasicInstanceSize());
+    public PointersNonVariableObject newMessage(final NativeObject selector, final ClassObject rcvrClass, final Object[] arguments) {
+        final PointersNonVariableObject message = new PointersNonVariableObject(this, messageClass);
         message.atput0(MESSAGE.SELECTOR, selector);
         message.atput0(MESSAGE.ARGUMENTS, asArrayOfObjects(arguments));
         if (message.instsize() > MESSAGE.LOOKUP_CLASS) { // Early versions do not have lookupClass.

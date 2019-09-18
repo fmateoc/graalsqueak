@@ -19,6 +19,7 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.ADDITIONAL_METHOD_STATE;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CLASS_BINDING;
 import de.hpi.swa.graal.squeak.nodes.DispatchUneagerlyNode;
 import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
 
 @ExportLibrary(InteropLibrary.class)
 public final class CompiledMethodObject extends CompiledCodeObject {
@@ -102,7 +103,7 @@ public final class CompiledMethodObject extends CompiledCodeObject {
     }
 
     /** CompiledMethod>>#methodClassAssociation. */
-    private PointersObject getMethodClassAssociation() {
+    private PointersNonVariableObject getMethodClassAssociation() {
         /**
          * From the CompiledMethod class description:
          *
@@ -112,7 +113,7 @@ public final class CompiledMethodObject extends CompiledCodeObject {
          * may be nil (as would be the case for example of methods providing a pool of inst var
          * accessors).
          */
-        return (PointersObject) literals[literals.length - 1];
+        return (PointersNonVariableObject) literals[literals.length - 1];
     }
 
     public boolean hasMethodClass() {
@@ -121,7 +122,11 @@ public final class CompiledMethodObject extends CompiledCodeObject {
 
     /** CompiledMethod>>#methodClass. */
     public ClassObject getMethodClass() {
-        return (ClassObject) getMethodClassAssociation().at0(CLASS_BINDING.VALUE);
+        return getMethodClass(AbstractPointersObjectReadNode.getUncached());
+    }
+
+    public ClassObject getMethodClass(final AbstractPointersObjectReadNode readNode) {
+        return (ClassObject) readNode.execute(getMethodClassAssociation(), CLASS_BINDING.VALUE);
     }
 
     /** CompiledMethod>>#methodClass:. */

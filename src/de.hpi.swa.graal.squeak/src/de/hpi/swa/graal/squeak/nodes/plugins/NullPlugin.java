@@ -17,7 +17,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
-import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
@@ -40,7 +40,7 @@ public final class NullPlugin extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = "objectWithTwoSlots.size() == 2")
-        protected static final PointersObject doUTC(@SuppressWarnings("unused") final Object receiver, final PointersObject objectWithTwoSlots) {
+        protected static final PointersNonVariableObject doUTC(@SuppressWarnings("unused") final Object receiver, final PointersNonVariableObject objectWithTwoSlots) {
             objectWithTwoSlots.atput0(0, getUTCMicroseconds());
             objectWithTwoSlots.atput0(1, getOffsetFromGTMInSeconds());
             return objectWithTwoSlots;

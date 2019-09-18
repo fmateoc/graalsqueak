@@ -16,7 +16,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
-import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.QuinaryPrimitive;
@@ -52,7 +52,7 @@ public final class JPEGReaderPlugin extends AbstractPrimitiveFactoryHolder {
 
         @Specialization(guards = {"componentArray.size() == 3", "bits.isIntType()", "residualArray.isIntType()", "residualArray.getIntLength() == 3"})
         @TruffleBoundary(transferToInterpreterOnException = false)
-        protected final Object doColor(final Object receiver, final PointersObject componentArray, final NativeObject bits, final NativeObject residualArray, final long mask) {
+        protected final Object doColor(final Object receiver, final PointersNonVariableObject componentArray, final NativeObject bits, final NativeObject residualArray, final long mask) {
             return method.image.jpegReader.primitiveColorConvertMCU(receiver, componentArray, bits, residualArray, mask);
         }
     }
@@ -69,8 +69,8 @@ public final class JPEGReaderPlugin extends AbstractPrimitiveFactoryHolder {
         @Specialization(guards = {"sampleBuffer.isIntType()", "sampleBuffer.getIntLength() == DCTSize2", "comp.size() >= MinComponentSize", "dcTableValue.isIntType()", "acTableValue.isIntType()",
                         "jpegStream.size() >= 5"})
         @TruffleBoundary(transferToInterpreterOnException = false)
-        protected final Object doColor(final Object receiver, final NativeObject sampleBuffer, final PointersObject comp, final NativeObject dcTableValue, final NativeObject acTableValue,
-                        final PointersObject jpegStream) {
+        protected final Object doColor(final Object receiver, final NativeObject sampleBuffer, final PointersNonVariableObject comp, final NativeObject dcTableValue, final NativeObject acTableValue,
+                        final PointersNonVariableObject jpegStream) {
             return method.image.jpegReader.primitiveDecodeMCU(receiver, sampleBuffer, comp, dcTableValue, acTableValue, jpegStream);
         }
     }

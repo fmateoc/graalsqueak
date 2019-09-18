@@ -13,13 +13,13 @@ import com.oracle.truffle.api.library.ExportLibrary;
 import com.oracle.truffle.api.library.ExportMessage;
 
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.DICTIONARY;
-import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 
 @ExportLibrary(InteropLibrary.class)
 public final class InteropMap implements TruffleObject {
     private final Map<String, Object> map;
 
-    public InteropMap(final PointersObject squeakDictionary) {
+    public InteropMap(final PointersNonVariableObject squeakDictionary) {
         map = DICTIONARY.toJavaMap(squeakDictionary);
     }
 

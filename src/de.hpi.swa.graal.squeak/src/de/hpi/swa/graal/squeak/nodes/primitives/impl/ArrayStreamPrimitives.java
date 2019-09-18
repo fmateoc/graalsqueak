@@ -23,6 +23,7 @@ import de.hpi.swa.graal.squeak.model.CharacterObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
+import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectInstSizeNode;
@@ -42,22 +43,34 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
         return ArrayStreamPrimitivesFactory.getFactories();
     }
 
+    protected abstract static class AbstractBasicAtOrAtPutNode extends AbstractPrimitiveNode {
+        @Child protected SqueakObjectInstSizeNode instSizeNode = SqueakObjectInstSizeNode.create();
+        @Child private SqueakObjectSizeNode sizeNode = SqueakObjectSizeNode.create();
+
+        protected AbstractBasicAtOrAtPutNode(final CompiledMethodObject method) {
+            super(method);
+        }
+
+        protected final boolean inBoundsOfSqueakObject(final long index, final Object target) {
+            return SqueakGuards.inBounds1(index + instSizeNode.execute(target), sizeNode.execute(target));
+        }
+    }
+
     @GenerateNodeFactory
     @NodeInfo(cost = NodeCost.NONE)
     @SqueakPrimitive(indices = 60)
-    protected abstract static class PrimBasicAtNode extends AbstractPrimitiveNode implements TernaryPrimitive {
+    protected abstract static class PrimBasicAtNode extends AbstractBasicAtOrAtPutNode implements TernaryPrimitive {
         protected PrimBasicAtNode(final CompiledMethodObject method) {
             super(method);
         }
 
         @Specialization
-        protected static final Object doSqueakObject(final Object receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided,
+        protected final Object doSqueakObject(final Object receiver, final long index, @SuppressWarnings("unused") final NotProvided notProvided,
                         @Shared("at0Node") @Cached final SqueakObjectAt0Node at0Node,
-                        @Shared("instSizeNode") @Cached final SqueakObjectInstSizeNode instSizeNode,
                         @Cached final BranchProfile outOfBounceProfile) {
-            try {
+            if (inBoundsOfSqueakObject(index, receiver)) {
                 return at0Node.execute(receiver, index - 1 + instSizeNode.execute(receiver));
-            } catch (final IndexOutOfBoundsException e) {
+            } else {
                 outOfBounceProfile.enter();
                 throw PrimitiveFailed.BAD_INDEX;
             }
@@ -65,32 +78,30 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
 
         /* Context>>#object:basicAt: */
         @Specialization
-        protected static final Object doSqueakObject(@SuppressWarnings("unused") final Object receiver, final Object target, final long index,
+        protected final Object doSqueakObject(@SuppressWarnings("unused") final Object receiver, final Object target, final long index,
                         @Shared("at0Node") @Cached final SqueakObjectAt0Node at0Node,
-                        @Shared("instSizeNode") @Cached final SqueakObjectInstSizeNode instSizeNode,
                         @Cached final BranchProfile outOfBounceProfile) {
-            return doSqueakObject(target, index, NotProvided.SINGLETON, at0Node, instSizeNode, outOfBounceProfile);
+            return doSqueakObject(target, index, NotProvided.SINGLETON, at0Node, outOfBounceProfile);
         }
     }
 
     @GenerateNodeFactory
     @NodeInfo(cost = NodeCost.NONE)
     @SqueakPrimitive(indices = 61)
-    protected abstract static class PrimBasicAtPutNode extends AbstractPrimitiveNode implements QuaternaryPrimitive {
+    protected abstract static class PrimBasicAtPutNode extends AbstractBasicAtOrAtPutNode implements QuaternaryPrimitive {
         protected PrimBasicAtPutNode(final CompiledMethodObject method) {
             super(method);
         }
 
         @Specialization
-        protected static final Object doSqueakObject(final AbstractSqueakObject receiver, final long index, final Object value,
+        protected final Object doSqueakObject(final AbstractSqueakObject receiver, final long index, final Object value,
                         @SuppressWarnings("unused") final NotProvided notProvided,
                         @Shared("atput0Node") @Cached final SqueakObjectAtPut0Node atput0Node,
-                        @Shared("instSizeNode") @Cached final SqueakObjectInstSizeNode instSizeNode,
                         @Cached final BranchProfile outOfBounceProfile) {
-            try {
+            if (inBoundsOfSqueakObject(index, receiver)) {
                 atput0Node.execute(receiver, index - 1 + instSizeNode.execute(receiver), value);
                 return value;
-            } catch (final IndexOutOfBoundsException e) {
+            } else {
                 outOfBounceProfile.enter();
                 throw PrimitiveFailed.BAD_INDEX;
             }
@@ -98,11 +109,10 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
 
         /* Context>>#object:basicAt:put: */
         @Specialization
-        protected static final Object doSqueakObject(@SuppressWarnings("unused") final Object receiver, final AbstractSqueakObject target, final long index, final Object value,
+        protected final Object doSqueakObject(@SuppressWarnings("unused") final Object receiver, final AbstractSqueakObject target, final long index, final Object value,
                         @Shared("atput0Node") @Cached final SqueakObjectAtPut0Node atput0Node,
-                        @Shared("instSizeNode") @Cached final SqueakObjectInstSizeNode instSizeNode,
                         @Cached final BranchProfile outOfBounceProfile) {
-            return doSqueakObject(target, index, value, NotProvided.SINGLETON, atput0Node, instSizeNode, outOfBounceProfile);
+            return doSqueakObject(target, index, value, NotProvided.SINGLETON, atput0Node, outOfBounceProfile);
         }
     }
 
@@ -140,13 +150,13 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
 
         @Specialization(guards = {"obj.isByteType()", "inBounds1(index, obj.getByteLength())"})
         protected static final char doNativeObjectBytes(final NativeObject obj, final long index) {
-            return (char) (obj.getByteStorage()[(int) index - 1] & 0xFF);
+            return (char) (obj.getByte(index - 1) & 0xFF);
         }
 
         @Specialization(guards = {"obj.isIntType()", "inBounds1(index, obj.getIntLength())"})
         protected static final Object doNativeObjectInts(final NativeObject obj, final long index,
                         @Cached("createBinaryProfile()") final ConditionProfile isFiniteProfile) {
-            return CharacterObject.valueOf(obj.getIntStorage()[(int) index - 1], isFiniteProfile);
+            return CharacterObject.valueOf(obj.getInt(index - 1), isFiniteProfile);
         }
     }
 
@@ -160,19 +170,19 @@ public final class ArrayStreamPrimitives extends AbstractPrimitiveFactoryHolder 
 
         @Specialization(guards = {"obj.isByteType()", "inBounds1(index, obj.getByteLength())", "inByteRange(value)"})
         protected static final char doNativeObjectBytes(final NativeObject obj, final long index, final char value) {
-            obj.getByteStorage()[(int) index - 1] = (byte) value;
+            obj.setByte(index - 1, (byte) value);
             return value;
         }
 
         @Specialization(guards = {"obj.isIntType()", "inBounds1(index, obj.getIntLength())"})
         protected static final char doNativeObjectInts(final NativeObject obj, final long index, final char value) {
-            obj.getIntStorage()[(int) index - 1] = value;
+            obj.setInt(index - 1, value);
             return value;
         }
 
         @Specialization(guards = {"obj.isIntType()", "inBounds1(index, obj.getIntLength())"})
         protected static final CharacterObject doNativeObjectInts(final NativeObject obj, final long index, final CharacterObject value) {
-            obj.getIntStorage()[(int) index - 1] = (int) value.getValue();
+            obj.setInt(index - 1, (int) value.getValue());
             return value;
         }
 

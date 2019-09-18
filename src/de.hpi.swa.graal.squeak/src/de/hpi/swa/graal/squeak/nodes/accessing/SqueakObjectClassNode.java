@@ -25,6 +25,7 @@ import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
@@ -76,6 +77,11 @@ public abstract class SqueakObjectClassNode extends AbstractNode {
     protected static final ClassObject doDouble(@SuppressWarnings("unused") final double value,
                     @Shared("image") @CachedContext(SqueakLanguage.class) final SqueakImageContext image) {
         return image.smallFloatClass;
+    }
+
+    @Specialization
+    protected static final ClassObject doPointers(final PointersNonVariableObject value) {
+        return value.getSqueakClass();
     }
 
     @Specialization

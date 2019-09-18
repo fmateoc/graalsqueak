@@ -22,6 +22,7 @@ import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 
 public final class SqueakGuards {
@@ -147,6 +148,10 @@ public final class SqueakGuards {
 
     public static boolean isOverflowDivision(final long a, final long b) {
         return a == Long.MIN_VALUE && b == -1;
+    }
+
+    public static boolean isPointersNonVariableObject(final Object object) {
+        return object instanceof PointersNonVariableObject;
     }
 
     public static boolean isPointersObject(final Object obj) {

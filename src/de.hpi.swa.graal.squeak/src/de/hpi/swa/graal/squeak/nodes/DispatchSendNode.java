@@ -18,7 +18,7 @@ import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
-import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
@@ -61,7 +61,7 @@ public abstract class DispatchSendNode extends AbstractNodeWithCode {
     @Specialization(guards = {"code.image.isHeadless()", "selector.isDebugSyntaxErrorSelector()", "lookupResult != null"})
     protected static final Object doDispatchHeadlessSyntaxError(final VirtualFrame frame, final NativeObject selector, final CompiledMethodObject lookupResult,
                     final ClassObject rcvrClass, final Object[] rcvrAndArgs) {
-        throw new SqueakSyntaxError((PointersObject) rcvrAndArgs[1]);
+        throw new SqueakSyntaxError((PointersNonVariableObject) rcvrAndArgs[1]);
     }
 
     @Specialization(guards = {"lookupResult == null"})
@@ -69,7 +69,7 @@ public abstract class DispatchSendNode extends AbstractNodeWithCode {
                     final Object[] rcvrAndArgs,
                     @Cached final LookupMethodNode lookupNode) {
         final CompiledMethodObject doesNotUnderstandMethod = (CompiledMethodObject) lookupNode.executeLookup(rcvrClass, code.image.doesNotUnderstand);
-        final PointersObject message = code.image.newMessage(selector, rcvrClass, ArrayUtils.allButFirst(rcvrAndArgs));
+        final PointersNonVariableObject message = code.image.newMessage(selector, rcvrClass, ArrayUtils.allButFirst(rcvrAndArgs));
         return dispatchNode.executeDispatch(frame, doesNotUnderstandMethod, new Object[]{rcvrAndArgs[0], message});
     }
 

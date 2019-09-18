@@ -19,6 +19,7 @@ import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.FORM;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
@@ -113,7 +114,7 @@ public final class BitBlt {
     private int affectedT;
     private int bbH;
     private int bbW;
-    private PointersObject bitBltOop;
+    private PointersNonVariableObject bitBltOop;
     private long bitCount;
     private int clipHeight;
     private int clipWidth;
@@ -137,7 +138,7 @@ public final class BitBlt {
     private byte[] destBytes;
     private long destDelta;
     private int destDepth;
-    private PointersObject destForm;
+    private PointersNonVariableObject destForm;
     private int destHeight;
     private long destIndex;
     private long destMask;
@@ -189,7 +190,7 @@ public final class BitBlt {
     private int[] sourceBits;
     private long sourceDelta;
     private int sourceDepth;
-    private PointersObject sourceForm;
+    private PointersNonVariableObject sourceForm;
     private int sourceHeight;
     private long sourceIndex;
     private boolean sourceMSB;
@@ -1508,7 +1509,7 @@ public final class BitBlt {
      */
 
     /* BitBltSimulation>>#fetchIntOrFloat:ofObject: */
-    private static int fetchIntOrFloatofObject(final int fieldIndex, final PointersObject objectPointer) {
+    private static int fetchIntOrFloatofObject(final int fieldIndex, final PointersNonVariableObject objectPointer) {
         final Object fieldOop = fetchPointerofObject(fieldIndex, objectPointer);
         if (fieldOop instanceof Long) {
             final long longValue = (long) fieldOop;
@@ -1544,7 +1545,7 @@ public final class BitBlt {
      */
 
     /* BitBltSimulation>>#fetchIntOrFloat:ofObject:ifNil: */
-    private static int fetchIntOrFloatofObjectifNil(final int fieldIndex, final PointersObject objectPointer, final long defaultValue) {
+    private static int fetchIntOrFloatofObjectifNil(final int fieldIndex, final PointersNonVariableObject objectPointer, final long defaultValue) {
         final Object fieldOop = fetchPointerofObject(fieldIndex, objectPointer);
         if (fieldOop instanceof Long) {
             final long longValue = (long) fieldOop;
@@ -1729,7 +1730,7 @@ public final class BitBlt {
      */
 
     /* BitBltSimulation>>#loadBitBltFrom: */
-    protected boolean loadBitBltFrom(final PointersObject bbObj) {
+    protected boolean loadBitBltFrom(final PointersNonVariableObject bbObj) {
         return loadBitBltFromwarping(bbObj, false);
     }
 
@@ -1740,7 +1741,7 @@ public final class BitBlt {
      */
 
     /* BitBltSimulation>>#loadBitBltFrom:warping: */
-    private boolean loadBitBltFromwarping(final PointersObject bbObj, final boolean aBool) {
+    private boolean loadBitBltFromwarping(final PointersNonVariableObject bbObj, final boolean aBool) {
         boolean ok;
 
         bitBltOop = bbObj;
@@ -1756,7 +1757,7 @@ public final class BitBlt {
         noSource = ignoreSourceOrHalftone(sourceForm);
         halftoneForm = (AbstractSqueakObject) fetchPointerofObject(BB_HALFTONE_FORM_INDEX, bitBltOop);
         noHalftone = ignoreSourceOrHalftone(halftoneForm == NilObject.SINGLETON ? null : halftoneForm);
-        destForm = fetchPointerofObjectOrNull(BB_DEST_FORM_INDEX, bbObj);
+        destForm = fetchPointerofObjectOrNull(BB_DEST_FORM_INDEX, bitBltOop);
         ok = loadBitBltDestForm();
         if (!ok) {
             return false;
@@ -1883,10 +1884,10 @@ public final class BitBlt {
         } else {
 
             /* A new-style color map (fully qualified) */
-            if (!(isPointers(cmOop) && slotSizeOf((PointersObject) cmOop) >= 3)) {
+            if (!(isPointers(cmOop) && slotSizeOf((PointersNonVariableObject) cmOop) >= 3)) {
                 return false;
             }
-            final PointersObject cmOopPointers = (PointersObject) cmOop;
+            final PointersNonVariableObject cmOopPointers = (PointersNonVariableObject) cmOop;
             cmShiftTable = loadColorMapShiftOrMaskFrom(fetchNativeofObjectOrNull(0, cmOopPointers));
             cmMaskTable = loadColorMapShiftOrMaskFrom(fetchNativeofObjectOrNull(1, cmOopPointers));
             oop = fetchNativeofObjectOrNull(2, cmOopPointers);
@@ -1978,7 +1979,7 @@ public final class BitBlt {
     /* BitBltSimulation>>#loadSurfacePlugin not needed for GraalSqueak */
 
     /* BitBltSimulation>>#loadWarpBltFrom: */
-    private boolean loadWarpBltFrom(final PointersObject bbObj) {
+    private boolean loadWarpBltFrom(final PointersNonVariableObject bbObj) {
         return loadBitBltFromwarping(bbObj, true);
     }
 
@@ -2529,8 +2530,8 @@ public final class BitBlt {
      */
 
     /* BitBltSimulation>>#primitiveCopyBits */
-    public Object primitiveCopyBits(final PointersObject rcvr, final long factor) {
-        if (!loadBitBltFromwarping(rcvr, false)) {
+    public Object primitiveCopyBits(final PointersNonVariableObject bbObj, final long factor) {
+        if (!loadBitBltFromwarping(bbObj, false)) {
             PrimitiveFailed.andTransferToInterpreter();
         }
         copyBits(factor);
@@ -2540,12 +2541,12 @@ public final class BitBlt {
         if (combinationRule == 22 || combinationRule == 32) {
             return bitCount;
         } else {
-            return rcvr;
+            return bbObj;
         }
     }
 
     /* BitBltSimulation>>#primitiveDisplayString */
-    public Object primitiveDisplayString(final PointersObject bbObj, final NativeObject sourceString, final long startIndex, final long stopIndex, final long[] glyphMap,
+    public Object primitiveDisplayString(final PointersNonVariableObject bbObj, final NativeObject sourceString, final long startIndex, final long stopIndex, final long[] glyphMap,
                     final long[] xTable, final int kernDelta) {
         int ascii;
         int glyphIndex;
@@ -2626,15 +2627,15 @@ public final class BitBlt {
     /* Invoke the line drawing primitive. */
 
     /* BitBltSimulation>>#primitiveDrawLoop */
-    public Object primitiveDrawLoop(final PointersObject rcvr, final long xDelta, final long yDelta) {
-        if (!loadBitBltFromwarping(rcvr, false)) {
+    public Object primitiveDrawLoop(final PointersNonVariableObject bbObj, final long xDelta, final long yDelta) {
+        if (!loadBitBltFromwarping(bbObj, false)) {
             PrimitiveFailed.andTransferToInterpreter();
         }
         if (!failed()) {
             drawLoopXY(xDelta, yDelta);
             showDisplayBits();
         }
-        return rcvr;
+        return bbObj;
     }
 
     /*
@@ -2644,7 +2645,7 @@ public final class BitBlt {
      */
 
     /* BitBltSimulation>>#primitivePixelValueAtX:y: */
-    public long primitivePixelValueAt(final PointersObject rcvr, final long xVal, final long yVal) {
+    public long primitivePixelValueAt(final PointersNonVariableObject bbObj, final long xVal, final long yVal) {
         final NativeObject bitmap;
         final long bitsSize;
         final long depth;
@@ -2658,17 +2659,17 @@ public final class BitBlt {
         if (xVal < 0 || yVal < 0) {
             return 0L;
         }
-        if (!(isPointers(rcvr) && slotSizeOf(rcvr) >= 4)) {
+        if (!(isPointers(bbObj) && slotSizeOf(bbObj) >= 4)) {
             PrimitiveFailed.andTransferToInterpreter();
         }
-        bitmap = fetchNativeofObjectOrNull(FORM.BITS, rcvr);
+        bitmap = fetchNativeofObjectOrNull(FORM.BITS, bbObj);
         if (!isWordsOrBytes(bitmap)) {
             PrimitiveFailed.andTransferToInterpreter();
         }
-        width = fetchIntegerofObject(FORM.WIDTH, rcvr);
-        height = fetchIntegerofObject(FORM.HEIGHT, rcvr);
+        width = fetchIntegerofObject(FORM.WIDTH, bbObj);
+        height = fetchIntegerofObject(FORM.HEIGHT, bbObj);
         /* if width/height/depth are not integer, fail */
-        depth = fetchIntegerofObject(FORM.DEPTH, rcvr);
+        depth = fetchIntegerofObject(FORM.DEPTH, bbObj);
         assert !failed();
         if (xVal >= width || yVal >= height) {
             return 0L;
@@ -2710,15 +2711,15 @@ public final class BitBlt {
      */
 
     /* BitBltSimulation>>#primitiveWarpBits */
-    public PointersObject primitiveWarpBits(final PointersObject rcvr, final long n, final AbstractSqueakObject sourceMap) {
-        if (!loadWarpBltFrom(rcvr)) {
+    public PointersNonVariableObject primitiveWarpBits(final PointersNonVariableObject bbObj, final long n, final AbstractSqueakObject sourceMap) {
+        if (!loadWarpBltFrom(bbObj)) {
             PrimitiveFailed.andTransferToInterpreter();
         }
         warpBits(n, sourceMap);
         assert !failed();
         showDisplayBits();
         assert !failed();
-        return rcvr;
+        return bbObj;
     }
 
     /* BitBltSimulation>>#rgbAdd:with: */
@@ -4043,12 +4044,22 @@ public final class BitBlt {
         }
     }
 
-    private static PointersObject fetchPointerofObjectOrNull(final int index, final PointersObject object) {
+    private int fetchIntegerofObject(final int index, final PointersNonVariableObject object) {
+        final Object value = fetchPointerofObject(index, object);
+        if (value instanceof Long) {
+            return (int) (long) value;
+        } else {
+            successFlag = false;
+            return 0;
+        }
+    }
+
+    private static PointersNonVariableObject fetchPointerofObjectOrNull(final int index, final PointersNonVariableObject object) {
         final Object value = fetchPointerofObject(index, object);
         if (value == NilObject.SINGLETON) {
             return null;
         } else {
-            return (PointersObject) value;
+            return (PointersNonVariableObject) value;
         }
     }
 
@@ -4061,7 +4072,20 @@ public final class BitBlt {
         }
     }
 
+    private static NativeObject fetchNativeofObjectOrNull(final int index, final PointersNonVariableObject object) {
+        final Object value = fetchPointerofObject(index, object);
+        if (value == NilObject.SINGLETON) {
+            return null;
+        } else {
+            return (NativeObject) value;
+        }
+    }
+
     private static Object fetchPointerofObject(final int index, final PointersObject object) {
+        return object.at0(index);
+    }
+
+    private static Object fetchPointerofObject(final int index, final PointersNonVariableObject object) {
         return object.at0(index);
     }
 
@@ -4089,8 +4113,12 @@ public final class BitBlt {
         return object.size();
     }
 
+    private static int slotSizeOf(final PointersNonVariableObject object) {
+        return object.size();
+    }
+
     private static boolean isPointers(final Object object) {
-        return object != null && object instanceof PointersObject;
+        return object != null && object instanceof PointersNonVariableObject;
     }
 
     private boolean failed() {
@@ -4121,7 +4149,7 @@ public final class BitBlt {
         return b < 0 ? b < -31 ? 0 : a >>> 0 - b : b > 31 ? 0 : a << b;
     }
 
-    private static void storeIntegerofObjectwithValue(final int index, final PointersObject target, final long value) {
+    private static void storeIntegerofObjectwithValue(final int index, final PointersNonVariableObject target, final long value) {
         target.atput0(index, value);
     }
 

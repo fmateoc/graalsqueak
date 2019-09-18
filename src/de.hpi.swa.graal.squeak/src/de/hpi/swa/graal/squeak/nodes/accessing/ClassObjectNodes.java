@@ -14,6 +14,7 @@ import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodesFactory.ClassObjectReadNodeGen;
@@ -120,7 +121,7 @@ public final class ClassObjectNodes {
         }
 
         @Specialization(guards = "isOrganizationIndex(index)")
-        protected static final void doClassOrganization(final ClassObject obj, @SuppressWarnings("unused") final long index, final PointersObject value) {
+        protected static final void doClassOrganization(final ClassObject obj, @SuppressWarnings("unused") final long index, final PointersNonVariableObject value) {
             obj.setOrganization(value);
         }
 

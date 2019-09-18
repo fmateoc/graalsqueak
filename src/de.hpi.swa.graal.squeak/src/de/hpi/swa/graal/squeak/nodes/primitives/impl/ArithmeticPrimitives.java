@@ -26,8 +26,9 @@ import de.hpi.swa.graal.squeak.model.BooleanObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
-import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.FloatObjectNodes.AsFloatObjectIfNessaryNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
@@ -217,7 +218,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
 
         /** Quick return `false` if b is not a Number or Complex. */
         @SuppressWarnings("unused")
-        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersObject(rhs)"})
+        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersNonVariableObject(rhs)"})
         protected static final boolean doQuickFalse(final Object lhs, final AbstractSqueakObject rhs) {
             return BooleanObject.FALSE;
         }
@@ -252,7 +253,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
 
         /** Quick return `true` if b is not a Number or Complex. */
         @SuppressWarnings("unused")
-        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersObject(rhs)"})
+        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersNonVariableObject(rhs)"})
         protected static final boolean doQuickTrue(final Object lhs, final AbstractSqueakObject rhs) {
             return BooleanObject.TRUE;
         }
@@ -496,8 +497,9 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected final PointersObject doObject(final Object xPos, final Object yPos) {
-            return method.image.asPoint(xPos, yPos);
+        protected final PointersNonVariableObject doObject(final Object xPos, final Object yPos,
+                        @Cached final AbstractPointersObjectWriteNode writeNode) {
+            return method.image.asPoint(writeNode, xPos, yPos);
         }
     }
 
@@ -662,7 +664,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
 
         /** Quick return `false` if b is not a Number or Complex. */
         @SuppressWarnings("unused")
-        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersObject(rhs)"})
+        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersNonVariableObject(rhs)"})
         protected static final boolean doQuickFalse(final LargeIntegerObject lhs, final AbstractSqueakObject rhs) {
             return BooleanObject.FALSE;
         }
@@ -687,7 +689,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
 
         /** Quick return `true` if b is not a Number or Complex. */
         @SuppressWarnings("unused")
-        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersObject(rhs)"})
+        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersNonVariableObject(rhs)"})
         protected static final boolean doQuickTrue(final Object lhs, final AbstractSqueakObject rhs) {
             return BooleanObject.TRUE;
         }

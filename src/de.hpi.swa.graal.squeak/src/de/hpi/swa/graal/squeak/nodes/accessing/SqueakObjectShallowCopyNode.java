@@ -20,6 +20,7 @@ import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
+import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.WeakPointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithImage;
@@ -50,6 +51,11 @@ public abstract class SqueakObjectShallowCopyNode extends AbstractNodeWithImage 
 
     @Specialization
     protected static final EmptyObject doEmpty(final EmptyObject receiver) {
+        return receiver.shallowCopy();
+    }
+
+    @Specialization
+    protected static final PointersNonVariableObject doPointers(final PointersNonVariableObject receiver) {
         return receiver.shallowCopy();
     }
 
