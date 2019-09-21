@@ -191,19 +191,19 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
             return BooleanObject.wrap(receiver.pointsTo(thang));
         }
 
-        @Specialization(guards = {"receiver.isEmptyType()", "receiver.getEmptyStorage() > 0"})
+        @Specialization(guards = {"receiver.isEmptyType()", "receiver.getEmptyLength() > 0"})
         protected static final boolean doEmptyArray(@SuppressWarnings("unused") final ArrayObject receiver, final Object thang) {
             return BooleanObject.wrap(thang == NilObject.SINGLETON);
         }
 
         @Specialization(guards = "receiver.isBooleanType()")
         protected static final boolean doArrayOfBooleans(final ArrayObject receiver, final boolean thang) {
-            return BooleanObject.wrap(ArrayUtils.contains(receiver.getBooleanStorage(), thang ? ArrayObject.BOOLEAN_TRUE_TAG : ArrayObject.BOOLEAN_FALSE_TAG));
+            return BooleanObject.wrap(ArrayUtils.contains(receiver.getBooleanStorage(), thang));
         }
 
         @Specialization(guards = "receiver.isBooleanType()")
         protected static final boolean doArrayOfBooleans(final ArrayObject receiver, @SuppressWarnings("unused") final NilObject thang) {
-            return BooleanObject.wrap(ArrayUtils.contains(receiver.getBooleanStorage(), ArrayObject.BOOLEAN_NIL_TAG));
+            return receiver.containsNil();
         }
 
         @SuppressWarnings("unused")
@@ -219,7 +219,7 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
 
         @Specialization(guards = "receiver.isCharType()")
         protected static final boolean doArrayOfChars(final ArrayObject receiver, @SuppressWarnings("unused") final NilObject thang) {
-            return BooleanObject.wrap(ArrayUtils.contains(receiver.getCharStorage(), ArrayObject.CHAR_NIL_TAG));
+            return receiver.containsNil();
         }
 
         @SuppressWarnings("unused")
@@ -235,7 +235,7 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
 
         @Specialization(guards = "receiver.isLongType()")
         protected static final boolean doArrayOfLongs(final ArrayObject receiver, @SuppressWarnings("unused") final NilObject thang) {
-            return BooleanObject.wrap(ArrayUtils.contains(receiver.getLongStorage(), ArrayObject.LONG_NIL_TAG));
+            return receiver.containsNil();
         }
 
         @SuppressWarnings("unused")
@@ -251,7 +251,7 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
 
         @Specialization(guards = "receiver.isDoubleType()")
         protected static final boolean doArrayOfDoubles(final ArrayObject receiver, @SuppressWarnings("unused") final NilObject thang) {
-            return BooleanObject.wrap(ArrayUtils.contains(receiver.getDoubleStorage(), ArrayObject.DOUBLE_NIL_TAG));
+            return receiver.containsNil();
         }
 
         @SuppressWarnings("unused")

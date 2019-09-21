@@ -81,6 +81,7 @@ public final class SqueakIOConstants {
      * allocate individual `long[]` arrays to signal no event (reduces memory pressure).
      */
     @CompilationFinal(dimensions = 1) public static final long[] NONE_EVENT = new long[EVENT_SIZE];
+    @CompilationFinal(dimensions = 1) public static final boolean[] NONE_EVENT_MAP = new boolean[]{true, true, true, true, true, true, true, true};
 
     public enum MOUSE_EVENT {
         DOWN,

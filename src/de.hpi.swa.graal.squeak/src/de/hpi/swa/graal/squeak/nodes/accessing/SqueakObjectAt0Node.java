@@ -38,7 +38,7 @@ public abstract class SqueakObjectAt0Node extends AbstractNode {
     @Specialization
     protected static final Object doArray(final ArrayObject obj, final long index,
                     @Cached final ArrayObjectReadNode readNode) {
-        return readNode.execute(obj, index);
+        return readNode.execute(obj, (int) index);
     }
 
     @Specialization

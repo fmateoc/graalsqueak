@@ -117,7 +117,7 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
         protected final PointersObject doGetNext(final PointersObject eventSensor, final ArrayObject targetArray,
                         @Cached("createIdentityProfile()") final ValueProfile displayProfile) {
             final long[] event = displayProfile.profile(method.image.getDisplay()).getNextEvent();
-            targetArray.setStorage(event != null ? event : SqueakIOConstants.NONE_EVENT);
+            targetArray.setStorage(event != null ? event : SqueakIOConstants.NONE_EVENT, SqueakIOConstants.NONE_EVENT_MAP);
             return eventSensor;
         }
 
@@ -130,7 +130,7 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
 
         @Specialization(guards = "!method.image.hasDisplay()")
         protected static final PointersObject doGetNextHeadless(final PointersObject eventSensor, @SuppressWarnings("unused") final ArrayObject targetArray) {
-            targetArray.setStorage(SqueakIOConstants.NONE_EVENT);
+            targetArray.setStorage(SqueakIOConstants.NONE_EVENT, SqueakIOConstants.NONE_EVENT_MAP);
             return eventSensor;
         }
     }
@@ -444,8 +444,12 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
             @Specialization(guards = {"rcvr.isBooleanType()", "repl.isBooleanType()"})
             protected static final void doArraysOfBooleans(final ArrayObject rcvr, final long start, final long stop, final ArrayObject repl, final long replStart,
                             @Shared("errorProfile") @Cached final BranchProfile errorProfile) {
+                final int srcPos = (int) replStart - 1;
+                final int destPos = (int) start - 1;
+                final int length = (int) (1 + stop - start);
                 try {
-                    System.arraycopy(repl.getBooleanStorage(), (int) replStart - 1, rcvr.getBooleanStorage(), (int) start - 1, (int) (1 + stop - start));
+                    System.arraycopy(repl.getBooleanStorage(), srcPos, rcvr.getBooleanStorage(), destPos, length);
+                    System.arraycopy(repl.getIsPrimitiveSetMap(), srcPos, rcvr.getIsPrimitiveSetMap(), destPos, length);
                 } catch (final IndexOutOfBoundsException e) {
                     errorProfile.enter();
                     throw PrimitiveFailed.BAD_INDEX;
@@ -455,8 +459,12 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
             @Specialization(guards = {"rcvr.isCharType()", "repl.isCharType()"})
             protected static final void doArraysOfChars(final ArrayObject rcvr, final long start, final long stop, final ArrayObject repl, final long replStart,
                             @Shared("errorProfile") @Cached final BranchProfile errorProfile) {
+                final int srcPos = (int) replStart - 1;
+                final int destPos = (int) start - 1;
+                final int length = (int) (1 + stop - start);
                 try {
-                    System.arraycopy(repl.getCharStorage(), (int) replStart - 1, rcvr.getCharStorage(), (int) start - 1, (int) (1 + stop - start));
+                    System.arraycopy(repl.getCharStorage(), srcPos, rcvr.getCharStorage(), destPos, length);
+                    System.arraycopy(repl.getIsPrimitiveSetMap(), srcPos, rcvr.getIsPrimitiveSetMap(), destPos, length);
                 } catch (final IndexOutOfBoundsException e) {
                     errorProfile.enter();
                     throw PrimitiveFailed.BAD_INDEX;
@@ -466,8 +474,12 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
             @Specialization(guards = {"rcvr.isLongType()", "repl.isLongType()"})
             protected static final void doArraysOfLongs(final ArrayObject rcvr, final long start, final long stop, final ArrayObject repl, final long replStart,
                             @Shared("errorProfile") @Cached final BranchProfile errorProfile) {
+                final int srcPos = (int) replStart - 1;
+                final int destPos = (int) start - 1;
+                final int length = (int) (1 + stop - start);
                 try {
-                    System.arraycopy(repl.getLongStorage(), (int) replStart - 1, rcvr.getLongStorage(), (int) start - 1, (int) (1 + stop - start));
+                    System.arraycopy(repl.getLongStorage(), srcPos, rcvr.getLongStorage(), destPos, length);
+                    System.arraycopy(repl.getIsPrimitiveSetMap(), srcPos, rcvr.getIsPrimitiveSetMap(), destPos, length);
                 } catch (final IndexOutOfBoundsException e) {
                     errorProfile.enter();
                     throw PrimitiveFailed.BAD_INDEX;
@@ -477,8 +489,12 @@ public final class IOPrimitives extends AbstractPrimitiveFactoryHolder {
             @Specialization(guards = {"rcvr.isDoubleType()", "repl.isDoubleType()"})
             protected static final void doArraysOfDoubles(final ArrayObject rcvr, final long start, final long stop, final ArrayObject repl, final long replStart,
                             @Shared("errorProfile") @Cached final BranchProfile errorProfile) {
+                final int srcPos = (int) replStart - 1;
+                final int destPos = (int) start - 1;
+                final int length = (int) (1 + stop - start);
                 try {
-                    System.arraycopy(repl.getDoubleStorage(), (int) replStart - 1, rcvr.getDoubleStorage(), (int) start - 1, (int) (1 + stop - start));
+                    System.arraycopy(repl.getDoubleStorage(), srcPos, rcvr.getDoubleStorage(), destPos, length);
+                    System.arraycopy(repl.getIsPrimitiveSetMap(), srcPos, rcvr.getIsPrimitiveSetMap(), destPos, length);
                 } catch (final IndexOutOfBoundsException e) {
                     errorProfile.enter();
                     throw PrimitiveFailed.BAD_INDEX;

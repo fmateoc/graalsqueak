@@ -466,15 +466,15 @@ public final class SqueakImageContext {
     }
 
     public NativeObject asByteArray(final byte[] bytes) {
-        return NativeObject.newNativeBytes(this, byteArrayClass, bytes);
+        return NativeObject.newNative(this, byteArrayClass, bytes);
     }
 
     public NativeObject asByteString(final String value) {
-        return NativeObject.newNativeBytes(this, byteStringClass, ArrayConversionUtils.stringToBytes(value));
+        return NativeObject.newNative(this, byteStringClass, ArrayConversionUtils.stringToBytes(value));
     }
 
     public NativeObject asWideString(final String value) {
-        return NativeObject.newNativeInts(this, getWideStringClass(), ArrayConversionUtils.stringToCodePointsArray(value));
+        return NativeObject.newNative(this, getWideStringClass(), ArrayConversionUtils.stringToCodePointsArray(value));
     }
 
     public NativeObject asString(final String value, final ConditionProfile wideStringProfile) {

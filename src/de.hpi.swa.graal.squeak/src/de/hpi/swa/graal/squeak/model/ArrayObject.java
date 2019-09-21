@@ -20,18 +20,11 @@ import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
 public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
-    public static final byte BOOLEAN_NIL_TAG = 0;
-    public static final byte BOOLEAN_TRUE_TAG = 1;
-    public static final byte BOOLEAN_FALSE_TAG = -1;
-    public static final char CHAR_NIL_TAG = Character.MAX_VALUE - 1; // Rather unlikely char.
-    public static final long LONG_NIL_TAG = Long.MIN_VALUE + 42; // Rather unlikely long.
-    public static final double DOUBLE_NIL_TAG = Double.longBitsToDouble(0x7ff8000000000001L); // NaN+1.
-    public static final long DOUBLE_NIL_TAG_LONG = Double.doubleToRawLongBits(DOUBLE_NIL_TAG);
-    public static final NativeObject NATIVE_OBJECT_NIL_TAG = null;
     public static final boolean ENABLE_STORAGE_STRATEGIES = true;
     private static final TruffleLogger LOG = TruffleLogger.getLogger(SqueakLanguageConfig.ID, ArrayObject.class);
 
     private Object storage;
+    private boolean[] isPrimitiveSetMap;
 
     public ArrayObject(final SqueakImageContext image) {
         super(image); // for special ArrayObjects only
@@ -40,10 +33,26 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
     private ArrayObject(final SqueakImageContext image, final ClassObject classObject, final Object storage) {
         super(image, classObject);
         this.storage = storage;
+        assert isFilledCorrectly();
     }
 
-    public ArrayObject(final SqueakImageContext img, final long hash, final ClassObject klass) {
-        super(img, hash, klass);
+    private ArrayObject(final SqueakImageContext image, final ClassObject classObject, final Object storage, final boolean[] isPrimitiveSetMap) {
+        super(image, classObject);
+        this.storage = storage;
+        this.isPrimitiveSetMap = isPrimitiveSetMap;
+    }
+
+    public ArrayObject(final SqueakImageContext image, final long hash, final ClassObject klass) {
+        super(image, hash, klass);
+    }
+
+    private ArrayObject(final ArrayObject original, final Object storageCopy) {
+        super(original.image, original.getSqueakClass());
+        assert storage != storageCopy;
+        storage = storageCopy;
+        if (original.isPrimitiveSetMap != null) {
+            isPrimitiveSetMap = original.isPrimitiveSetMap.clone();
+        }
     }
 
     public static ArrayObject createEmptyStrategy(final SqueakImageContext image, final ClassObject classObject, final int size) {
@@ -60,20 +69,12 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         return new ArrayObject(image, classObject, storage);
     }
 
-    public static boolean isCharNilTag(final char value) {
-        return value == CHAR_NIL_TAG;
+    public static ArrayObject createWithStorage(final SqueakImageContext image, final ClassObject classObject, final long[] storage) {
+        return new ArrayObject(image, classObject, storage, ArrayUtils.allTrueArray(storage.length));
     }
 
-    public static boolean isDoubleNilTag(final double value) {
-        return Double.doubleToRawLongBits(value) == DOUBLE_NIL_TAG_LONG;
-    }
-
-    public static boolean isLongNilTag(final long value) {
-        return value == LONG_NIL_TAG;
-    }
-
-    public static boolean isNativeObjectNilTag(final NativeObject value) {
-        return value == NATIVE_OBJECT_NIL_TAG;
+    public static ArrayObject createWithStorage(final SqueakImageContext image, final ClassObject classObject, final Object storage, final boolean[] isPrimitiveSetMap) {
+        return new ArrayObject(image, classObject, storage, isPrimitiveSetMap);
     }
 
     @Override
@@ -91,22 +92,35 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
                 writeNode.execute(this, i, pointers[i]);
             }
         }
+        assert isPrimitiveSetMap == null && (isEmptyType() || isNativeObjectType() || isObjectType()) || isPrimitiveSetMap != null;
     }
 
     public void become(final ArrayObject other) {
         becomeOtherClass(other);
         final Object otherStorage = other.storage;
+        final boolean[] otherisPrimitiveSetMap = other.isPrimitiveSetMap;
         other.setStorage(storage);
         setStorage(otherStorage);
+        isPrimitiveSetMap = otherisPrimitiveSetMap;
+    }
+
+    public boolean containsNil() {
+        assert isBooleanType() || isCharType() || isDoubleType() || isLongType();
+        for (final boolean isSet : isPrimitiveSetMap) {
+            if (!isSet) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public int getBooleanLength() {
         return getBooleanStorage().length;
     }
 
-    public byte[] getBooleanStorage() {
+    public boolean[] getBooleanStorage() {
         assert isBooleanType();
-        return (byte[]) storage;
+        return (boolean[]) storage;
     }
 
     public int getCharLength() {
@@ -128,10 +142,6 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     public int getEmptyLength() {
-        return getEmptyStorage();
-    }
-
-    public int getEmptyStorage() {
         assert isEmptyType();
         return (int) storage;
     }
@@ -177,8 +187,24 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         throw SqueakException.create("Use ArrayObjectSizeNode");
     }
 
+    public void setPrimitive(final int index) {
+        isPrimitiveSetMap[index] = true;
+    }
+
+    public void unsetPrimitive(final int index) {
+        isPrimitiveSetMap[index] = false;
+    }
+
+    public boolean[] getIsPrimitiveSetMap() {
+        return isPrimitiveSetMap;
+    }
+
+    public boolean isPrimitiveSet(final int index) {
+        return isPrimitiveSetMap[index];
+    }
+
     public boolean isBooleanType() {
-        return storage instanceof byte[];
+        return storage instanceof boolean[];
     }
 
     public boolean isCharType() {
@@ -210,49 +236,37 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         return isObjectType() || isNativeObjectType();
     }
 
+    private boolean isFilledCorrectly() {
+        return !(isPrimitiveSetMap != null ^ (isBooleanType() || isCharType() || isDoubleType() || isLongType()));
+    }
+
     public boolean hasSameStorageType(final ArrayObject other) {
         return storage.getClass() == other.storage.getClass();
     }
 
+    public void setStorage(final long[] newStorage, final boolean[] newIsPrimitiveSetMap) {
+        storage = newStorage;
+        isPrimitiveSetMap = newIsPrimitiveSetMap;
+    }
+
     public void setStorage(final Object newStorage) {
         storage = newStorage;
+        assert isFilledCorrectly();
     }
 
-    public static Object toObjectFromBoolean(final byte value) {
-        if (value == BOOLEAN_FALSE_TAG) {
-            return BooleanObject.FALSE;
-        } else if (value == BOOLEAN_TRUE_TAG) {
-            return BooleanObject.TRUE;
-        } else {
-            assert value == BOOLEAN_NIL_TAG;
-            return NilObject.SINGLETON;
-        }
-    }
-
-    public static Object toObjectFromChar(final char value) {
-        return isCharNilTag(value) ? NilObject.SINGLETON : value;
-    }
-
-    public static Object toObjectFromLong(final long value) {
-        return isLongNilTag(value) ? NilObject.SINGLETON : value;
-    }
-
-    public static Object toObjectFromDouble(final double value) {
-        return isDoubleNilTag(value) ? NilObject.SINGLETON : value;
-    }
-
-    public static Object toObjectFromNativeObject(final NativeObject value) {
-        return isNativeObjectNilTag(value) ? NilObject.SINGLETON : value;
+    public ArrayObject shallowCopy(final Object storageCopy) {
+        return new ArrayObject(this, storageCopy);
     }
 
     public void transitionFromBooleansToObjects() {
         LOG.finer("transition from Booleans to Objects");
-        final byte[] booleans = getBooleanStorage();
+        final boolean[] booleans = getBooleanStorage();
         final Object[] objects = new Object[booleans.length];
         for (int i = 0; i < booleans.length; i++) {
-            objects[i] = toObjectFromBoolean(booleans[i]);
+            objects[i] = isPrimitiveSet(i) ? booleans[i] : NilObject.SINGLETON;
         }
         storage = objects;
+        isPrimitiveSetMap = null;
     }
 
     public void transitionFromCharsToObjects() {
@@ -260,9 +274,10 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         final char[] chars = getCharStorage();
         final Object[] objects = new Object[chars.length];
         for (int i = 0; i < chars.length; i++) {
-            objects[i] = toObjectFromChar(chars[i]);
+            objects[i] = isPrimitiveSet(i) ? chars[i] : NilObject.SINGLETON;
         }
         storage = objects;
+        isPrimitiveSetMap = null;
     }
 
     public void transitionFromDoublesToObjects() {
@@ -270,36 +285,41 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         final double[] doubles = getDoubleStorage();
         final Object[] objects = new Object[doubles.length];
         for (int i = 0; i < doubles.length; i++) {
-            objects[i] = toObjectFromDouble(doubles[i]);
+            objects[i] = isPrimitiveSet(i) ? doubles[i] : NilObject.SINGLETON;
         }
         storage = objects;
+        isPrimitiveSetMap = null;
     }
 
     public void transitionFromEmptyToBooleans() {
-        // Zero-initialized, no need to fill with BOOLEAN_NIL_TAG.
-        storage = new byte[getEmptyStorage()];
+        final int size = getEmptyLength();
+        storage = new boolean[size];
+        isPrimitiveSetMap = new boolean[size];
     }
 
     public void transitionFromEmptyToChars() {
-        final char[] chars = new char[getEmptyStorage()];
-        Arrays.fill(chars, CHAR_NIL_TAG);
+        final int size = getEmptyLength();
+        final char[] chars = new char[size];
         storage = chars;
+        isPrimitiveSetMap = new boolean[size];
     }
 
     public void transitionFromEmptyToDoubles() {
-        final double[] doubles = new double[getEmptyStorage()];
-        Arrays.fill(doubles, DOUBLE_NIL_TAG);
+        final int size = getEmptyLength();
+        final double[] doubles = new double[size];
         storage = doubles;
+        isPrimitiveSetMap = new boolean[size];
     }
 
     public void transitionFromEmptyToLongs() {
-        final long[] longs = new long[getEmptyStorage()];
-        Arrays.fill(longs, LONG_NIL_TAG);
+        final int size = getEmptyLength();
+        final long[] longs = new long[size];
         storage = longs;
+        isPrimitiveSetMap = new boolean[size];
     }
 
     public void transitionFromEmptyToNatives() {
-        storage = new NativeObject[getEmptyStorage()];
+        storage = new NativeObject[getEmptyLength()];
     }
 
     public void transitionFromEmptyToObjects() {
@@ -311,7 +331,7 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         final long[] longs = getLongStorage();
         final Object[] objects = new Object[longs.length];
         for (int i = 0; i < longs.length; i++) {
-            objects[i] = toObjectFromLong(longs[i]);
+            objects[i] = isPrimitiveSet(i) ? longs[i] : NilObject.SINGLETON;
         }
         storage = objects;
     }
@@ -321,7 +341,7 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         final NativeObject[] natives = getNativeObjectStorage();
         final Object[] objects = new Object[natives.length];
         for (int i = 0; i < natives.length; i++) {
-            objects[i] = toObjectFromNativeObject(natives[i]);
+            objects[i] = natives[i] != null ? natives[i] : NilObject.SINGLETON;
         }
         storage = objects;
     }
@@ -351,7 +371,7 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
 
     @ExportMessage
     protected Object readArrayElement(final long index, @Cached final ArrayObjectReadNode readNode) {
-        return readNode.execute(this, index);
+        return readNode.execute(this, (int) index);
     }
 
     @ExportMessage
@@ -359,7 +379,7 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
                     @Exclusive @Cached final WrapToSqueakNode wrapNode,
                     @Cached final ArrayObjectWriteNode writeNode) throws InvalidArrayIndexException {
         try {
-            writeNode.execute(this, index, wrapNode.executeWrap(value));
+            writeNode.execute(this, (int) index, wrapNode.executeWrap(value));
         } catch (final ArrayIndexOutOfBoundsException e) {
             throw InvalidArrayIndexException.create(index);
         }

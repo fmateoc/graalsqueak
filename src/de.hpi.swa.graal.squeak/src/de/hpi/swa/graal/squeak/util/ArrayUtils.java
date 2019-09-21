@@ -22,6 +22,21 @@ public final class ArrayUtils {
         return Arrays.copyOfRange(values, 1, values.length);
     }
 
+    public static boolean[] allTrueArray(final int size) {
+        final boolean[] booleans = new boolean[size];
+        Arrays.fill(booleans, true);
+        return booleans;
+    }
+
+    public static boolean contains(final boolean[] objects, final boolean element) {
+        for (int i = 0; i < objects.length; i++) {
+            if (objects[i] == element) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static boolean contains(final byte[] objects, final byte element) {
         for (int i = 0; i < objects.length; i++) {
             if (objects[i] == element) {

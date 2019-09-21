@@ -45,7 +45,7 @@ public abstract class SqueakObjectAtPut0Node extends AbstractNode {
     @Specialization
     protected static final void doArray(final ArrayObject obj, final long index, final Object value,
                     @Cached final ArrayObjectWriteNode writeNode) {
-        writeNode.execute(obj, index, value);
+        writeNode.execute(obj, (int) index, value);
     }
 
     @Specialization
