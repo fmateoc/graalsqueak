@@ -355,7 +355,7 @@ public final class ArrayObjectNodes {
             doArrayOfObjects(obj, index, value);
         }
 
-        @Specialization(guards = {"!obj.isNativeObjectType()", "!obj.isObjectType()"})
+        @Specialization(guards = {"!obj.isEmptyType()", "!obj.isNativeObjectType()", "!obj.isObjectType()"})
         protected static final void doArrayOfPrimitives(final ArrayObject obj, final int index, @SuppressWarnings("unused") final NilObject value) {
             obj.unsetPrimitive(index);
         }
