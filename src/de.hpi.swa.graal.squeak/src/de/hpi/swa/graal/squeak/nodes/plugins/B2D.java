@@ -20,7 +20,7 @@ import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.ERROR_TABLE;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
+import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 
@@ -278,7 +278,7 @@ public final class B2D {
     private long dispatchedValue;
     private long dispatchReturnValue;
     private boolean doProfileStats = false;
-    private PointersNonVariableObject engine;
+    private PointersObject engine;
     private boolean engineStopped;
     private ArrayObject formArray;
     private long geProfileTime;
@@ -3401,7 +3401,7 @@ public final class B2D {
 
     /* BalloonEnginePlugin>>#loadArrayShape:nSegments:fill:lineWidth:lineFill: */
     private void loadArrayShapenSegmentsfilllineWidthlineFill(final ArrayObject points, final long nSegments, final long fillIndex, final int lineWidth, final long lineFill) {
-        PointersNonVariableObject pointOop;
+        PointersObject pointOop;
         long segs;
         int x0;
         int x1;
@@ -3488,7 +3488,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#loadBitBltFrom: */
-    private boolean loadBitBltFrom(final PointersNonVariableObject bbObj) {
+    private boolean loadBitBltFrom(final PointersObject bbObj) {
         image.bitblt.resetSuccessFlag();
         return image.bitblt.loadBitBltFrom(bbObj);
     }
@@ -3496,7 +3496,7 @@ public final class B2D {
     /* Load the bitmap fill. */
 
     /* BalloonEnginePlugin>>#loadBitmapFill:colormap:tile:from:along:normal:xIndex: */
-    private long loadBitmapFillcolormaptilefromalongnormalxIndex(final PointersNonVariableObject formOop, final AbstractSqueakObject cmOop, final boolean tileFlag, final long xIndex) {
+    private long loadBitmapFillcolormaptilefromalongnormalxIndex(final PointersObject formOop, final AbstractSqueakObject cmOop, final boolean tileFlag, final long xIndex) {
         final NativeObject bmBits;
         final long bmBitsSize;
         final long bmDepth;
@@ -3566,7 +3566,7 @@ public final class B2D {
     private int[] loadBitsFrom(final long bmFill) {
         final long bitsLen;
         final NativeObject bitsOop;
-        final PointersNonVariableObject formOop;
+        final PointersObject formOop;
         final int xIndex;
 
         xIndex = objectIndexOf(bmFill);
@@ -3749,7 +3749,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#loadEdgeStateFrom: */
-    private long loadEdgeStateFrom(final PointersNonVariableObject edgeOop) {
+    private long loadEdgeStateFrom(final PointersObject edgeOop) {
         final int edge = lastExportedEdgeGet();
         if (slotSizeOf(edgeOop) < ET_BALLOON_EDGE_DATA_SIZE) {
             PrimitiveFailed.andTransferToInterpreter(GEF_EDGE_DATA_TOO_SMALL);
@@ -3843,7 +3843,7 @@ public final class B2D {
         long bmHeight;
         long bmRaster;
         long bmWidth;
-        PointersNonVariableObject formOop;
+        PointersObject formOop;
         long ppw;
 
         formArray = arrayOop;
@@ -4000,7 +4000,7 @@ public final class B2D {
     /* Load the contents of pointOop into pointArray */
 
     /* BalloonEngineBase>>#loadPoint:from: */
-    private void loadPointfrom(final int pointIndex, final PointersNonVariableObject pointOop) {
+    private void loadPointfrom(final int pointIndex, final PointersObject pointOop) {
         if (!pointOop.isPoint()) {
             PrimitiveFailed.andTransferToInterpreter();
         }
@@ -4079,7 +4079,7 @@ public final class B2D {
      */
 
     /* BalloonEngineBase>>#loadRenderingState */
-    private int loadRenderingState(final PointersNonVariableObject receiver, final PointersNonVariableObject edgeOop, final PointersNonVariableObject fillOop) {
+    private int loadRenderingState(final PointersObject receiver, final PointersObject edgeOop, final PointersObject fillOop) {
         int failCode;
         final long state;
 
@@ -4513,7 +4513,7 @@ public final class B2D {
     /* Note: No need to load either bitBlt or spanBuffer */
 
     /* BalloonEngineBase>>#primitiveAddActiveEdgeEntry */
-    public PointersNonVariableObject primitiveAddActiveEdgeEntry(final PointersNonVariableObject receiver, final PointersNonVariableObject edgeEntry) {
+    public PointersObject primitiveAddActiveEdgeEntry(final PointersObject receiver, final PointersObject edgeEntry) {
         if (doProfileStats) {
             geProfileTime = ioMicroMSecs();
         }
@@ -4541,8 +4541,8 @@ public final class B2D {
     }
 
     /* BalloonEnginePlugin>>#primitiveAddBezier */
-    public PointersNonVariableObject primitiveAddBezier(final PointersNonVariableObject receiver, final PointersNonVariableObject start, final PointersNonVariableObject end,
-                    final PointersNonVariableObject via, final long leftFillValue,
+    public PointersObject primitiveAddBezier(final PointersObject receiver, final PointersObject start, final PointersObject end,
+                    final PointersObject via, final long leftFillValue,
                     final long rightFillValue) {
         final long nSegments;
         long leftFill = leftFillValue;
@@ -4587,7 +4587,7 @@ public final class B2D {
     }
 
     /* BalloonEnginePlugin>>#primitiveAddBezierShape */
-    public PointersNonVariableObject primitiveAddBezierShape(final PointersNonVariableObject receiver, final AbstractSqueakObject points, final long nSegments, final long fillIndexValue,
+    public PointersObject primitiveAddBezierShape(final PointersObject receiver, final AbstractSqueakObject points, final long nSegments, final long fillIndexValue,
                     final long lineWidthValue,
                     final long lineFillValue) {
         final long length;
@@ -4659,9 +4659,9 @@ public final class B2D {
     }
 
     /* BalloonEnginePlugin>>#primitiveAddBitmapFill */
-    public long primitiveAddBitmapFill(final PointersNonVariableObject receiver, final PointersNonVariableObject formOop, final AbstractSqueakObject cmOop, final boolean tileFlag,
-                    final PointersNonVariableObject origin,
-                    final PointersNonVariableObject direction, final PointersNonVariableObject normal, final long xIndex) {
+    public long primitiveAddBitmapFill(final PointersObject receiver, final PointersObject formOop, final AbstractSqueakObject cmOop, final boolean tileFlag,
+                    final PointersObject origin,
+                    final PointersObject direction, final PointersObject normal, final long xIndex) {
         final long fill;
 
         final int failureCode = quickLoadEngineFromrequiredState(receiver, GE_STATE_UNLOCKED);
@@ -4687,7 +4687,7 @@ public final class B2D {
     }
 
     /* BalloonEnginePlugin>>#primitiveAddCompressedShape */
-    public PointersNonVariableObject primitiveAddCompressedShape(final PointersNonVariableObject receiver, final NativeObject points, final long nSegments, final NativeObject leftFills,
+    public PointersObject primitiveAddCompressedShape(final PointersObject receiver, final NativeObject points, final long nSegments, final NativeObject leftFills,
                     final NativeObject rightFills, final NativeObject lineWidths, final NativeObject lineFills, final NativeObject fillIndexList) {
         final boolean pointsShort;
 
@@ -4721,8 +4721,8 @@ public final class B2D {
     }
 
     /* BalloonEnginePlugin>>#primitiveAddGradientFill */
-    public long primitiveAddGradientFill(final PointersNonVariableObject receiver, final NativeObject colorRamp, final PointersNonVariableObject origin, final PointersNonVariableObject direction,
-                    final PointersNonVariableObject normal,
+    public long primitiveAddGradientFill(final PointersObject receiver, final NativeObject colorRamp, final PointersObject origin, final PointersObject direction,
+                    final PointersObject normal,
                     final boolean isRadial) {
         final long fill;
 
@@ -4750,7 +4750,7 @@ public final class B2D {
     }
 
     /* BalloonEnginePlugin>>#primitiveAddLine */
-    public PointersNonVariableObject primitiveAddLine(final PointersNonVariableObject receiver, final PointersNonVariableObject start, final PointersNonVariableObject end, final long leftFillValue,
+    public PointersObject primitiveAddLine(final PointersObject receiver, final PointersObject start, final PointersObject end, final long leftFillValue,
                     final long rightFillValue) {
         final int failureCode = quickLoadEngineFromrequiredState(receiver, GE_STATE_UNLOCKED);
         if (failureCode != 0) {
@@ -4782,7 +4782,7 @@ public final class B2D {
     }
 
     /* BalloonEnginePlugin>>#primitiveAddOval */
-    public PointersNonVariableObject primitiveAddOval(final PointersNonVariableObject receiver, final PointersNonVariableObject start, final PointersNonVariableObject end, final long fillIndexValue,
+    public PointersObject primitiveAddOval(final PointersObject receiver, final PointersObject start, final PointersObject end, final long fillIndexValue,
                     final long borderWidthValue,
                     final long borderIndexValue) {
         final int failureCode = quickLoadEngineFromrequiredState(receiver, GE_STATE_UNLOCKED);
@@ -4828,7 +4828,7 @@ public final class B2D {
     }
 
     /* BalloonEnginePlugin>>#primitiveAddPolygon */
-    public PointersNonVariableObject primitiveAddPolygon(final PointersNonVariableObject receiver, final AbstractSqueakObject points, final long nPoints, final long fillIndexValue,
+    public PointersObject primitiveAddPolygon(final PointersObject receiver, final AbstractSqueakObject points, final long nPoints, final long fillIndexValue,
                     final long lineWidthValue,
                     final long lineFillValue) {
         final long length;
@@ -4897,7 +4897,7 @@ public final class B2D {
     }
 
     /* BalloonEnginePlugin>>#primitiveAddRect */
-    public PointersNonVariableObject primitiveAddRect(final PointersNonVariableObject receiver, final PointersNonVariableObject start, final PointersNonVariableObject end, final long fillIndexValue,
+    public PointersObject primitiveAddRect(final PointersObject receiver, final PointersObject start, final PointersObject end, final long fillIndexValue,
                     final long borderWidthValue,
                     final long borderIndexValue) {
         final int failureCode = quickLoadEngineFromrequiredState(receiver, GE_STATE_UNLOCKED);
@@ -4946,7 +4946,7 @@ public final class B2D {
     /* Note: No need to load either bitBlt or spanBuffer */
 
     /* BalloonEngineBase>>#primitiveChangedActiveEdgeEntry */
-    public PointersNonVariableObject primitiveChangedActiveEdgeEntry(final PointersNonVariableObject receiver, final PointersNonVariableObject edgeEntry) {
+    public PointersObject primitiveChangedActiveEdgeEntry(final PointersObject receiver, final PointersObject edgeEntry) {
         final long edge;
 
         if (doProfileStats) {
@@ -4973,7 +4973,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveCopyBuffer */
-    public PointersNonVariableObject primitiveCopyBuffer(final PointersNonVariableObject receiver, final NativeObject buf1, final NativeObject buf2) {
+    public PointersObject primitiveCopyBuffer(final PointersObject receiver, final NativeObject buf1, final NativeObject buf2) {
         final int diff;
 
         /* Make sure the old buffer is properly initialized */
@@ -5010,7 +5010,7 @@ public final class B2D {
     /* Note: Must load bitBlt and spanBuffer */
 
     /* BalloonEngineBase>>#primitiveDisplaySpanBuffer */
-    public PointersNonVariableObject primitiveDisplaySpanBuffer(final PointersNonVariableObject receiver) {
+    public PointersObject primitiveDisplaySpanBuffer(final PointersObject receiver) {
         if (doProfileStats) {
             geProfileTime = ioMicroMSecs();
         }
@@ -5052,7 +5052,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveFinishedProcessing */
-    public Object primitiveFinishedProcessing(final PointersNonVariableObject receiver) {
+    public Object primitiveFinishedProcessing(final PointersObject receiver) {
         if (doProfileStats) {
             geProfileTime = ioMicroMSecs();
         }
@@ -5070,7 +5070,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveGetAALevel */
-    public long primitiveGetAALevel(final PointersNonVariableObject receiver) {
+    public long primitiveGetAALevel(final PointersObject receiver) {
         final int failureCode = quickLoadEngineFrom(receiver);
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
@@ -5079,7 +5079,7 @@ public final class B2D {
     }
 
     /* BalloonEnginePlugin>>#primitiveGetBezierStats */
-    public Object primitiveGetBezierStats(final PointersNonVariableObject receiver, final NativeObject statOop) {
+    public Object primitiveGetBezierStats(final PointersObject receiver, final NativeObject statOop) {
         final int failureCode = quickLoadEngineFrom(receiver);
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
@@ -5093,12 +5093,12 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveGetClipRect */
-    public PointersNonVariableObject primitiveGetClipRect(final AbstractPointersObjectWriteNode writeNode, final PointersNonVariableObject receiver, final PointersNonVariableObject rectOop) {
+    public PointersObject primitiveGetClipRect(final AbstractPointersObjectWriteNode writeNode, final PointersObject receiver, final PointersObject rectOop) {
         final int failureCode = quickLoadEngineFrom(receiver);
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
         }
-        PointersNonVariableObject pointOop = receiver.image.asPoint(writeNode, clipMinXGet(), clipMinYGet());
+        PointersObject pointOop = receiver.image.asPoint(writeNode, clipMinXGet(), clipMinYGet());
         storeValue(0, rectOop, pointOop);
         pointOop = receiver.image.asPoint(writeNode, clipMaxXGet(), clipMaxYGet());
         storeValue(1, rectOop, pointOop);
@@ -5106,7 +5106,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveGetCounts */
-    public Object primitiveGetCounts(final PointersNonVariableObject receiver, final NativeObject statOop) {
+    public Object primitiveGetCounts(final PointersObject receiver, final NativeObject statOop) {
         final int failureCode = quickLoadEngineFrom(receiver);
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
@@ -5125,7 +5125,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveGetDepth */
-    public long primitiveGetDepth(final PointersNonVariableObject receiver) {
+    public long primitiveGetDepth(final PointersObject receiver) {
         final int failureCode = quickLoadEngineFrom(receiver);
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
@@ -5136,7 +5136,7 @@ public final class B2D {
     /* Return the reason why the last operation failed. */
 
     /* BalloonEngineBase>>#primitiveGetFailureReason */
-    public long primitiveGetFailureReason(final PointersNonVariableObject receiver) {
+    public long primitiveGetFailureReason(final PointersObject receiver) {
         /*
          * Note -- don't call loadEngineFrom here because this will override the stopReason with
          * Zero
@@ -5153,7 +5153,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveGetOffset */
-    public PointersNonVariableObject primitiveGetOffset(final AbstractPointersObjectWriteNode writeNode, final PointersNonVariableObject receiver) {
+    public PointersObject primitiveGetOffset(final AbstractPointersObjectWriteNode writeNode, final PointersObject receiver) {
         final int failureCode = quickLoadEngineFrom(receiver);
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
@@ -5162,7 +5162,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveGetTimes */
-    public Object primitiveGetTimes(final PointersNonVariableObject receiver, final NativeObject statsArray) {
+    public Object primitiveGetTimes(final PointersObject receiver, final NativeObject statsArray) {
         final int failureCode = quickLoadEngineFrom(receiver);
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
@@ -5215,7 +5215,7 @@ public final class B2D {
     /* Note: No need to load bitBlt but must load spanBuffer */
 
     /* BalloonEngineBase>>#primitiveInitializeProcessing */
-    public PointersNonVariableObject primitiveInitializeProcessing(final PointersNonVariableObject receiver) {
+    public PointersObject primitiveInitializeProcessing(final PointersObject receiver) {
         if (doProfileStats) {
             geProfileTime = ioMicroMSecs();
         }
@@ -5245,7 +5245,7 @@ public final class B2D {
     /* Note: No need to load bitBlt but must load spanBuffer */
 
     /* BalloonEngineBase>>#primitiveMergeFillFrom */
-    public Object primitiveMergeFillFrom(final PointersNonVariableObject receiver, final NativeObject bitsOop, final PointersNonVariableObject fillOop) {
+    public Object primitiveMergeFillFrom(final PointersObject receiver, final NativeObject bitsOop, final PointersObject fillOop) {
         long value;
 
         if (doProfileStats) {
@@ -5292,7 +5292,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveNeedsFlush */
-    public boolean primitiveNeedsFlush(final PointersNonVariableObject receiver) {
+    public boolean primitiveNeedsFlush(final PointersObject receiver) {
         final boolean needFlush;
 
         final int failureCode = quickLoadEngineFrom(receiver);
@@ -5305,7 +5305,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveNeedsFlushPut */
-    public Object primitiveNeedsFlushPut(final PointersNonVariableObject receiver, final boolean needFlush) {
+    public Object primitiveNeedsFlushPut(final PointersObject receiver, final boolean needFlush) {
         final int failureCode = quickLoadEngineFrom(receiver);
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
@@ -5322,7 +5322,7 @@ public final class B2D {
     /* Note: No need to load either bitBlt or spanBuffer */
 
     /* BalloonEngineBase>>#primitiveNextActiveEdgeEntry */
-    public boolean primitiveNextActiveEdgeEntry(final PointersNonVariableObject receiver, final PointersNonVariableObject edgeEntry) {
+    public boolean primitiveNextActiveEdgeEntry(final PointersObject receiver, final PointersObject edgeEntry) {
         final int edge;
         boolean hasEdge;
 
@@ -5356,7 +5356,7 @@ public final class B2D {
     /* Note: No need to load bitBlt but must load spanBuffer */
 
     /* BalloonEngineBase>>#primitiveNextFillEntry */
-    public boolean primitiveNextFillEntry(final PointersNonVariableObject receiver, final PointersNonVariableObject fillOop) {
+    public boolean primitiveNextFillEntry(final PointersObject receiver, final PointersObject fillOop) {
         final boolean hasFill;
 
         if (doProfileStats) {
@@ -5407,7 +5407,7 @@ public final class B2D {
     /* Note: No need to load either bitBlt or spanBuffer */
 
     /* BalloonEngineBase>>#primitiveNextGlobalEdgeEntry */
-    public boolean primitiveNextGlobalEdgeEntry(final PointersNonVariableObject receiver, final PointersNonVariableObject edgeEntry) {
+    public boolean primitiveNextGlobalEdgeEntry(final PointersObject receiver, final PointersObject edgeEntry) {
         final int edge;
         final boolean hasEdge;
 
@@ -5445,7 +5445,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveRegisterExternalEdge */
-    public PointersNonVariableObject primitiveRegisterExternalEdge(final PointersNonVariableObject receiver, final long index, final long initialX, final long initialY, final long initialZ,
+    public PointersObject primitiveRegisterExternalEdge(final PointersObject receiver, final long index, final long initialX, final long initialY, final long initialZ,
                     final long leftFillIndex,
                     final long rightFillIndex) {
         final int edge;
@@ -5481,7 +5481,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveRegisterExternalFill */
-    public long primitiveRegisterExternalFill(final PointersNonVariableObject receiver, final long index) {
+    public long primitiveRegisterExternalFill(final PointersObject receiver, final long index) {
         int fill;
 
         final int failureCode = quickLoadEngineFromrequiredState(receiver, GE_STATE_UNLOCKED);
@@ -5507,7 +5507,7 @@ public final class B2D {
     /* Start/Proceed rendering the entire image */
 
     /* BalloonEngineBase>>#primitiveRenderImage */
-    public long primitiveRenderImage(final PointersNonVariableObject receiver, final PointersNonVariableObject edge, final PointersNonVariableObject fill) {
+    public long primitiveRenderImage(final PointersObject receiver, final PointersObject edge, final PointersObject fill) {
         final int failCode = loadRenderingState(receiver, edge, fill);
         if (failCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failCode);
@@ -5523,7 +5523,7 @@ public final class B2D {
     /* Start rendering the entire image */
 
     /* BalloonEngineBase>>#primitiveRenderScanline */
-    public long primitiveRenderScanline(final PointersNonVariableObject receiver, final PointersNonVariableObject edge, final PointersNonVariableObject fill) {
+    public long primitiveRenderScanline(final PointersObject receiver, final PointersObject edge, final PointersObject fill) {
         final int failCode = loadRenderingState(receiver, edge, fill);
         if (failCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failCode);
@@ -5533,7 +5533,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveSetAALevel */
-    public PointersNonVariableObject primitiveSetAALevel(final PointersNonVariableObject receiver, final long level) {
+    public PointersObject primitiveSetAALevel(final PointersObject receiver, final long level) {
         final int failureCode = quickLoadEngineFromrequiredState(receiver, GE_STATE_UNLOCKED);
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
@@ -5560,7 +5560,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveSetClipRect */
-    public PointersNonVariableObject primitiveSetClipRect(final PointersNonVariableObject receiver, final PointersNonVariableObject rectOop) {
+    public PointersObject primitiveSetClipRect(final PointersObject receiver, final PointersObject rectOop) {
         final int failureCode = quickLoadEngineFromrequiredState(receiver, GE_STATE_UNLOCKED);
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
@@ -5579,7 +5579,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveSetColorTransform */
-    public PointersNonVariableObject primitiveSetColorTransform(final PointersNonVariableObject receiver, final AbstractSqueakObject transformOop) {
+    public PointersObject primitiveSetColorTransform(final PointersObject receiver, final AbstractSqueakObject transformOop) {
         final int failureCode = quickLoadEngineFromrequiredState(receiver, GE_STATE_UNLOCKED);
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
@@ -5590,7 +5590,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveSetDepth */
-    public PointersNonVariableObject primitiveSetDepth(final PointersNonVariableObject receiver, final long depth) {
+    public PointersObject primitiveSetDepth(final PointersObject receiver, final long depth) {
         final int failureCode = quickLoadEngineFromrequiredState(receiver, GE_STATE_UNLOCKED);
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
@@ -5601,7 +5601,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveSetEdgeTransform */
-    public PointersNonVariableObject primitiveSetEdgeTransform(final PointersNonVariableObject receiver, final AbstractSqueakObject transformOop) {
+    public PointersObject primitiveSetEdgeTransform(final PointersObject receiver, final AbstractSqueakObject transformOop) {
         final int failureCode = quickLoadEngineFromrequiredState(receiver, GE_STATE_UNLOCKED);
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
@@ -5612,7 +5612,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#primitiveSetOffset */
-    public PointersNonVariableObject primitiveSetOffset(final PointersNonVariableObject receiver, final PointersNonVariableObject pointOop) {
+    public PointersObject primitiveSetOffset(final PointersObject receiver, final PointersObject pointOop) {
         final int failureCode = quickLoadEngineFromrequiredState(receiver, GE_STATE_UNLOCKED);
         if (failureCode != 0) {
             PrimitiveFailed.andTransferToInterpreter(failureCode);
@@ -5832,7 +5832,7 @@ public final class B2D {
      */
 
     /* BalloonEngineBase>>#quickLoadEngineFrom: */
-    private int quickLoadEngineFrom(final PointersNonVariableObject engineOop) {
+    private int quickLoadEngineFrom(final PointersObject engineOop) {
         if (failed()) {
             return GEF_ALREADY_FAILED;
         }
@@ -5851,7 +5851,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#quickLoadEngineFrom:requiredState: */
-    private int quickLoadEngineFromrequiredState(final PointersNonVariableObject oop, final long requiredState) {
+    private int quickLoadEngineFromrequiredState(final PointersObject oop, final long requiredState) {
         final int failureCode = quickLoadEngineFrom(oop);
         if (failureCode != 0) {
             return failureCode;
@@ -5864,7 +5864,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#quickLoadEngineFrom:requiredState:or: */
-    private int quickLoadEngineFromrequiredStateor(final PointersNonVariableObject oop, final long requiredState, final long alternativeState) {
+    private int quickLoadEngineFromrequiredStateor(final PointersObject oop, final long requiredState, final long alternativeState) {
         final int failureCode = quickLoadEngineFrom(oop);
         if (failureCode != 0) {
             return failureCode;
@@ -6729,7 +6729,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#storeEdgeStateFrom:into: */
-    private void storeEdgeStateFrominto(final long edge, final PointersNonVariableObject edgeOop) {
+    private void storeEdgeStateFrominto(final long edge, final PointersObject edgeOop) {
         if (slotSizeOf(edgeOop) < ET_BALLOON_EDGE_DATA_SIZE) {
             PrimitiveFailed.andTransferToInterpreter();
         }
@@ -6742,12 +6742,12 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#storeEngineStateInto: */
-    private void storeEngineStateInto(@SuppressWarnings("unused") final PointersNonVariableObject oop) {
+    private void storeEngineStateInto(@SuppressWarnings("unused") final PointersObject oop) {
         objUsedPut(objUsed);
     }
 
     /* BalloonEngineBase>>#storeFillStateInto: */
-    private void storeFillStateInto(final PointersNonVariableObject fillOop) {
+    private void storeFillStateInto(final PointersObject fillOop) {
         final long fillIndex;
         final long leftX;
         final long rightX;
@@ -6765,7 +6765,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#storeRenderingState */
-    private long storeRenderingState(final PointersNonVariableObject edgeOop, final PointersNonVariableObject fillOop) {
+    private long storeRenderingState(final PointersObject edgeOop, final PointersObject fillOop) {
         assert !failed();
         if (engineStopped) {
             /* Check the stop reason and store the required information */
@@ -6776,7 +6776,7 @@ public final class B2D {
     }
 
     /* BalloonEngineBase>>#storeStopStateIntoEdge:fill: */
-    private void storeStopStateIntoEdgefill(final PointersNonVariableObject edgeOop, final PointersNonVariableObject fillOop) {
+    private void storeStopStateIntoEdgefill(final PointersObject edgeOop, final PointersObject fillOop) {
         final int edge;
         final long reason = stopReasonGet();
         if (reason == G_ERROR_GET_ENTRY) {
@@ -7411,7 +7411,7 @@ public final class B2D {
         return false;
     }
 
-    private static int slotSizeOf(final PointersNonVariableObject object) {
+    private static int slotSizeOf(final PointersObject object) {
         return object.size();
     }
 
@@ -7419,7 +7419,7 @@ public final class B2D {
         return System.currentTimeMillis();
     }
 
-    private static void storeValue(final int i, final PointersNonVariableObject object, final Object value) {
+    private static void storeValue(final int i, final PointersObject object, final Object value) {
         object.atput0(i, value);
     }
 
@@ -7439,23 +7439,23 @@ public final class B2D {
         return object.getSqueakClass();
     }
 
-    private static ArrayObject fetchArrayofObject(final int index, final PointersNonVariableObject object) {
+    private static ArrayObject fetchArrayofObject(final int index, final PointersObject object) {
         return (ArrayObject) object.at0(index);
     }
 
-    private static Object fetchObjectofObject(final int index, final PointersNonVariableObject object) {
+    private static Object fetchObjectofObject(final int index, final PointersObject object) {
         return object.at0(index);
     }
 
-    private static PointersNonVariableObject fetchPointerofObject(final int index, final PointersNonVariableObject object) {
-        return (PointersNonVariableObject) object.at0(index);
+    private static PointersObject fetchPointerofObject(final int index, final PointersObject object) {
+        return (PointersObject) object.at0(index);
     }
 
-    private static NativeObject fetchNativeofObject(final int index, final PointersNonVariableObject object) {
+    private static NativeObject fetchNativeofObject(final int index, final PointersObject object) {
         return (NativeObject) object.at0(index);
     }
 
-    private static long fetchIntegerofObject(final int index, final PointersNonVariableObject object) {
+    private static long fetchIntegerofObject(final int index, final PointersObject object) {
         return (long) object.at0(index);
     }
 
@@ -7463,8 +7463,8 @@ public final class B2D {
         workBuffer[index] = (int) value;
     }
 
-    private static PointersNonVariableObject fetchPointerofObject(final int index, final ArrayObject object) {
-        return (PointersNonVariableObject) object.getObjectStorage()[index];
+    private static PointersObject fetchPointerofObject(final int index, final ArrayObject object) {
+        return (PointersObject) object.getObjectStorage()[index];
     }
 
     private static int slotSizeOf(final ArrayObject object) {

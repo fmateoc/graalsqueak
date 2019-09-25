@@ -5,10 +5,6 @@
  */
 package de.hpi.swa.graal.squeak.model;
 
-import java.util.Arrays;
-
-import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
-
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.LINKED_LIST;
@@ -16,24 +12,31 @@ import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.UpdateSqueakObjectHashNode;
-import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
 public final class PointersObject extends AbstractPointersObject {
-    @CompilationFinal(dimensions = 0) public Object[] variablePart;
 
-    public PointersObject(final SqueakImageContext image, final long hash, final ClassObject classObject) {
-        super(image, hash, classObject);
+    public PointersObject(final SqueakImageContext image) {
+        super(image); // for special PointersObjects only
     }
 
-    public PointersObject(final SqueakImageContext image, final ClassObject classObject, final int variableSize) {
+    public PointersObject(final SqueakImageContext image, final long hash, final ClassObject klass) {
+        super(image, hash, klass);
+    }
+
+    public PointersObject(final SqueakImageContext image, final ClassObject classObject) {
         super(image, classObject);
-        variablePart = ArrayUtils.withAll(variableSize, NilObject.SINGLETON);
     }
 
     private PointersObject(final PointersObject original) {
         super(original);
-        variablePart = original.variablePart.clone();
+    }
+
+    public static PointersObject create(final AbstractPointersObjectWriteNode writeNode, final ClassObject squeakClass, final Object... pointers) {
+        final PointersObject object = new PointersObject(squeakClass.image, squeakClass);
+        for (int i = 0; i < pointers.length; i++) {
+            writeNode.execute(object, i, pointers[i]);
+        }
+        return object;
     }
 
     @Override
@@ -41,86 +44,42 @@ public final class PointersObject extends AbstractPointersObject {
         final AbstractPointersObjectWriteNode writeNode = AbstractPointersObjectWriteNode.getUncached();
         final Object[] pointersObject = chunk.getPointers();
         initializeLayoutAndExtensionsUnsafe();
-        final int instSize = getSqueakClass().getBasicInstanceSize();
-        for (int i = 0; i < instSize; i++) {
+        for (int i = 0; i < pointersObject.length; i++) {
             writeNode.execute(this, i, pointersObject[i]);
         }
-        variablePart = Arrays.copyOfRange(pointersObject, instSize, pointersObject.length);
         assert size() == pointersObject.length;
     }
 
-    public void become(final PointersObject other) {
-        becomeLayout(other);
-        final Object[] otherVariablePart = other.variablePart;
-        /*
-         * Keep outer arrays and only copy contents as variablePart is marked
-         * with @CompilationFinal(dimensions = 0).
-         */
-        System.arraycopy(variablePart, 0, other.variablePart, 0, variablePart.length);
-        System.arraycopy(otherVariablePart, 0, variablePart, 0, otherVariablePart.length);
-    }
-
-    @Override
-    public int size() {
-        return instsize() + variablePart.length;
-    }
-
-    public void pointersBecomeOneWay(final UpdateSqueakObjectHashNode updateHashNode, final Object[] from, final Object[] to, final boolean copyHash) {
-        layoutValuesBecomeOneWay(updateHashNode, from, to, copyHash);
-        final int variableSize = variablePart.length;
-        if (variableSize > 0) {
-            for (int i = 0; i < from.length; i++) {
-                final Object fromPointer = from[i];
-                for (int j = 0; j < variableSize; j++) {
-                    final Object object = getFromVariablePart(j);
-                    if (object == fromPointer) {
-                        putIntoVariablePart(j, to[i]);
-                        updateHashNode.executeUpdate(fromPointer, to[i], copyHash);
-                    }
-                }
-            }
-        }
-    }
-
-    public boolean pointsTo(final Object thang) {
-        return layoutValuesPointTo(thang) || ArrayUtils.contains(variablePart, thang);
-    }
-
-    public Object getFromVariablePart(final int index) {
-        return variablePart[index];
-    }
-
-    public void putIntoVariablePart(final int index, final Object value) {
-        variablePart[index] = value;
-    }
-
     public Object at0(final int i) {
-        final int instsize = instsize();
-        if (i < instsize) {
-            if (!getLayout().isValid()) {
-                updateLayout();
-            }
-            return getLayout().getLocation(i).read(this);
-        } else {
-            return variablePart[i - instsize];
+        if (!getLayout().isValid()) {
+            updateLayout();
         }
+        return getLayout().getLocation(i).read(this);
     }
 
     public void atput0(final int i, final Object value) {
         assert value != null : "Unexpected `null` value";
-        final int instsize = instsize();
-        if (i < instsize) {
-            if (!getLayout().getLocation(i).canStore(value)) {
-                updateLayout(i, value);
-            }
-            getLayout().getLocation(i).writeMustSucceed(this, value);
-        } else {
-            variablePart[i - instsize] = value;
+        if (!getLayout().getLocation(i).canStore(value)) {
+            updateLayout(i, value);
         }
+        getLayout().getLocation(i).writeMustSucceed(this, value);
+    }
+
+    @Override
+    public int size() {
+        return instsize();
     }
 
     public void atputNil0(final int i) {
         atput0(i, NilObject.SINGLETON);
+    }
+
+    public boolean isActiveProcess() {
+        return this == image.getActiveProcess();
+    }
+
+    public boolean isEmptyList() {
+        return at0(LINKED_LIST.FIRST_LINK) == NilObject.SINGLETON;
     }
 
     public boolean isDisplay() {
@@ -131,9 +90,9 @@ public final class PointersObject extends AbstractPointersObject {
         return getSqueakClass() == image.pointClass;
     }
 
-    public PointersNonVariableObject removeFirstLinkOfList() {
+    public PointersObject removeFirstLinkOfList() {
         // Remove the first process from the given linked list.
-        final PointersNonVariableObject first = (PointersNonVariableObject) at0(LINKED_LIST.FIRST_LINK);
+        final PointersObject first = (PointersObject) at0(LINKED_LIST.FIRST_LINK);
         final Object last = at0(LINKED_LIST.LAST_LINK);
         if (first == last) {
             atput0(LINKED_LIST.FIRST_LINK, NilObject.SINGLETON);
@@ -151,8 +110,5 @@ public final class PointersObject extends AbstractPointersObject {
 
     public void traceObjects(final ObjectTracer tracer) {
         super.traceLayoutObjects(tracer);
-        for (final Object object : variablePart) {
-            tracer.addIfUnmarked(object);
-        }
     }
 }

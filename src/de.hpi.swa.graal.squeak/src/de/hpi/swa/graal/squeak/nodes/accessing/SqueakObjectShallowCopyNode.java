@@ -20,9 +20,9 @@ import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
-import de.hpi.swa.graal.squeak.model.WeakPointersObject;
+import de.hpi.swa.graal.squeak.model.VariablePointersObject;
+import de.hpi.swa.graal.squeak.model.WeakVariablePointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithImage;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectShallowCopyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectShallowCopyNode;
@@ -55,17 +55,17 @@ public abstract class SqueakObjectShallowCopyNode extends AbstractNodeWithImage 
     }
 
     @Specialization
-    protected static final PointersNonVariableObject doPointers(final PointersNonVariableObject receiver) {
-        return receiver.shallowCopy();
-    }
-
-    @Specialization
     protected static final PointersObject doPointers(final PointersObject receiver) {
         return receiver.shallowCopy();
     }
 
     @Specialization
-    protected static final WeakPointersObject doWeakPointers(final WeakPointersObject receiver) {
+    protected static final VariablePointersObject doPointers(final VariablePointersObject receiver) {
+        return receiver.shallowCopy();
+    }
+
+    @Specialization
+    protected static final WeakVariablePointersObject doWeakPointers(final WeakVariablePointersObject receiver) {
         return receiver.shallowCopy();
     }
 

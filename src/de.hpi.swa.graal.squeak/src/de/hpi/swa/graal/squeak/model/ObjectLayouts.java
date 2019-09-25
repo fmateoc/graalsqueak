@@ -87,7 +87,7 @@ public final class ObjectLayouts {
             if (organization == NilObject.SINGLETON) {
                 return null;
             }
-            final AbstractSqueakObjectWithClassAndHash classComment = (AbstractSqueakObjectWithClassAndHash) ((PointersObject) organization).at0(CLASS_ORGANIZER.CLASS_COMMENT);
+            final AbstractSqueakObjectWithClassAndHash classComment = (AbstractSqueakObjectWithClassAndHash) ((VariablePointersObject) organization).at0(CLASS_ORGANIZER.CLASS_COMMENT);
             final NativeObject string = (NativeObject) classComment.send("string");
             return string.asStringUnsafe();
         }
@@ -117,12 +117,12 @@ public final class ObjectLayouts {
     }
 
     public static final class DICTIONARY {
-        public static HashMap<String, Object> toJavaMap(final PointersNonVariableObject dictionary) {
+        public static HashMap<String, Object> toJavaMap(final PointersObject dictionary) {
             final ArrayObject classBindings = (ArrayObject) dictionary.at0(HASHED_COLLECTION.ARRAY);
             final HashMap<String, Object> keyValues = new HashMap<>();
             for (final Object classBinding : classBindings.getObjectStorage()) {
                 if (classBinding != NilObject.SINGLETON) {
-                    final PointersNonVariableObject classBindingPointer = (PointersNonVariableObject) classBinding;
+                    final PointersObject classBindingPointer = (PointersObject) classBinding;
                     keyValues.put(((NativeObject) classBindingPointer.at0(CLASS_BINDING.KEY)).asStringUnsafe(), classBindingPointer.at0(CLASS_BINDING.VALUE));
                 }
             }

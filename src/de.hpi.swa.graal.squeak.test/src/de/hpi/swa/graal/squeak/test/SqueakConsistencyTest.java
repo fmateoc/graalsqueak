@@ -20,7 +20,7 @@ import org.junit.Test;
 
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
+import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.test.SqueakTests.SqueakTest;
 
 public class SqueakConsistencyTest extends AbstractSqueakTestCaseWithImage {
@@ -72,7 +72,7 @@ public class SqueakConsistencyTest extends AbstractSqueakTestCaseWithImage {
     }
 
     private static List<String> inspectCollection(final Object collection) {
-        final ArrayObject array = (ArrayObject) ((PointersNonVariableObject) collection).at0(0);
+        final ArrayObject array = (ArrayObject) ((PointersObject) collection).at0(0);
         final List<String> items = new ArrayList<>();
         for (final NativeObject aso : array.getNativeObjectStorage()) {
             items.add(aso.asStringUnsafe());

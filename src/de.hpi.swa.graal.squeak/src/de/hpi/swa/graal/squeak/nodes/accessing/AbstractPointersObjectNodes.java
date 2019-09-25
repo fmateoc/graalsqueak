@@ -18,8 +18,8 @@ import de.hpi.swa.graal.squeak.model.Location.IllegalWriteException;
 import de.hpi.swa.graal.squeak.model.Location.ReadLocationNode;
 import de.hpi.swa.graal.squeak.model.Location.WriteLocationNode;
 import de.hpi.swa.graal.squeak.model.ObjectLayout;
-import de.hpi.swa.graal.squeak.model.PointersObject;
-import de.hpi.swa.graal.squeak.model.WeakPointersObject;
+import de.hpi.swa.graal.squeak.model.VariablePointersObject;
+import de.hpi.swa.graal.squeak.model.WeakVariablePointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodesFactory.AbstractPointersObjectReadNodeGen;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodesFactory.AbstractPointersObjectWriteNodeGen;
@@ -140,23 +140,23 @@ public class AbstractPointersObjectNodes {
     @ImportStatic(AbstractPointersObjectNodes.class)
     public abstract static class PointersObjectReadNode extends Node {
 
-        public abstract Object execute(PointersObject object, int index);
+        public abstract Object execute(VariablePointersObject object, int index);
 
         @Specialization(guards = "index < object.instsize()")
-        protected static final Object doRead(final PointersObject object, final int index,
+        protected static final Object doRead(final VariablePointersObject object, final int index,
                         @Cached final AbstractPointersObjectReadNode readNode) {
             return readNode.execute(object, index);
         }
 
         @Specialization(guards = {"cachedIndex == index", "object.getLayout() == cachedLayout", "cachedIndex >= cachedLayout.getInstSize()"}, limit = "CACHE_LIMIT")
-        protected static final Object doReadFromVariablePartCached(final PointersObject object, @SuppressWarnings("unused") final int index,
+        protected static final Object doReadFromVariablePartCached(final VariablePointersObject object, @SuppressWarnings("unused") final int index,
                         @Cached("index") final int cachedIndex,
                         @Cached("object.getLayout()") final ObjectLayout cachedLayout) {
             return object.getFromVariablePart(cachedIndex - cachedLayout.getInstSize());
         }
 
         @Specialization(guards = "index >= object.instsize()", replaces = "doReadFromVariablePartCached")
-        protected static final Object doReadFromVariablePart(final PointersObject object, final int index) {
+        protected static final Object doReadFromVariablePart(final VariablePointersObject object, final int index) {
             return object.getFromVariablePart(index - object.instsize());
         }
     }
@@ -170,23 +170,23 @@ public class AbstractPointersObjectNodes {
             return PointersObjectWriteNodeGen.getUncached();
         }
 
-        public abstract void execute(PointersObject object, int index, Object value);
+        public abstract void execute(VariablePointersObject object, int index, Object value);
 
         @Specialization(guards = "index < object.instsize()")
-        protected static final void doWrite(final PointersObject object, final int index, final Object value,
+        protected static final void doWrite(final VariablePointersObject object, final int index, final Object value,
                         @Cached final AbstractPointersObjectWriteNode writeNode) {
             writeNode.execute(object, index, value);
         }
 
         @Specialization(guards = {"cachedIndex == index", "object.getLayout() == cachedLayout", "cachedIndex >= cachedLayout.getInstSize()"}, limit = "CACHE_LIMIT")
-        protected static final void doWriteIntoVariablePartCached(final PointersObject object, @SuppressWarnings("unused") final int index, final Object value,
+        protected static final void doWriteIntoVariablePartCached(final VariablePointersObject object, @SuppressWarnings("unused") final int index, final Object value,
                         @Cached("index") final int cachedIndex,
                         @Cached("object.getLayout()") final ObjectLayout cachedLayout) {
             object.putIntoVariablePart(cachedIndex - cachedLayout.getInstSize(), value);
         }
 
         @Specialization(guards = "index >= object.instsize()", replaces = "doWriteIntoVariablePartCached")
-        protected static final void doWriteIntoVariablePart(final PointersObject object, final int index, final Object value) {
+        protected static final void doWriteIntoVariablePart(final VariablePointersObject object, final int index, final Object value) {
             object.putIntoVariablePart(index - object.instsize(), value);
         }
     }
@@ -196,16 +196,16 @@ public class AbstractPointersObjectNodes {
     @ImportStatic(AbstractPointersObjectNodes.class)
     public abstract static class WeakPointersObjectReadNode extends Node {
 
-        public abstract Object execute(WeakPointersObject object, int index);
+        public abstract Object execute(WeakVariablePointersObject object, int index);
 
         @Specialization(guards = "index < object.instsize()")
-        protected static final Object doRead(final WeakPointersObject object, final int index,
+        protected static final Object doRead(final WeakVariablePointersObject object, final int index,
                         @Cached final AbstractPointersObjectReadNode readNode) {
             return readNode.execute(object, index);
         }
 
         @Specialization(guards = {"cachedIndex == index", "object.getLayout() == cachedLayout", "cachedIndex >= cachedLayout.getInstSize()"}, limit = "CACHE_LIMIT")
-        protected static final Object doReadFromVariablePartCached(final WeakPointersObject object, @SuppressWarnings("unused") final int index,
+        protected static final Object doReadFromVariablePartCached(final WeakVariablePointersObject object, @SuppressWarnings("unused") final int index,
                         @Cached("index") final int cachedIndex,
                         @Cached("object.getLayout()") final ObjectLayout cachedLayout,
                         @Cached("createBinaryProfile()") final ConditionProfile nilProfile) {
@@ -213,7 +213,7 @@ public class AbstractPointersObjectNodes {
         }
 
         @Specialization(guards = "index >= object.instsize()", replaces = "doReadFromVariablePartCached")
-        protected static final Object doReadFromVariablePart(final WeakPointersObject object, final int index,
+        protected static final Object doReadFromVariablePart(final WeakVariablePointersObject object, final int index,
                         @Cached("createBinaryProfile()") final ConditionProfile nilProfile) {
             return object.getFromVariablePart(index - object.instsize(), nilProfile);
         }
@@ -228,23 +228,23 @@ public class AbstractPointersObjectNodes {
             return WeakPointersObjectWriteNodeGen.getUncached();
         }
 
-        public abstract void execute(WeakPointersObject object, int index, Object value);
+        public abstract void execute(WeakVariablePointersObject object, int index, Object value);
 
         @Specialization(guards = "index < object.instsize()")
-        protected static final void doWrite(final WeakPointersObject object, final int index, final Object value,
+        protected static final void doWrite(final WeakVariablePointersObject object, final int index, final Object value,
                         @Cached final AbstractPointersObjectWriteNode writeNode) {
             writeNode.execute(object, index, value);
         }
 
         @Specialization(guards = {"cachedIndex == index", "object.getLayout() == cachedLayout", "cachedIndex >= cachedLayout.getInstSize()"}, limit = "CACHE_LIMIT")
-        protected static final void doWriteIntoVariablePartCached(final WeakPointersObject object, @SuppressWarnings("unused") final int index, final Object value,
+        protected static final void doWriteIntoVariablePartCached(final WeakVariablePointersObject object, @SuppressWarnings("unused") final int index, final Object value,
                         @Cached("index") final int cachedIndex,
                         @Cached("object.getLayout()") final ObjectLayout cachedLayout) {
             object.putIntoVariablePart(cachedIndex - cachedLayout.getInstSize(), value);
         }
 
         @Specialization(guards = "index >= object.instsize()", replaces = "doWriteIntoVariablePartCached")
-        protected static final void doWriteIntoVariablePart(final WeakPointersObject object, final int index, final Object value) {
+        protected static final void doWriteIntoVariablePart(final WeakVariablePointersObject object, final int index, final Object value) {
             object.putIntoVariablePart(index - object.instsize(), value);
         }
     }

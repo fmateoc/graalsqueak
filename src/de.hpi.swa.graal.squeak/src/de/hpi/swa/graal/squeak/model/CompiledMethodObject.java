@@ -93,8 +93,8 @@ public final class CompiledMethodObject extends CompiledCodeObject {
         final Object penultimateLiteral = literals[literals.length - 2];
         if (penultimateLiteral instanceof NativeObject) {
             return (NativeObject) penultimateLiteral;
-        } else if (penultimateLiteral instanceof PointersObject) {
-            final PointersObject penultimateLiteralAsPointer = (PointersObject) penultimateLiteral;
+        } else if (penultimateLiteral instanceof VariablePointersObject) {
+            final VariablePointersObject penultimateLiteralAsPointer = (VariablePointersObject) penultimateLiteral;
             assert penultimateLiteralAsPointer.size() >= ADDITIONAL_METHOD_STATE.SELECTOR;
             return (NativeObject) penultimateLiteralAsPointer.at0(ADDITIONAL_METHOD_STATE.SELECTOR);
         } else {
@@ -103,7 +103,7 @@ public final class CompiledMethodObject extends CompiledCodeObject {
     }
 
     /** CompiledMethod>>#methodClassAssociation. */
-    private PointersNonVariableObject getMethodClassAssociation() {
+    private PointersObject getMethodClassAssociation() {
         /**
          * From the CompiledMethod class description:
          *
@@ -113,7 +113,7 @@ public final class CompiledMethodObject extends CompiledCodeObject {
          * may be nil (as would be the case for example of methods providing a pool of inst var
          * accessors).
          */
-        return (PointersNonVariableObject) literals[literals.length - 1];
+        return (PointersObject) literals[literals.length - 1];
     }
 
     public boolean hasMethodClass() {

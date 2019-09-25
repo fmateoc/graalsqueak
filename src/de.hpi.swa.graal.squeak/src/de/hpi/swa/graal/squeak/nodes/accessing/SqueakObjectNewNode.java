@@ -21,9 +21,9 @@ import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.METACLASS;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
-import de.hpi.swa.graal.squeak.model.WeakPointersObject;
+import de.hpi.swa.graal.squeak.model.VariablePointersObject;
+import de.hpi.swa.graal.squeak.model.WeakVariablePointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithImage;
 
 public abstract class SqueakObjectNewNode extends AbstractNodeWithImage {
@@ -65,9 +65,9 @@ public abstract class SqueakObjectNewNode extends AbstractNodeWithImage {
     }
 
     @Specialization(guards = {"classObject.isNonIndexableWithInstVars()", "!classObject.isMetaClass()", "!classObject.instancesAreClasses()"})
-    protected final PointersNonVariableObject doClassPointers(final ClassObject classObject, final int extraSize) {
+    protected final PointersObject doClassPointers(final ClassObject classObject, final int extraSize) {
         assert extraSize == 0;
-        return new PointersNonVariableObject(image, classObject);
+        return new PointersObject(image, classObject);
     }
 
     @Specialization(guards = "classObject.isIndexableWithNoInstVars()")
@@ -93,18 +93,18 @@ public abstract class SqueakObjectNewNode extends AbstractNodeWithImage {
     }
 
     @Specialization(guards = {"classObject.isIndexableWithInstVars()", "!classObject.isMethodContextClass()", "!classObject.isBlockClosureClass()"})
-    protected final PointersObject doPointers(final ClassObject classObject, final int extraSize) {
-        return new PointersObject(image, classObject, extraSize);
+    protected final VariablePointersObject doPointers(final ClassObject classObject, final int extraSize) {
+        return new VariablePointersObject(image, classObject, extraSize);
     }
 
     @Specialization(guards = "classObject.isWeak()")
-    protected final WeakPointersObject doWeakPointers(final ClassObject classObject, final int extraSize) {
-        return new WeakPointersObject(image, classObject, extraSize);
+    protected final WeakVariablePointersObject doWeakPointers(final ClassObject classObject, final int extraSize) {
+        return new WeakVariablePointersObject(image, classObject, extraSize);
     }
 
     @SuppressWarnings("unused")
     @Specialization(guards = "classObject.isEphemeronClassType()")
-    protected static final WeakPointersObject doEphemerons(final ClassObject classObject, final int extraSize) {
+    protected static final WeakVariablePointersObject doEphemerons(final ClassObject classObject, final int extraSize) {
         throw SqueakException.create("Ephemerons not (yet) supported");
     }
 

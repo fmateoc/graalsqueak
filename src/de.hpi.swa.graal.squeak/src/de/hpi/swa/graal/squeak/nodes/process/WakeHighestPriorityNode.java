@@ -12,7 +12,7 @@ import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS_SCHEDULER;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
+import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithImage;
 import de.hpi.swa.graal.squeak.nodes.GetOrCreateContextNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
@@ -38,15 +38,15 @@ public final class WakeHighestPriorityNode extends AbstractNodeWithImage {
         // Note: It is a fatal VM error if there is no runnable process.
         final ArrayObject schedLists = (ArrayObject) image.getScheduler().at0(PROCESS_SCHEDULER.PROCESS_LISTS);
         long p = arraySizeNode.execute(schedLists) - 1;  // index of last indexable field
-        PointersNonVariableObject processList;
+        PointersObject processList;
         do {
             if (p < 0) {
                 errorProfile.enter();
                 throw SqueakException.create("scheduler could not find a runnable process");
             }
-            processList = (PointersNonVariableObject) arrayReadNode.execute(schedLists, p--);
+            processList = (PointersObject) arrayReadNode.execute(schedLists, p--);
         } while (processList.isEmptyList());
-        final PointersNonVariableObject newProcess = processList.removeFirstLinkOfList();
+        final PointersObject newProcess = processList.removeFirstLinkOfList();
         contextNode.executeGet(frame).transferTo(newProcess);
     }
 }

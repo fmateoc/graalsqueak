@@ -12,7 +12,7 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
+import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithCode;
 import de.hpi.swa.graal.squeak.nodes.GetOrCreateContextNode;
 
@@ -28,21 +28,21 @@ public abstract class ResumeProcessNode extends AbstractNodeWithCode {
         return ResumeProcessNodeGen.create(code);
     }
 
-    public abstract void executeResume(VirtualFrame frame, PointersNonVariableObject newProcess);
+    public abstract void executeResume(VirtualFrame frame, PointersObject newProcess);
 
     @Specialization(guards = "hasHigherPriority(newProcess)")
-    protected final void doTransferTo(final VirtualFrame frame, final PointersNonVariableObject newProcess,
+    protected final void doTransferTo(final VirtualFrame frame, final PointersObject newProcess,
                     @Cached("create(code)") final GetOrCreateContextNode contextNode) {
         putToSleepNode.executePutToSleep(code.image.getActiveProcess());
         contextNode.executeGet(frame).transferTo(newProcess);
     }
 
     @Fallback
-    protected final void doSleep(final PointersNonVariableObject newProcess) {
+    protected final void doSleep(final PointersObject newProcess) {
         putToSleepNode.executePutToSleep(newProcess);
     }
 
-    protected final boolean hasHigherPriority(final PointersNonVariableObject newProcess) {
+    protected final boolean hasHigherPriority(final PointersObject newProcess) {
         return (long) newProcess.at0(PROCESS.PRIORITY) > (long) code.image.getActiveProcess().at0(PROCESS.PRIORITY);
     }
 }

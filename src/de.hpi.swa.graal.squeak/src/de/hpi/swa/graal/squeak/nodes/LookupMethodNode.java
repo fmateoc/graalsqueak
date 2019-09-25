@@ -13,7 +13,7 @@ import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.METHOD_DICT;
-import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.VariablePointersObject;
 
 @ReportPolymorphism
 public abstract class LookupMethodNode extends AbstractNode {
@@ -39,7 +39,7 @@ public abstract class LookupMethodNode extends AbstractNode {
     protected static final Object doGeneric(final ClassObject classObject, final NativeObject selector) {
         ClassObject lookupClass = classObject;
         while (lookupClass != null) {
-            final PointersObject methodDict = lookupClass.getMethodDict();
+            final VariablePointersObject methodDict = lookupClass.getMethodDict();
             final Object[] methodDictVariablePart = methodDict.variablePart;
             for (int i = 0; i < methodDictVariablePart.length; i++) {
                 if (selector == methodDictVariablePart[i]) {

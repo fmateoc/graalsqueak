@@ -19,21 +19,21 @@ import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.WeakP
 import de.hpi.swa.graal.squeak.nodes.accessing.UpdateSqueakObjectHashNode;
 import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
-public final class WeakPointersObject extends AbstractPointersObject {
+public final class WeakVariablePointersObject extends AbstractPointersObject {
     private static final WeakReference<?> NIL_REFERENCE = new WeakReference<>(NilObject.SINGLETON);
     @CompilationFinal(dimensions = 0) public WeakReference<?>[] variablePart;
 
-    public WeakPointersObject(final SqueakImageContext image, final long hash, final ClassObject classObject) {
+    public WeakVariablePointersObject(final SqueakImageContext image, final long hash, final ClassObject classObject) {
         super(image, hash, classObject);
     }
 
-    public WeakPointersObject(final SqueakImageContext image, final ClassObject classObject, final int variableSize) {
+    public WeakVariablePointersObject(final SqueakImageContext image, final ClassObject classObject, final int variableSize) {
         super(image, classObject);
         variablePart = new WeakReference<?>[variableSize];
         Arrays.fill(variablePart, NIL_REFERENCE);
     }
 
-    private WeakPointersObject(final WeakPointersObject original) {
+    private WeakVariablePointersObject(final WeakVariablePointersObject original) {
         super(original);
         variablePart = original.variablePart.clone();
     }
@@ -54,7 +54,7 @@ public final class WeakPointersObject extends AbstractPointersObject {
         assert size() == pointersObject.length;
     }
 
-    public void become(final WeakPointersObject other) {
+    public void become(final WeakVariablePointersObject other) {
         becomeLayout(other);
         final Object[] otherVariablePart = other.variablePart;
         /*
@@ -118,8 +118,8 @@ public final class WeakPointersObject extends AbstractPointersObject {
         return "WeakPointersObject: " + getSqueakClass();
     }
 
-    public WeakPointersObject shallowCopy() {
-        return new WeakPointersObject(this);
+    public WeakVariablePointersObject shallowCopy() {
+        return new WeakVariablePointersObject(this);
     }
 
     public void traceObjects(final ObjectTracer tracer) {

@@ -43,9 +43,9 @@ import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.SPECIAL_OBJECT;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
-import de.hpi.swa.graal.squeak.model.WeakPointersObject;
+import de.hpi.swa.graal.squeak.model.VariablePointersObject;
+import de.hpi.swa.graal.squeak.model.WeakVariablePointersObject;
 import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
@@ -76,7 +76,7 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
             super(method);
         }
 
-        protected final void signalAtMilliseconds(final PointersNonVariableObject semaphore, final long msTime) {
+        protected final void signalAtMilliseconds(final PointersObject semaphore, final long msTime) {
             method.image.setSemaphore(SPECIAL_OBJECT.THE_TIMER_SEMAPHORE, semaphore);
             method.image.interrupt.setTimerSemaphore(semaphore);
             method.image.interrupt.setNextWakeupTick(msTime);
@@ -277,17 +277,17 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
         }
 
         @Specialization
-        protected static final boolean doPointers(final PointersNonVariableObject receiver, final Object thang) {
+        protected static final boolean doPointers(final PointersObject receiver, final Object thang) {
             return BooleanObject.wrap(receiver.layoutValuesPointTo(thang));
         }
 
         @Specialization
-        protected static final boolean doPointers(final PointersObject receiver, final Object thang) {
+        protected static final boolean doPointers(final VariablePointersObject receiver, final Object thang) {
             return BooleanObject.wrap(receiver.pointsTo(thang));
         }
 
         @Specialization
-        protected static final boolean doWeakPointers(final WeakPointersObject receiver, final Object thang) {
+        protected static final boolean doWeakPointers(final WeakVariablePointersObject receiver, final Object thang) {
             return BooleanObject.wrap(receiver.pointsTo(thang));
         }
     }
@@ -301,7 +301,7 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
         }
 
         @Specialization
-        protected final Object get(final Object receiver, final PointersNonVariableObject semaphore) {
+        protected final Object get(final Object receiver, final PointersObject semaphore) {
             method.image.setSemaphore(SPECIAL_OBJECT.THE_INTERRUPT_SEMAPHORE, semaphore);
             method.image.interrupt.setInterruptSemaphore(semaphore);
             return receiver;
@@ -338,7 +338,7 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
         }
 
         @Specialization(guards = "semaphore.getSqueakClass().isSemaphoreClass()")
-        protected final Object doSignal(final Object receiver, final PointersNonVariableObject semaphore, final long msTime) {
+        protected final Object doSignal(final Object receiver, final PointersObject semaphore, final long msTime) {
             signalAtMilliseconds(semaphore, msTime);
             return receiver;
         }
@@ -562,20 +562,20 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
         }
 
         @Specialization(guards = {"receiver.getSqueakClass() == anotherObject.getSqueakClass()", "receiver.size() == anotherObject.size()"})
-        protected static final AbstractPointersObject doCopyAbstractPointers(final PointersNonVariableObject receiver, final PointersNonVariableObject anotherObject) {
+        protected static final AbstractPointersObject doCopyAbstractPointers(final PointersObject receiver, final PointersObject anotherObject) {
             receiver.copyLayoutValuesFrom(anotherObject);
             return receiver;
         }
 
         @Specialization(guards = {"receiver.getSqueakClass() == anotherObject.getSqueakClass()", "receiver.size() == anotherObject.size()"})
-        protected static final AbstractPointersObject doCopyAbstractPointers(final PointersObject receiver, final PointersObject anotherObject) {
+        protected static final AbstractPointersObject doCopyAbstractPointers(final VariablePointersObject receiver, final VariablePointersObject anotherObject) {
             receiver.copyLayoutValuesFrom(anotherObject);
             System.arraycopy(anotherObject.variablePart, 0, receiver.variablePart, 0, anotherObject.variablePart.length);
             return receiver;
         }
 
         @Specialization(guards = {"receiver.getSqueakClass() == anotherObject.getSqueakClass()", "receiver.size() == anotherObject.size()"})
-        protected static final AbstractPointersObject doCopyAbstractPointers(final WeakPointersObject receiver, final WeakPointersObject anotherObject) {
+        protected static final AbstractPointersObject doCopyAbstractPointers(final WeakVariablePointersObject receiver, final WeakVariablePointersObject anotherObject) {
             receiver.copyLayoutValuesFrom(anotherObject);
             System.arraycopy(anotherObject.variablePart, 0, receiver.variablePart, 0, anotherObject.variablePart.length);
             return receiver;
@@ -756,7 +756,7 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
         }
 
         @Specialization(guards = "semaphore.getSqueakClass().isSemaphoreClass()")
-        protected final Object doSignal(final Object receiver, final PointersNonVariableObject semaphore, final long usecsUTC) {
+        protected final Object doSignal(final Object receiver, final PointersObject semaphore, final long usecsUTC) {
             final long msTime = MiscUtils.toJavaMicrosecondsLocal(usecsUTC) / 1000;
             signalAtMilliseconds(semaphore, msTime);
             return receiver;
@@ -894,12 +894,12 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
         }
 
         @Specialization(guards = "!DEBUG_META_PRIMITIVE_FAILURES")
-        protected static final Object doFail(@SuppressWarnings("unused") final PointersNonVariableObject proxy, final long reasonCode) {
+        protected static final Object doFail(@SuppressWarnings("unused") final PointersObject proxy, final long reasonCode) {
             throw new SimulationPrimitiveFailed((int) reasonCode);
         }
 
         @Specialization(guards = "DEBUG_META_PRIMITIVE_FAILURES")
-        protected final Object doFailAndLog(@SuppressWarnings("unused") final PointersNonVariableObject proxy, final long reasonCode) {
+        protected final Object doFailAndLog(@SuppressWarnings("unused") final PointersObject proxy, final long reasonCode) {
             debugMetaPrimitiveFailures(reasonCode);
             throw new SimulationPrimitiveFailed((int) reasonCode);
         }

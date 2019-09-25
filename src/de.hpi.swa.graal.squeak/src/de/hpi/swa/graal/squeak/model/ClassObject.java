@@ -48,10 +48,10 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     @CompilationFinal private boolean instancesAreClasses = false;
 
     private ClassObject superclass;
-    @CompilationFinal private PointersObject methodDict;
+    @CompilationFinal private VariablePointersObject methodDict;
     @CompilationFinal private long format = -1;
     private ArrayObject instanceVariables;
-    private PointersNonVariableObject organization;
+    private PointersObject organization;
     private Object[] pointers;
 
     private ObjectLayout layout;
@@ -244,10 +244,10 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         if (methodDict == null) {
             final Object[] chunkPointers = chunk.getPointers();
             superclass = chunkPointers[CLASS_DESCRIPTION.SUPERCLASS] == NilObject.SINGLETON ? null : (ClassObject) chunkPointers[CLASS_DESCRIPTION.SUPERCLASS];
-            methodDict = (PointersObject) chunkPointers[CLASS_DESCRIPTION.METHOD_DICT];
+            methodDict = (VariablePointersObject) chunkPointers[CLASS_DESCRIPTION.METHOD_DICT];
             format = (long) chunkPointers[CLASS_DESCRIPTION.FORMAT];
             instanceVariables = chunkPointers[CLASS_DESCRIPTION.INSTANCE_VARIABLES] == NilObject.SINGLETON ? null : (ArrayObject) chunkPointers[CLASS_DESCRIPTION.INSTANCE_VARIABLES];
-            organization = chunkPointers[CLASS_DESCRIPTION.ORGANIZATION] == NilObject.SINGLETON ? null : (PointersNonVariableObject) chunkPointers[CLASS_DESCRIPTION.ORGANIZATION];
+            organization = chunkPointers[CLASS_DESCRIPTION.ORGANIZATION] == NilObject.SINGLETON ? null : (PointersObject) chunkPointers[CLASS_DESCRIPTION.ORGANIZATION];
             pointers = Arrays.copyOfRange(chunkPointers, CLASS_DESCRIPTION.SIZE, chunkPointers.length);
             if (size() > 7) {
                 final String className = getClassNameUnsafe();
@@ -309,7 +309,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         return superclass;
     }
 
-    public PointersObject getMethodDict() {
+    public VariablePointersObject getMethodDict() {
         return methodDict;
     }
 
@@ -333,11 +333,11 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         return NilObject.nullToNil(organization);
     }
 
-    public PointersNonVariableObject getOrganizationOrNull() {
+    public PointersObject getOrganizationOrNull() {
         return organization;
     }
 
-    public void setOrganization(final PointersNonVariableObject organization) {
+    public void setOrganization(final PointersObject organization) {
         this.organization = organization;
     }
 
@@ -366,7 +366,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         this.superclass = superclass;
     }
 
-    public void setMethodDict(final PointersObject methodDict) {
+    public void setMethodDict(final VariablePointersObject methodDict) {
         methodDictStable.invalidate();
         this.methodDict = methodDict;
     }
@@ -376,7 +376,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         final List<String> methodNames = new ArrayList<>();
         ClassObject lookupClass = this;
         while (lookupClass != null) {
-            final PointersObject methodDictObject = lookupClass.getMethodDict();
+            final VariablePointersObject methodDictObject = lookupClass.getMethodDict();
             for (int i = METHOD_DICT.NAMES; i < methodDictObject.size(); i++) {
                 final Object methodSelector = methodDictObject.at0(i);
                 if (methodSelector instanceof NativeObject) {
@@ -428,10 +428,10 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         }
 
         final ClassObject otherSuperclass = other.superclass;
-        final PointersObject otherMethodDict = other.methodDict;
+        final VariablePointersObject otherMethodDict = other.methodDict;
         final long otherFormat = other.format;
         final ArrayObject otherInstanceVariables = other.instanceVariables;
-        final PointersNonVariableObject otherOrganization = other.organization;
+        final PointersObject otherOrganization = other.organization;
         final Object[] otherPointers = other.pointers;
 
         other.setSuperclass(superclass);

@@ -25,9 +25,9 @@ import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
-import de.hpi.swa.graal.squeak.model.WeakPointersObject;
+import de.hpi.swa.graal.squeak.model.VariablePointersObject;
+import de.hpi.swa.graal.squeak.model.WeakVariablePointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 
 @GenerateUncached
@@ -80,17 +80,17 @@ public abstract class SqueakObjectClassNode extends AbstractNode {
     }
 
     @Specialization
-    protected static final ClassObject doPointers(final PointersNonVariableObject value) {
-        return value.getSqueakClass();
-    }
-
-    @Specialization
     protected static final ClassObject doPointers(final PointersObject value) {
         return value.getSqueakClass();
     }
 
     @Specialization
-    protected static final ClassObject doWeakPointers(final WeakPointersObject value) {
+    protected static final ClassObject doPointers(final VariablePointersObject value) {
+        return value.getSqueakClass();
+    }
+
+    @Specialization
+    protected static final ClassObject doWeakPointers(final WeakVariablePointersObject value) {
         return value.getSqueakClass();
     }
 

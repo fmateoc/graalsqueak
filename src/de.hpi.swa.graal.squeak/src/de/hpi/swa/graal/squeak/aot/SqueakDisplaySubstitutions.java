@@ -45,7 +45,7 @@ import de.hpi.swa.graal.squeak.io.SqueakIOConstants.KEYBOARD_EVENT;
 import de.hpi.swa.graal.squeak.io.SqueakIOConstants.MOUSE;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.FORM;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
+import de.hpi.swa.graal.squeak.model.PointersObject;
 
 final class Target_de_hpi_swa_graal_squeak_io_SqueakDisplay implements SqueakDisplayInterface {
     private static final String DEFAULT_WINDOW_TITLE = "GraalSqueak + SubstrateVM + SDL2";
@@ -103,7 +103,7 @@ final class Target_de_hpi_swa_graal_squeak_io_SqueakDisplay implements SqueakDis
     }
 
     @Override
-    public void showDisplayBitsLeftTopRightBottom(final PointersNonVariableObject destForm, final int left, final int top, final int right, final int bottom) {
+    public void showDisplayBitsLeftTopRightBottom(final PointersObject destForm, final int left, final int top, final int right, final int bottom) {
         if (left < right && top < bottom && !deferUpdates && destForm.isDisplay()) {
             paintImmediately(left, right, top, bottom);
         }
@@ -140,7 +140,7 @@ final class Target_de_hpi_swa_graal_squeak_io_SqueakDisplay implements SqueakDis
     }
 
     @Override
-    public void open(final PointersNonVariableObject sqDisplay) {
+    public void open(final PointersObject sqDisplay) {
         bitmap = (NativeObject) sqDisplay.at0(FORM.BITS);
         if (!bitmap.isIntType()) {
             throw SqueakException.create("Display bitmap expected to be a words object");

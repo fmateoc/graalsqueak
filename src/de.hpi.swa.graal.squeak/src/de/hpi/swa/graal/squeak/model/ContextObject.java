@@ -526,12 +526,12 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         return arguments;
     }
 
-    public void transferTo(final PointersNonVariableObject newProcess) {
+    public void transferTo(final PointersObject newProcess) {
         // Record a process to be awakened on the next interpreter cycle.
-        final PointersNonVariableObject scheduler = newProcess.image.getScheduler();
+        final PointersObject scheduler = newProcess.image.getScheduler();
         assert newProcess != newProcess.image.getActiveProcess() : "trying to switch to already active process";
         // overwritten in next line.
-        final PointersNonVariableObject currentProcess = newProcess.image.getActiveProcess();
+        final PointersObject currentProcess = newProcess.image.getActiveProcess();
         scheduler.atput0(PROCESS_SCHEDULER.ACTIVE_PROCESS, newProcess);
         currentProcess.atput0(PROCESS.SUSPENDED_CONTEXT, this);
         final ContextObject newActiveContext = (ContextObject) newProcess.at0(PROCESS.SUSPENDED_CONTEXT);

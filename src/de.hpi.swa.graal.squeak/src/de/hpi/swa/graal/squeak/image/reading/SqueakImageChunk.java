@@ -22,9 +22,9 @@ import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
-import de.hpi.swa.graal.squeak.model.WeakPointersObject;
+import de.hpi.swa.graal.squeak.model.VariablePointersObject;
+import de.hpi.swa.graal.squeak.model.WeakVariablePointersObject;
 import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
 import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
@@ -88,7 +88,7 @@ public final class SqueakImageChunk {
                 if (squeakClass.instancesAreClasses()) {
                     object = new ClassObject(image, hash, squeakClass);
                 } else {
-                    object = new PointersNonVariableObject(image, hash, squeakClass);
+                    object = new PointersObject(image, hash, squeakClass);
                 }
             } else if (format == 2) { // indexable fields
                 object = new ArrayObject(image, hash, squeakClass);
@@ -98,10 +98,10 @@ public final class SqueakImageChunk {
                 } else if (squeakClass == image.blockClosureClass) {
                     object = new BlockClosureObject(image, hash);
                 } else {
-                    object = new PointersObject(image, hash, squeakClass);
+                    object = new VariablePointersObject(image, hash, squeakClass);
                 }
             } else if (format == 4) { // indexable weak fields
-                object = new WeakPointersObject(image, hash, squeakClass);
+                object = new WeakVariablePointersObject(image, hash, squeakClass);
             } else if (format == 5) { // fixed weak fields
                 throw SqueakException.create("Ephemerons not (yet) supported");
             } else if (format <= 8) {

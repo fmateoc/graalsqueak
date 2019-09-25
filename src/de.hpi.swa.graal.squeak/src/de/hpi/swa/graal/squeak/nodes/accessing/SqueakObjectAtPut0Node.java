@@ -19,9 +19,9 @@ import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
-import de.hpi.swa.graal.squeak.model.WeakPointersObject;
+import de.hpi.swa.graal.squeak.model.VariablePointersObject;
+import de.hpi.swa.graal.squeak.model.WeakVariablePointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.PointersObjectWriteNode;
@@ -55,13 +55,13 @@ public abstract class SqueakObjectAtPut0Node extends AbstractNode {
     }
 
     @Specialization
-    protected static final void doPointers(final PointersNonVariableObject obj, final long index, final Object value,
+    protected static final void doPointers(final PointersObject obj, final long index, final Object value,
                     @Cached final AbstractPointersObjectWriteNode writeNode) {
         writeNode.execute(obj, (int) index, value);
     }
 
     @Specialization
-    protected static final void doPointers(final PointersObject obj, final long index, final Object value,
+    protected static final void doPointers(final VariablePointersObject obj, final long index, final Object value,
                     @Cached final PointersObjectWriteNode writeNode) {
         writeNode.execute(obj, (int) index, value);
     }
@@ -72,7 +72,7 @@ public abstract class SqueakObjectAtPut0Node extends AbstractNode {
     }
 
     @Specialization
-    protected static final void doWeakPointers(final WeakPointersObject obj, final long index, final Object value,
+    protected static final void doWeakPointers(final WeakVariablePointersObject obj, final long index, final Object value,
                     @Cached final WeakPointersObjectWriteNode writeNode) {
         writeNode.execute(obj, (int) index, value);
     }

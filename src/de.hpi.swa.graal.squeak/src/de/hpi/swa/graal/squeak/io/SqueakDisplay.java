@@ -56,7 +56,7 @@ import de.hpi.swa.graal.squeak.io.SqueakIOConstants.KEYBOARD;
 import de.hpi.swa.graal.squeak.io.SqueakIOConstants.WINDOW;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.ObjectLayouts.FORM;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
+import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.plugins.DropPlugin;
 
 public final class SqueakDisplay implements SqueakDisplayInterface {
@@ -143,7 +143,7 @@ public final class SqueakDisplay implements SqueakDisplayInterface {
             }
         }
 
-        private void setSqDisplay(final PointersNonVariableObject sqDisplay) {
+        private void setSqDisplay(final PointersObject sqDisplay) {
             CompilerDirectives.transferToInterpreterAndInvalidate();
             final NativeObject bitmap = (NativeObject) sqDisplay.at0(FORM.BITS);
             if (!bitmap.isIntType()) {
@@ -178,7 +178,7 @@ public final class SqueakDisplay implements SqueakDisplayInterface {
 
     @Override
     @TruffleBoundary
-    public void showDisplayBitsLeftTopRightBottom(final PointersNonVariableObject destForm, final int left, final int top, final int right, final int bottom) {
+    public void showDisplayBitsLeftTopRightBottom(final PointersObject destForm, final int left, final int top, final int right, final int bottom) {
         if (left < right && top < bottom && !deferUpdates && destForm.isDisplay()) {
             canvas.paintImmediately(left, top, right - left, bottom - top);
         }
@@ -250,7 +250,7 @@ public final class SqueakDisplay implements SqueakDisplayInterface {
 
     @Override
     @TruffleBoundary
-    public void open(final PointersNonVariableObject sqDisplay) {
+    public void open(final PointersObject sqDisplay) {
         canvas.setSqDisplay(sqDisplay);
         // Set or update frame title.
         frame.setTitle(SqueakDisplay.DEFAULT_WINDOW_TITLE + " (" + image.getImagePath() + ")");

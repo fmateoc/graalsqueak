@@ -19,9 +19,9 @@ import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
-import de.hpi.swa.graal.squeak.model.WeakPointersObject;
+import de.hpi.swa.graal.squeak.model.VariablePointersObject;
+import de.hpi.swa.graal.squeak.model.WeakVariablePointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.PointersObjectReadNode;
@@ -48,13 +48,13 @@ public abstract class SqueakObjectAt0Node extends AbstractNode {
     }
 
     @Specialization
-    protected static final Object doPointers(final PointersNonVariableObject obj, final long index,
+    protected static final Object doPointers(final PointersObject obj, final long index,
                     @Cached final AbstractPointersObjectReadNode readNode) {
         return readNode.execute(obj, (int) index);
     }
 
     @Specialization
-    protected static final Object doPointers(final PointersObject obj, final long index,
+    protected static final Object doPointers(final VariablePointersObject obj, final long index,
                     @Cached final PointersObjectReadNode readNode) {
         return readNode.execute(obj, (int) index);
     }
@@ -66,7 +66,7 @@ public abstract class SqueakObjectAt0Node extends AbstractNode {
     }
 
     @Specialization
-    protected static final Object doWeakPointersVariable(final WeakPointersObject obj, final long index,
+    protected static final Object doWeakPointersVariable(final WeakVariablePointersObject obj, final long index,
                     @Cached final WeakPointersObjectReadNode readNode) {
         return readNode.execute(obj, (int) index);
     }

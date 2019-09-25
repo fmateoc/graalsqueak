@@ -22,8 +22,8 @@ import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.NotProvided;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.VariablePointersObject;
 
 public final class SqueakGuards {
 
@@ -151,11 +151,11 @@ public final class SqueakGuards {
     }
 
     public static boolean isPointersNonVariableObject(final Object object) {
-        return object instanceof PointersNonVariableObject;
+        return object instanceof PointersObject;
     }
 
     public static boolean isPointersObject(final Object obj) {
-        return obj instanceof PointersObject;
+        return obj instanceof VariablePointersObject;
     }
 
     public static boolean isPowerOfTwo(final long value) {

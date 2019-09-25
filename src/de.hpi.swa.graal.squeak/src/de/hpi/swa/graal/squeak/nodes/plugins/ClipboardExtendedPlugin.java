@@ -13,7 +13,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
-import de.hpi.swa.graal.squeak.model.PointersNonVariableObject;
+import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.BinaryPrimitive;
@@ -32,7 +32,7 @@ public final class ClipboardExtendedPlugin extends AbstractPrimitiveFactoryHolde
 
         @SuppressWarnings("unused")
         @Specialization
-        protected static final Object doAdd(final PointersNonVariableObject receiver, final Object clipboard, final Object data, final Object dataFormat) {
+        protected static final Object doAdd(final PointersObject receiver, final Object clipboard, final Object data, final Object dataFormat) {
             throw PrimitiveFailed.GENERIC_ERROR; // TODO: implement primitive
         }
     }
@@ -46,7 +46,7 @@ public final class ClipboardExtendedPlugin extends AbstractPrimitiveFactoryHolde
 
         @SuppressWarnings("unused")
         @Specialization
-        protected static final Object doClear(final PointersNonVariableObject receiver, final Object clipboard) {
+        protected static final Object doClear(final PointersObject receiver, final Object clipboard) {
             throw PrimitiveFailed.GENERIC_ERROR; // TODO: implement primitive
         }
     }
@@ -73,7 +73,7 @@ public final class ClipboardExtendedPlugin extends AbstractPrimitiveFactoryHolde
 
         @SuppressWarnings("unused")
         @Specialization
-        protected static final Object doGet(final PointersNonVariableObject receiver, final Object clipboard, final long formatNumber) {
+        protected static final Object doGet(final PointersObject receiver, final Object clipboard, final long formatNumber) {
             throw PrimitiveFailed.GENERIC_ERROR; // TODO: implement primitive
         }
     }
@@ -87,7 +87,7 @@ public final class ClipboardExtendedPlugin extends AbstractPrimitiveFactoryHolde
 
         @SuppressWarnings("unused")
         @Specialization
-        protected static final Object doRead(final PointersNonVariableObject receiver, final Object clipboard, final Object dataFormat) {
+        protected static final Object doRead(final PointersObject receiver, final Object clipboard, final Object dataFormat) {
             throw PrimitiveFailed.GENERIC_ERROR; // TODO: implement primitive
         }
     }
