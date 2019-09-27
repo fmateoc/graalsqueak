@@ -23,7 +23,6 @@ public abstract class Location {
     public static final int NUM_PRIMITIVE_INLINE_LOCATIONS = 3;
     public static final int NUM_PRIMITIVE_EXT_LOCATIONS = Integer.SIZE - NUM_PRIMITIVE_INLINE_LOCATIONS;
     public static final int NUM_OBJECT_INLINE_LOCATIONS = 3;
-    public static final int NUM_OBJECT_EXT_LOCATIONS = 64;
 
     public static final int PRIM0_LOCATION_USED_MASK = 1 << 0;
     public static final int PRIM1_LOCATION_USED_MASK = 1 << 1;

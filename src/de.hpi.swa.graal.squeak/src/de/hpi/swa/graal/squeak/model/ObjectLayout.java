@@ -46,13 +46,13 @@ public final class ObjectLayout {
         newLocations[index] = Location.UNINITIALIZED_LOCATION;
         if (oldLocation.isUninitialized()) {
             if (value instanceof Boolean) {
-                assignLocation(newLocations, index, Location.BOOL_LOCATIONS);
+                assignPrimitiveLocation(newLocations, index, Location.BOOL_LOCATIONS);
             } else if (value instanceof Character) {
-                assignLocation(newLocations, index, Location.CHAR_LOCATIONS);
+                assignPrimitiveLocation(newLocations, index, Location.CHAR_LOCATIONS);
             } else if (value instanceof Long) {
-                assignLocation(newLocations, index, Location.LONG_LOCATIONS);
+                assignPrimitiveLocation(newLocations, index, Location.LONG_LOCATIONS);
             } else if (value instanceof Double) {
-                assignLocation(newLocations, index, Location.DOUBLE_LOCATIONS);
+                assignPrimitiveLocation(newLocations, index, Location.DOUBLE_LOCATIONS);
             } else {
                 assignGenericLocation(newLocations, index);
             }
@@ -84,14 +84,15 @@ public final class ObjectLayout {
         newLocations[index] = Location.getObjectLocation(Location.OBJECT_LOCATIONS.size());
     }
 
-    private static void assignLocation(final Location[] newLocations, final int index, final Location[] possibleLocations) {
+    private static void assignPrimitiveLocation(final Location[] newLocations, final int index, final Location[] possibleLocations) {
         for (final Location possibleLocation : possibleLocations) {
             if (!inUse(newLocations, possibleLocation)) {
                 newLocations[index] = possibleLocation;
                 return;
             }
         }
-        throw SqueakException.create("Unable to find location");
+        // Primitive locations exhausted, fall back to a generic location.
+        assignGenericLocation(newLocations, index);
     }
 
     private static void compressPrimitivesIfPossible(final Location[] locations, final Location freePrimitiveLocation) {
