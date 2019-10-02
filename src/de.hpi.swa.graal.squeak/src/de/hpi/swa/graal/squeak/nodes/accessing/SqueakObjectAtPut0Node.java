@@ -24,8 +24,8 @@ import de.hpi.swa.graal.squeak.model.VariablePointersObject;
 import de.hpi.swa.graal.squeak.model.WeakVariablePointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.PointersObjectWriteNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.WeakPointersObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.VariablePointersObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.WeakVariablePointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.BlockClosureObjectNodes.BlockClosureObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ClassObjectWriteNode;
@@ -62,7 +62,7 @@ public abstract class SqueakObjectAtPut0Node extends AbstractNode {
 
     @Specialization
     protected static final void doPointers(final VariablePointersObject obj, final long index, final Object value,
-                    @Cached final PointersObjectWriteNode writeNode) {
+                    @Cached final VariablePointersObjectWriteNode writeNode) {
         writeNode.execute(obj, (int) index, value);
     }
 
@@ -73,7 +73,7 @@ public abstract class SqueakObjectAtPut0Node extends AbstractNode {
 
     @Specialization
     protected static final void doWeakPointers(final WeakVariablePointersObject obj, final long index, final Object value,
-                    @Cached final WeakPointersObjectWriteNode writeNode) {
+                    @Cached final WeakVariablePointersObjectWriteNode writeNode) {
         writeNode.execute(obj, (int) index, value);
     }
 

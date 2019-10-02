@@ -15,7 +15,7 @@ import com.oracle.truffle.api.profiles.ConditionProfile;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
-import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.WeakPointersObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.WeakVariablePointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.UpdateSqueakObjectHashNode;
 import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
@@ -40,7 +40,7 @@ public final class WeakVariablePointersObject extends AbstractPointersObject {
 
     @Override
     public void fillin(final SqueakImageChunk chunk) {
-        final WeakPointersObjectWriteNode writeNode = WeakPointersObjectWriteNode.getUncached();
+        final WeakVariablePointersObjectWriteNode writeNode = WeakVariablePointersObjectWriteNode.getUncached();
         final Object[] pointersObject = chunk.getPointers();
         initializeLayoutAndExtensionsUnsafe();
         final int instSize = getSqueakClass().getBasicInstanceSize();

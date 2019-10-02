@@ -24,8 +24,8 @@ import de.hpi.swa.graal.squeak.model.VariablePointersObject;
 import de.hpi.swa.graal.squeak.model.WeakVariablePointersObject;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.PointersObjectReadNode;
-import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.WeakPointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.VariablePointersObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.WeakVariablePointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.BlockClosureObjectNodes.BlockClosureObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ClassObjectNodes.ClassObjectReadNode;
@@ -55,7 +55,7 @@ public abstract class SqueakObjectAt0Node extends AbstractNode {
 
     @Specialization
     protected static final Object doPointers(final VariablePointersObject obj, final long index,
-                    @Cached final PointersObjectReadNode readNode) {
+                    @Cached final VariablePointersObjectReadNode readNode) {
         return readNode.execute(obj, (int) index);
     }
 
@@ -67,7 +67,7 @@ public abstract class SqueakObjectAt0Node extends AbstractNode {
 
     @Specialization
     protected static final Object doWeakPointersVariable(final WeakVariablePointersObject obj, final long index,
-                    @Cached final WeakPointersObjectReadNode readNode) {
+                    @Cached final WeakVariablePointersObjectReadNode readNode) {
         return readNode.execute(obj, (int) index);
     }
 
