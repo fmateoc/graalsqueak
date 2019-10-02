@@ -7424,7 +7424,7 @@ public final class B2D {
     }
 
     private static boolean isPointers(final AbstractSqueakObject object) {
-        return SqueakGuards.isPointersNonVariableObject(object);
+        return SqueakGuards.isPointersObject(object);
     }
 
     private static boolean isWords(final NativeObject object) {

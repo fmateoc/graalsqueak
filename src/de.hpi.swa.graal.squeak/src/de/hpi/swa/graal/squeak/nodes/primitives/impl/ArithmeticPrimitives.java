@@ -218,7 +218,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
 
         /** Quick return `false` if b is not a Number or Complex. */
         @SuppressWarnings("unused")
-        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersNonVariableObject(rhs)"})
+        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersObject(rhs)"})
         protected static final boolean doQuickFalse(final Object lhs, final AbstractSqueakObject rhs) {
             return BooleanObject.FALSE;
         }
@@ -253,7 +253,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
 
         /** Quick return `true` if b is not a Number or Complex. */
         @SuppressWarnings("unused")
-        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersNonVariableObject(rhs)"})
+        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersObject(rhs)"})
         protected static final boolean doQuickTrue(final Object lhs, final AbstractSqueakObject rhs) {
             return BooleanObject.TRUE;
         }
@@ -664,7 +664,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
 
         /** Quick return `false` if b is not a Number or Complex. */
         @SuppressWarnings("unused")
-        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersNonVariableObject(rhs)"})
+        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersObject(rhs)"})
         protected static final boolean doQuickFalse(final LargeIntegerObject lhs, final AbstractSqueakObject rhs) {
             return BooleanObject.FALSE;
         }
@@ -689,7 +689,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
 
         /** Quick return `true` if b is not a Number or Complex. */
         @SuppressWarnings("unused")
-        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersNonVariableObject(rhs)"})
+        @Specialization(guards = {"!isFloatObject(rhs)", "!isLargeIntegerObject(rhs)", "!isPointersObject(rhs)"})
         protected static final boolean doQuickTrue(final Object lhs, final AbstractSqueakObject rhs) {
             return BooleanObject.TRUE;
         }

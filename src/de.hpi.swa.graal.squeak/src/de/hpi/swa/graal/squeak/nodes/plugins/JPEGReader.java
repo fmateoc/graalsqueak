@@ -758,7 +758,7 @@ public final class JPEGReader {
     }
 
     private static boolean isPointers(final Object pointerOop) {
-        return SqueakGuards.isPointersNonVariableObject(pointerOop);
+        return SqueakGuards.isPointersObject(pointerOop);
     }
 
     private static int slotSizeOf(final PointersObject pointerOop) {
