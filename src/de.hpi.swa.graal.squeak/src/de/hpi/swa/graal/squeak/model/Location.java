@@ -48,7 +48,7 @@ public abstract class Location {
             DOUBLE_LOCATIONS[i] = new DoubleInlineLocation(i);
         }
 
-        for (int i = NUM_PRIMITIVE_INLINE_LOCATIONS; i < NUM_PRIMITIVE_EXT_LOCATIONS; i++) {
+        for (int i = NUM_PRIMITIVE_INLINE_LOCATIONS; i < NUM_PRIMITIVE_INLINE_LOCATIONS + NUM_PRIMITIVE_EXT_LOCATIONS; i++) {
             BOOL_LOCATIONS[i] = new BoolExtLocation(i);
             CHAR_LOCATIONS[i] = new CharExtLocation(i);
             LONG_LOCATIONS[i] = new LongExtLocation(i);
