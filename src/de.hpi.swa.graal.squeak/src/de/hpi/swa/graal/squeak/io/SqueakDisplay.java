@@ -55,8 +55,8 @@ import de.hpi.swa.graal.squeak.io.SqueakIOConstants.EVENT_TYPE;
 import de.hpi.swa.graal.squeak.io.SqueakIOConstants.KEYBOARD;
 import de.hpi.swa.graal.squeak.io.SqueakIOConstants.WINDOW;
 import de.hpi.swa.graal.squeak.model.NativeObject;
-import de.hpi.swa.graal.squeak.model.ObjectLayouts.FORM;
 import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.FORM;
 import de.hpi.swa.graal.squeak.nodes.plugins.DropPlugin;
 
 public final class SqueakDisplay implements SqueakDisplayInterface {

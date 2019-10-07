@@ -11,6 +11,8 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
+import de.hpi.swa.graal.squeak.model.layout.Location;
+import de.hpi.swa.graal.squeak.model.layout.ObjectLayout;
 import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
 import de.hpi.swa.graal.squeak.nodes.accessing.UpdateSqueakObjectHashNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
@@ -22,12 +24,10 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
     public long primitive0;
     public long primitive1;
     public long primitive2;
-    public long primitive3;
 
     public Object object0 = NilObject.SINGLETON;
     public Object object1 = NilObject.SINGLETON;
     public Object object2 = NilObject.SINGLETON;
-    public Object object3 = NilObject.SINGLETON;
 
     public long[] primitiveExtension;
     public Object[] objectExtension;
@@ -53,12 +53,10 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         primitive0 = original.primitive0;
         primitive1 = original.primitive1;
         primitive2 = original.primitive2;
-        primitive3 = original.primitive3;
 
         object0 = original.object0;
         object1 = original.object1;
         object2 = original.object2;
-        object3 = original.object3;
 
         if (original.primitiveExtension != null) {
             primitiveExtension = original.primitiveExtension.clone();
@@ -74,11 +72,9 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         primitive0 = anotherObject.primitive0;
         primitive1 = anotherObject.primitive1;
         primitive2 = anotherObject.primitive2;
-        primitive3 = anotherObject.primitive3;
         object0 = anotherObject.object0;
         object1 = anotherObject.object1;
         object2 = anotherObject.object2;
-        object3 = anotherObject.object3;
         if (anotherObject.primitiveExtension != null) {
             System.arraycopy(anotherObject.primitiveExtension, 0, primitiveExtension, 0, anotherObject.primitiveExtension.length);
         }
@@ -197,12 +193,10 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         final long otherPrimitive0 = other.primitive0;
         final long otherPrimitive1 = other.primitive1;
         final long otherPrimitive2 = other.primitive2;
-        final long otherPrimitive3 = other.primitive3;
 
         final Object otherObject0 = other.object0;
         final Object otherObject1 = other.object1;
         final Object otherObject2 = other.object2;
-        final Object otherObject3 = other.object3;
 
         final long[] otherPrimitiveExtension = other.primitiveExtension;
         final Object[] otherObjectExtension = other.objectExtension;
@@ -213,12 +207,10 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         other.primitive0 = primitive0;
         other.primitive1 = primitive1;
         other.primitive2 = primitive2;
-        other.primitive3 = primitive3;
 
         other.object0 = object0;
         other.object1 = object1;
         other.object2 = object2;
-        other.object3 = object3;
 
         other.primitiveExtension = primitiveExtension;
         other.objectExtension = objectExtension;
@@ -229,12 +221,10 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         primitive0 = otherPrimitive0;
         primitive1 = otherPrimitive1;
         primitive2 = otherPrimitive2;
-        primitive3 = otherPrimitive3;
 
         object0 = otherObject0;
         object1 = otherObject1;
         object2 = otherObject2;
-        object3 = otherObject3;
 
         primitiveExtension = otherPrimitiveExtension;
         objectExtension = otherObjectExtension;
@@ -248,7 +238,7 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
 
     public final boolean layoutValuesPointTo(final Object thang) {
         // FIXME: primitive values?
-        return object0 == thang || object1 == thang || object2 == thang || object3 == thang || objectExtension != null && ArrayUtils.contains(objectExtension, thang);
+        return object0 == thang || object1 == thang || object2 == thang || objectExtension != null && ArrayUtils.contains(objectExtension, thang);
     }
 
     public final void layoutValuesBecomeOneWay(final UpdateSqueakObjectHashNode updateHashNode, final Object[] from, final Object[] to, final boolean copyHash) {
@@ -264,10 +254,6 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
             }
             if (object2 == fromPointer) {
                 object2 = to[i];
-                updateHashNode.executeUpdate(fromPointer, to[i], copyHash);
-            }
-            if (object3 == fromPointer) {
-                object3 = to[i];
                 updateHashNode.executeUpdate(fromPointer, to[i], copyHash);
             }
             if (objectExtension != null) {
@@ -286,7 +272,6 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         tracer.addIfUnmarked(object0);
         tracer.addIfUnmarked(object1);
         tracer.addIfUnmarked(object2);
-        tracer.addIfUnmarked(object3);
         if (objectExtension != null) {
             for (final Object object : objectExtension) {
                 tracer.addIfUnmarked(object);

@@ -1,4 +1,4 @@
-package de.hpi.swa.graal.squeak.model;
+package de.hpi.swa.graal.squeak.model.layout;
 
 import java.util.Arrays;
 
@@ -8,6 +8,8 @@ import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.Truffle;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
+import de.hpi.swa.graal.squeak.model.ClassObject;
+import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
 public final class ObjectLayout {

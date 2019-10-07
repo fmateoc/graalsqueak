@@ -1,4 +1,4 @@
-package de.hpi.swa.graal.squeak.model;
+package de.hpi.swa.graal.squeak.model.layout;
 
 import org.graalvm.collections.EconomicMap;
 
@@ -15,15 +15,17 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import com.oracle.truffle.api.profiles.IntValueProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
-import de.hpi.swa.graal.squeak.model.LocationFactory.ReadLocationNodeGen;
-import de.hpi.swa.graal.squeak.model.LocationFactory.WriteLocationNodeGen;
+import de.hpi.swa.graal.squeak.model.AbstractPointersObject;
+import de.hpi.swa.graal.squeak.model.NilObject;
+import de.hpi.swa.graal.squeak.model.layout.LocationFactory.ReadLocationNodeGen;
+import de.hpi.swa.graal.squeak.model.layout.LocationFactory.WriteLocationNodeGen;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
 public abstract class Location {
-    public static final int NUM_PRIMITIVE_INLINE_LOCATIONS = 4;
+    public static final int NUM_PRIMITIVE_INLINE_LOCATIONS = 3;
     public static final int NUM_PRIMITIVE_EXT_LOCATIONS = Integer.SIZE - NUM_PRIMITIVE_INLINE_LOCATIONS;
-    public static final int NUM_OBJECT_INLINE_LOCATIONS = 4;
+    public static final int NUM_OBJECT_INLINE_LOCATIONS = 3;
 
     private static final long PRIMITIVE_USED_MAP_ADDRESS;
 

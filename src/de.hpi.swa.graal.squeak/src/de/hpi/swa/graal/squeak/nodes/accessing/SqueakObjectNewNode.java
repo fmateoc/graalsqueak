@@ -19,11 +19,11 @@ import de.hpi.swa.graal.squeak.model.EmptyObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
 import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
-import de.hpi.swa.graal.squeak.model.ObjectLayouts.CONTEXT;
-import de.hpi.swa.graal.squeak.model.ObjectLayouts.METACLASS;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.VariablePointersObject;
 import de.hpi.swa.graal.squeak.model.WeakVariablePointersObject;
+import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.CONTEXT;
+import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.METACLASS;
 import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithImage;
 
 public abstract class SqueakObjectNewNode extends AbstractNodeWithImage {

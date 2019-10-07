@@ -8,9 +8,9 @@ package de.hpi.swa.graal.squeak.nodes.process;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
 
-import de.hpi.swa.graal.squeak.model.ObjectLayouts.LINKED_LIST;
-import de.hpi.swa.graal.squeak.model.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.LINKED_LIST;
+import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 
 public abstract class LinkProcessToListNode extends AbstractNode {

@@ -13,13 +13,13 @@ import com.oracle.truffle.api.profiles.ConditionProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.AbstractPointersObject;
-import de.hpi.swa.graal.squeak.model.Location;
-import de.hpi.swa.graal.squeak.model.Location.IllegalWriteException;
-import de.hpi.swa.graal.squeak.model.Location.ReadLocationNode;
-import de.hpi.swa.graal.squeak.model.Location.WriteLocationNode;
-import de.hpi.swa.graal.squeak.model.ObjectLayout;
 import de.hpi.swa.graal.squeak.model.VariablePointersObject;
 import de.hpi.swa.graal.squeak.model.WeakVariablePointersObject;
+import de.hpi.swa.graal.squeak.model.layout.Location;
+import de.hpi.swa.graal.squeak.model.layout.Location.IllegalWriteException;
+import de.hpi.swa.graal.squeak.model.layout.Location.ReadLocationNode;
+import de.hpi.swa.graal.squeak.model.layout.Location.WriteLocationNode;
+import de.hpi.swa.graal.squeak.model.layout.ObjectLayout;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodesFactory.AbstractPointersObjectReadNodeGen;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodesFactory.AbstractPointersObjectWriteNodeGen;

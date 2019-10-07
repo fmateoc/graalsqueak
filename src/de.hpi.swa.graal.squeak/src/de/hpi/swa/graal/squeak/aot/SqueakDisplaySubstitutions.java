@@ -44,8 +44,8 @@ import de.hpi.swa.graal.squeak.io.SqueakIOConstants.KEY;
 import de.hpi.swa.graal.squeak.io.SqueakIOConstants.KEYBOARD_EVENT;
 import de.hpi.swa.graal.squeak.io.SqueakIOConstants.MOUSE;
 import de.hpi.swa.graal.squeak.model.NativeObject;
-import de.hpi.swa.graal.squeak.model.ObjectLayouts.FORM;
 import de.hpi.swa.graal.squeak.model.PointersObject;
+import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.FORM;
 
 final class Target_de_hpi_swa_graal_squeak_io_SqueakDisplay implements SqueakDisplayInterface {
     private static final String DEFAULT_WINDOW_TITLE = "GraalSqueak + SubstrateVM + SDL2";
