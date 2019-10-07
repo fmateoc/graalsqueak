@@ -8,6 +8,7 @@ package de.hpi.swa.graal.squeak.nodes;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.profiles.ValueProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
@@ -15,8 +16,6 @@ import de.hpi.swa.graal.squeak.model.BooleanObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.nodes.context.TemporaryWriteMarkContextsNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameSlotReadNode;
-import de.hpi.swa.graal.squeak.util.ArrayUtils;
-import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public abstract class AboutToReturnNode extends AbstractNodeWithCode {
     protected AboutToReturnNode(final CompiledCodeObject code) {
@@ -41,10 +40,11 @@ public abstract class AboutToReturnNode extends AbstractNodeWithCode {
                     @Cached("createTemporaryWriteNode(0)") final FrameSlotReadNode blockArgumentNode,
                     @SuppressWarnings("unused") @Cached("createTemporaryWriteNode(1)") final FrameSlotReadNode completeTempReadNode,
                     @Cached("create(code, 1)") final TemporaryWriteMarkContextsNode completeTempWriteNode,
+                    @Cached("createIdentityProfile()") final ValueProfile blockProfile,
                     @Cached final DispatchBlockNode dispatchNode) {
         completeTempWriteNode.executeWrite(frame, BooleanObject.TRUE);
-        final BlockClosureObject block = (BlockClosureObject) blockArgumentNode.executeRead(frame);
-        dispatchNode.executeBlock(block, FrameAccess.newClosureArguments(block, getContextOrMarker(frame), ArrayUtils.EMPTY_ARRAY));
+        final BlockClosureObject closure = (BlockClosureObject) blockArgumentNode.executeRead(frame);
+        dispatchNode.executeClosure0(closure, blockProfile.profile(closure.getCompiledBlock()), getContextOrMarker(frame));
     }
 
     @SuppressWarnings("unused")

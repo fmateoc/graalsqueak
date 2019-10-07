@@ -7,7 +7,6 @@ package de.hpi.swa.graal.squeak.model;
 
 import java.util.Arrays;
 
-import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
@@ -40,14 +39,14 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithHash {
         copied = ArrayUtils.EMPTY_ARRAY; // Ensure copied is set.
     }
 
-    public BlockClosureObject(final SqueakImageContext image, final CompiledBlockObject myBlock, final int numArgs, final Object receiver, final Object[] copied, final ContextObject outerContext) {
+    public BlockClosureObject(final SqueakImageContext image, final CompiledBlockObject block, final long startPC, final int numArgs, final Object receiver, final Object[] copied,
+                    final ContextObject outerContext) {
         super(image);
-        CompilerAsserts.partialEvaluationConstant(myBlock); // ensure startPC is constant
-        block = myBlock;
+        this.block = block;
         this.outerContext = outerContext;
         this.receiver = receiver;
         this.copied = copied;
-        startPC = block.getInitialPC();
+        this.startPC = startPC;
         this.numArgs = numArgs;
     }
 
@@ -238,7 +237,7 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithHash {
     public Object execute(final Object[] arguments,
                     @Exclusive @Cached final WrapToSqueakNode wrapNode) throws ArityException {
         if (getNumArgs() == arguments.length) {
-            final Object[] frameArguments = FrameAccess.newClosureArguments(this, NilObject.SINGLETON, wrapNode.executeObjects(arguments));
+            final Object[] frameArguments = FrameAccess.newClosureArguments(this, getCompiledBlock(), NilObject.SINGLETON, wrapNode.executeObjects(arguments));
             return getCompiledBlock().getCallTarget().call(frameArguments);
         } else {
             throw ArityException.create((int) getNumArgs(), arguments.length);
