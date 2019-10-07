@@ -185,7 +185,7 @@ public final class BlockClosurePrimitives extends AbstractPrimitiveFactoryHolder
             return dispatchNode.executeClosureN(closure, cachedBlock, getContextOrMarker(frame), getObjectArrayNode.execute(argArray));
         }
 
-        @Specialization(guards = {"closure.getCompiledBlock().getNumArgs() == sizeNode.execute(argArray)"}, replaces = "doValueCached")
+        @Specialization(guards = {"closure.getCompiledBlock().getNumArgs() == sizeNode.execute(argArray)"}, replaces = "doValueCached", limit = "1")
         protected final Object doValue(final VirtualFrame frame, final BlockClosureObject closure, final ArrayObject argArray,
                         @SuppressWarnings("unused") @Cached final SqueakObjectSizeNode sizeNode,
                         @Cached final DispatchBlockNode dispatchNode,
