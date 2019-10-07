@@ -21,9 +21,9 @@ import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
 public abstract class Location {
-    public static final int NUM_PRIMITIVE_INLINE_LOCATIONS = 5;
+    public static final int NUM_PRIMITIVE_INLINE_LOCATIONS = 4;
     public static final int NUM_PRIMITIVE_EXT_LOCATIONS = Integer.SIZE - NUM_PRIMITIVE_INLINE_LOCATIONS;
-    public static final int NUM_OBJECT_INLINE_LOCATIONS = 5;
+    public static final int NUM_OBJECT_INLINE_LOCATIONS = 4;
 
     private static final long PRIMITIVE_USED_MAP_ADDRESS;
 
