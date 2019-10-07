@@ -361,7 +361,7 @@ public abstract class Location {
         @Override
         public Object readProfiled(final AbstractPointersObject object, final IntValueProfile primitiveUsedMapProfile) {
             if (isSet(object, primitiveUsedMapProfile)) {
-                return BooleanObject.wrap(object.primitiveExtension[index] == 1);
+                return UnsafeUtils.getBoolFromLongs(object.primitiveExtension, index);
             } else {
                 return NilObject.SINGLETON;
             }
@@ -375,7 +375,7 @@ public abstract class Location {
         public Object read(final AbstractPointersObject object) {
             CompilerAsserts.neverPartOfCompilation();
             if (isSet(object)) {
-                return BooleanObject.wrap(object.primitiveExtension[index] == 1);
+                return UnsafeUtils.getBoolFromLongs(object.primitiveExtension, index);
             } else {
                 return NilObject.SINGLETON;
             }
@@ -390,7 +390,7 @@ public abstract class Location {
         public void writeProfiled(final AbstractPointersObject object, final Object value, final IntValueProfile primitiveUsedMapProfile) {
             if (value instanceof Boolean) {
                 putPrimitiveUsedMap(object, primitiveUsedMapProfile.profile(getPrimitiveUsedMap(object)) | usedMask);
-                object.primitiveExtension[index] = (boolean) value ? 1 : 0;
+                UnsafeUtils.putBoolIntoLongs(object.primitiveExtension, index, (boolean) value);
             } else {
                 throw IllegalWriteException.SINGLETON;
             }
@@ -402,6 +402,7 @@ public abstract class Location {
             if (value instanceof Boolean) {
                 putPrimitiveUsedMap(object, getPrimitiveUsedMap(object) | usedMask);
                 object.primitiveExtension[index] = (boolean) value ? 1 : 0;
+                UnsafeUtils.putBoolIntoLongs(object.primitiveExtension, index, (boolean) value);
             } else {
                 throw IllegalWriteException.SINGLETON;
             }
@@ -494,7 +495,7 @@ public abstract class Location {
         @Override
         public Object readProfiled(final AbstractPointersObject object, final IntValueProfile primitiveUsedMapProfile) {
             if (isSet(object, primitiveUsedMapProfile)) {
-                return (char) object.primitiveExtension[index];
+                return UnsafeUtils.getCharFromLongs(object.primitiveExtension, index);
             } else {
                 return NilObject.SINGLETON;
             }
@@ -508,7 +509,7 @@ public abstract class Location {
         public Object read(final AbstractPointersObject object) {
             CompilerAsserts.neverPartOfCompilation();
             if (isSet(object)) {
-                return (char) object.primitiveExtension[index];
+                return UnsafeUtils.getCharFromLongs(object.primitiveExtension, index);
             } else {
                 return NilObject.SINGLETON;
             }
@@ -523,7 +524,7 @@ public abstract class Location {
         public void writeProfiled(final AbstractPointersObject object, final Object value, final IntValueProfile primitiveUsedMapProfile) {
             if (value instanceof Character) {
                 putPrimitiveUsedMap(object, primitiveUsedMapProfile.profile(getPrimitiveUsedMap(object)) | usedMask);
-                object.primitiveExtension[index] = (char) value;
+                UnsafeUtils.putCharIntoLongs(object.primitiveExtension, index, (char) value);
             } else {
                 throw IllegalWriteException.SINGLETON;
             }
@@ -534,7 +535,7 @@ public abstract class Location {
             CompilerAsserts.neverPartOfCompilation();
             if (value instanceof Character) {
                 putPrimitiveUsedMap(object, getPrimitiveUsedMap(object) | usedMask);
-                object.primitiveExtension[index] = (char) value;
+                UnsafeUtils.putCharIntoLongs(object.primitiveExtension, index, (char) value);
             } else {
                 throw IllegalWriteException.SINGLETON;
             }
@@ -627,7 +628,7 @@ public abstract class Location {
         @Override
         public Object readProfiled(final AbstractPointersObject object, final IntValueProfile primitiveUsedMapProfile) {
             if (isSet(object, primitiveUsedMapProfile)) {
-                return object.primitiveExtension[index];
+                return UnsafeUtils.getLong(object.primitiveExtension, index);
             } else {
                 return NilObject.SINGLETON;
             }
@@ -641,7 +642,7 @@ public abstract class Location {
         public Object read(final AbstractPointersObject object) {
             CompilerAsserts.neverPartOfCompilation();
             if (isSet(object)) {
-                return object.primitiveExtension[index];
+                return UnsafeUtils.getLong(object.primitiveExtension, index);
             } else {
                 return NilObject.SINGLETON;
             }
@@ -656,7 +657,7 @@ public abstract class Location {
         public void writeProfiled(final AbstractPointersObject object, final Object value, final IntValueProfile primitiveUsedMapProfile) {
             if (value instanceof Long) {
                 putPrimitiveUsedMap(object, primitiveUsedMapProfile.profile(getPrimitiveUsedMap(object)) | usedMask);
-                object.primitiveExtension[index] = (long) value;
+                UnsafeUtils.putLong(object.primitiveExtension, index, (long) value);
             } else {
                 throw IllegalWriteException.SINGLETON;
             }
@@ -667,7 +668,7 @@ public abstract class Location {
             CompilerAsserts.neverPartOfCompilation();
             if (value instanceof Long) {
                 putPrimitiveUsedMap(object, getPrimitiveUsedMap(object) | usedMask);
-                object.primitiveExtension[index] = (long) value;
+                UnsafeUtils.putLong(object.primitiveExtension, index, (long) value);
             } else {
                 throw IllegalWriteException.SINGLETON;
             }
@@ -760,7 +761,7 @@ public abstract class Location {
         @Override
         public Object readProfiled(final AbstractPointersObject obj, final IntValueProfile primitiveUsedMapProfile) {
             if (isSet(obj, primitiveUsedMapProfile)) {
-                return Double.longBitsToDouble(obj.primitiveExtension[index]);
+                return UnsafeUtils.getDoubleFromLongs(obj.primitiveExtension, index);
             } else {
                 return NilObject.SINGLETON;
             }
@@ -774,7 +775,7 @@ public abstract class Location {
         public Object read(final AbstractPointersObject obj) {
             CompilerAsserts.neverPartOfCompilation();
             if (isSet(obj)) {
-                return Double.longBitsToDouble(obj.primitiveExtension[index]);
+                return UnsafeUtils.getDoubleFromLongs(obj.primitiveExtension, index);
             } else {
                 return NilObject.SINGLETON;
             }
@@ -789,7 +790,7 @@ public abstract class Location {
         public void writeProfiled(final AbstractPointersObject object, final Object value, final IntValueProfile primitiveUsedMapProfile) {
             if (value instanceof Double) {
                 putPrimitiveUsedMap(object, primitiveUsedMapProfile.profile(getPrimitiveUsedMap(object)) | usedMask);
-                object.primitiveExtension[index] = Double.doubleToRawLongBits((double) value);
+                UnsafeUtils.putDoubleIntoLongs(object.primitiveExtension, index, (double) value);
             } else {
                 throw IllegalWriteException.SINGLETON;
             }
@@ -800,7 +801,7 @@ public abstract class Location {
             CompilerAsserts.neverPartOfCompilation();
             if (value instanceof Double) {
                 putPrimitiveUsedMap(object, getPrimitiveUsedMap(object) | usedMask);
-                object.primitiveExtension[index] = Double.doubleToRawLongBits((double) value);
+                UnsafeUtils.putDoubleIntoLongs(object.primitiveExtension, index, (double) value);
             } else {
                 throw IllegalWriteException.SINGLETON;
             }
@@ -857,17 +858,17 @@ public abstract class Location {
         @Override
         public Object read(final AbstractPointersObject object) {
             assert isSet(object);
-            return object.objectExtension[index];
+            return UnsafeUtils.getObject(object.objectExtension, index);
         }
 
         @Override
         public boolean isSet(final AbstractPointersObject object) {
-            return object.objectExtension != null && object.objectExtension[index] != null;
+            return object.objectExtension != null && UnsafeUtils.getObject(object.objectExtension, index) != null;
         }
 
         @Override
         public void write(final AbstractPointersObject object, final Object value) {
-            object.objectExtension[index] = value;
+            UnsafeUtils.putObject(object.objectExtension, index, value);
             assert isSet(object);
         }
 

@@ -42,6 +42,11 @@ public final class UnsafeUtils {
         return UNSAFE.getBoolean(object, address);
     }
 
+    public static boolean getBoolFromLongs(final long[] array, final long index) {
+        assert 0 <= index && index < array.length;
+        return UNSAFE.getBoolean(array, Unsafe.ARRAY_LONG_BASE_OFFSET + index * Unsafe.ARRAY_LONG_INDEX_SCALE);
+    }
+
     public static byte getByte(final Object storage, final long index) {
         assert storage instanceof byte[] && 0 <= index && index < ((byte[]) storage).length;
         return UNSAFE.getByte(storage, Unsafe.ARRAY_BYTE_BASE_OFFSET + index * Unsafe.ARRAY_BYTE_INDEX_SCALE);
@@ -56,6 +61,11 @@ public final class UnsafeUtils {
         return UNSAFE.getChar(object, address);
     }
 
+    public static char getCharFromLongs(final long[] array, final long index) {
+        assert 0 <= index && index < array.length;
+        return UNSAFE.getChar(array, Unsafe.ARRAY_LONG_BASE_OFFSET + index * Unsafe.ARRAY_LONG_INDEX_SCALE);
+    }
+
     public static double getDouble(final Object storage, final long index) {
         assert storage instanceof double[] && 0 <= index && index < ((double[]) storage).length;
         return UNSAFE.getDouble(storage, Unsafe.ARRAY_DOUBLE_BASE_OFFSET + index * Unsafe.ARRAY_DOUBLE_INDEX_SCALE);
@@ -63,6 +73,11 @@ public final class UnsafeUtils {
 
     public static double getDoubleAt(final Object object, final long address) {
         return UNSAFE.getDouble(object, address);
+    }
+
+    public static double getDoubleFromLongs(final long[] array, final long index) {
+        assert 0 <= index && index < array.length;
+        return UNSAFE.getDouble(array, Unsafe.ARRAY_LONG_BASE_OFFSET + index * Unsafe.ARRAY_LONG_INDEX_SCALE);
     }
 
     public static int getInt(final byte[] bytes, final long index) {
@@ -169,6 +184,11 @@ public final class UnsafeUtils {
         UNSAFE.putBoolean(object, address, value);
     }
 
+    public static void putBoolIntoLongs(final long[] array, final long index, final boolean value) {
+        assert 0 <= index && index < array.length;
+        UNSAFE.putBoolean(array, Unsafe.ARRAY_LONG_BASE_OFFSET + index * Unsafe.ARRAY_LONG_INDEX_SCALE, value);
+    }
+
     public static void putByte(final Object storage, final long index, final byte value) {
         assert storage instanceof byte[] && 0 <= index && index < ((byte[]) storage).length;
         UNSAFE.putByte(storage, Unsafe.ARRAY_BYTE_BASE_OFFSET + index * Unsafe.ARRAY_BYTE_INDEX_SCALE, value);
@@ -183,6 +203,15 @@ public final class UnsafeUtils {
         UNSAFE.putChar(object, address, value);
     }
 
+    public static void putCharIntoLongs(final long[] array, final long index, final char value) {
+        assert 0 <= index && index < array.length;
+        UNSAFE.putChar(array, Unsafe.ARRAY_LONG_BASE_OFFSET + index * Unsafe.ARRAY_LONG_INDEX_SCALE, value);
+    }
+
+    public static double putDouble(final long[] array, final long index) {
+        return UNSAFE.getDouble(array, Unsafe.ARRAY_LONG_BASE_OFFSET + index * Unsafe.ARRAY_LONG_INDEX_SCALE);
+    }
+
     public static void putDouble(final Object storage, final long index, final double value) {
         assert storage instanceof double[] && 0 <= index && index < ((double[]) storage).length;
         UNSAFE.putDouble(storage, Unsafe.ARRAY_DOUBLE_BASE_OFFSET + index * Unsafe.ARRAY_DOUBLE_INDEX_SCALE, value);
@@ -190,6 +219,10 @@ public final class UnsafeUtils {
 
     public static void putDoubleAt(final Object object, final long address, final double value) {
         UNSAFE.putDouble(object, address, value);
+    }
+
+    public static void putDoubleIntoLongs(final long[] array, final long index, final double value) {
+        UNSAFE.putDouble(array, Unsafe.ARRAY_LONG_BASE_OFFSET + index * Unsafe.ARRAY_LONG_INDEX_SCALE, value);
     }
 
     public static void putInt(final byte[] bytes, final long index, final int value) {
