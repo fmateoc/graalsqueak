@@ -116,6 +116,10 @@ public final class UnsafeUtils {
         return UNSAFE.getObject(storage, Unsafe.ARRAY_OBJECT_BASE_OFFSET + index * Unsafe.ARRAY_OBJECT_INDEX_SCALE);
     }
 
+    public static Object getObjectAt(final Object object, final long address) {
+        return UNSAFE.getObject(object, address);
+    }
+
     public static short getShort(final byte[] bytes, final long index) {
         assert 0 <= index && index * ArrayConversionUtils.SHORT_BYTE_SIZE < bytes.length;
         return UNSAFE.getShort(bytes, Unsafe.ARRAY_BYTE_BASE_OFFSET + index * ArrayConversionUtils.SHORT_BYTE_SIZE * Unsafe.ARRAY_BYTE_INDEX_SCALE);
@@ -242,6 +246,10 @@ public final class UnsafeUtils {
     public static void putObject(final Object storage, final long index, final Object value) {
         assert storage.getClass() == Object[].class && 0 <= index && index < ((Object[]) storage).length;
         UNSAFE.putObject(storage, Unsafe.ARRAY_OBJECT_BASE_OFFSET + index * Unsafe.ARRAY_OBJECT_INDEX_SCALE, value);
+    }
+
+    public static void putObjectAt(final Object storage, final long address, final Object value) {
+        UNSAFE.putObject(storage, address, value);
     }
 
     public static void putShort(final byte[] bytes, final long index, final short value) {
