@@ -23,35 +23,47 @@ import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
 public abstract class Location {
+    public static final int NUM_BOOLEAN_INLINE_LOCATIONS = 3;
+    public static final int NUM_BOOLEAN_EXT_LOCATIONS = Integer.SIZE - NUM_BOOLEAN_INLINE_LOCATIONS;
     public static final int NUM_PRIMITIVE_INLINE_LOCATIONS = 3;
     public static final int NUM_PRIMITIVE_EXT_LOCATIONS = Integer.SIZE - NUM_PRIMITIVE_INLINE_LOCATIONS;
     public static final int NUM_OBJECT_INLINE_LOCATIONS = 3;
 
+    private static final long BOOLEAN_USED_MAP_ADDRESS;
     private static final long PRIMITIVE_USED_MAP_ADDRESS;
 
+    @CompilationFinal(dimensions = 1) private static final long[] BOOLEAN_ADDRESSES = new long[NUM_BOOLEAN_INLINE_LOCATIONS];
     @CompilationFinal(dimensions = 1) private static final long[] PRIMITIVE_ADDRESSES = new long[NUM_PRIMITIVE_INLINE_LOCATIONS];
     @CompilationFinal(dimensions = 1) private static final long[] OBJECT_ADDRESSES = new long[NUM_OBJECT_INLINE_LOCATIONS];
 
     public static final UninitializedLocation UNINITIALIZED_LOCATION = new UninitializedLocation();
-    public static final Location[] BOOL_LOCATIONS = new Location[NUM_PRIMITIVE_INLINE_LOCATIONS + NUM_PRIMITIVE_EXT_LOCATIONS];
+    public static final Location[] BOOL_LOCATIONS = new Location[NUM_BOOLEAN_INLINE_LOCATIONS + NUM_BOOLEAN_EXT_LOCATIONS];
     public static final Location[] CHAR_LOCATIONS = new Location[NUM_PRIMITIVE_INLINE_LOCATIONS + NUM_PRIMITIVE_EXT_LOCATIONS];
     public static final Location[] LONG_LOCATIONS = new Location[NUM_PRIMITIVE_INLINE_LOCATIONS + NUM_PRIMITIVE_EXT_LOCATIONS];
     public static final Location[] DOUBLE_LOCATIONS = new Location[NUM_PRIMITIVE_INLINE_LOCATIONS + NUM_PRIMITIVE_EXT_LOCATIONS];
     public static final EconomicMap<Integer, Location> OBJECT_LOCATIONS = EconomicMap.create();
 
     static {
+        BOOLEAN_USED_MAP_ADDRESS = UnsafeUtils.getAddress(AbstractPointersObject.class, "booleanUsedMap");
         PRIMITIVE_USED_MAP_ADDRESS = UnsafeUtils.getAddress(AbstractPointersObject.class, "primitiveUsedMap");
+
+        for (int i = 0; i < NUM_BOOLEAN_INLINE_LOCATIONS; i++) {
+            BOOLEAN_ADDRESSES[i] = UnsafeUtils.getAddress(AbstractPointersObject.class, "boolean" + i);
+            BOOL_LOCATIONS[i] = new BoolInlineLocation(i);
+        }
+
+        for (int i = NUM_BOOLEAN_INLINE_LOCATIONS; i < NUM_BOOLEAN_INLINE_LOCATIONS + NUM_BOOLEAN_EXT_LOCATIONS; i++) {
+            BOOL_LOCATIONS[i] = new BoolExtLocation(i);
+        }
 
         for (int i = 0; i < NUM_PRIMITIVE_INLINE_LOCATIONS; i++) {
             PRIMITIVE_ADDRESSES[i] = UnsafeUtils.getAddress(AbstractPointersObject.class, "primitive" + i);
-            BOOL_LOCATIONS[i] = new BoolInlineLocation(i);
             CHAR_LOCATIONS[i] = new CharInlineLocation(i);
             LONG_LOCATIONS[i] = new LongInlineLocation(i);
             DOUBLE_LOCATIONS[i] = new DoubleInlineLocation(i);
         }
 
         for (int i = NUM_PRIMITIVE_INLINE_LOCATIONS; i < NUM_PRIMITIVE_INLINE_LOCATIONS + NUM_PRIMITIVE_EXT_LOCATIONS; i++) {
-            BOOL_LOCATIONS[i] = new BoolExtLocation(i);
             CHAR_LOCATIONS[i] = new CharExtLocation(i);
             LONG_LOCATIONS[i] = new LongExtLocation(i);
             DOUBLE_LOCATIONS[i] = new DoubleExtLocation(i);
@@ -279,6 +291,14 @@ public abstract class Location {
         return 1 << index;
     }
 
+    private static int getBooleanUsedMap(final AbstractPointersObject object) {
+        return UnsafeUtils.getIntAt(object, BOOLEAN_USED_MAP_ADDRESS);
+    }
+
+    private static void putBooleanUsedMap(final AbstractPointersObject object, final int value) {
+        UnsafeUtils.putIntAt(object, BOOLEAN_USED_MAP_ADDRESS, value);
+    }
+
     private static int getPrimitiveUsedMap(final AbstractPointersObject object) {
         return UnsafeUtils.getIntAt(object, PRIMITIVE_USED_MAP_ADDRESS);
     }
@@ -292,7 +312,7 @@ public abstract class Location {
         private final int usedMask;
 
         private BoolInlineLocation(final int index) {
-            address = PRIMITIVE_ADDRESSES[index];
+            address = BOOLEAN_ADDRESSES[index];
             usedMask = getPrimitiveUsedMask(index);
         }
 
@@ -306,7 +326,7 @@ public abstract class Location {
         }
 
         private boolean isSet(final AbstractPointersObject object, final IntValueProfile primitiveUsedMapProfile) {
-            return primitiveUsedMapProfile.profile(getPrimitiveUsedMap(object) & usedMask) != 0;
+            return primitiveUsedMapProfile.profile(getBooleanUsedMap(object) & usedMask) != 0;
         }
 
         @Override
@@ -321,13 +341,13 @@ public abstract class Location {
 
         @Override
         public boolean isSet(final AbstractPointersObject object) {
-            return (getPrimitiveUsedMap(object) & usedMask) != 0;
+            return (getBooleanUsedMap(object) & usedMask) != 0;
         }
 
         @Override
         public void writeProfiled(final AbstractPointersObject object, final Object value, final IntValueProfile primitiveUsedMapProfile) {
             if (value instanceof Boolean) {
-                putPrimitiveUsedMap(object, primitiveUsedMapProfile.profile(getPrimitiveUsedMap(object)) | usedMask);
+                putBooleanUsedMap(object, primitiveUsedMapProfile.profile(getBooleanUsedMap(object)) | usedMask);
                 UnsafeUtils.putBoolAt(object, address, (boolean) value);
             } else {
                 throw IllegalWriteException.SINGLETON;
@@ -338,7 +358,7 @@ public abstract class Location {
         public void write(final AbstractPointersObject object, final Object value) {
             CompilerAsserts.neverPartOfCompilation();
             if (value instanceof Boolean) {
-                putPrimitiveUsedMap(object, getPrimitiveUsedMap(object) | usedMask);
+                putBooleanUsedMap(object, getBooleanUsedMap(object) | usedMask);
                 UnsafeUtils.putBoolAt(object, address, (boolean) value);
             } else {
                 throw IllegalWriteException.SINGLETON;
@@ -347,7 +367,7 @@ public abstract class Location {
 
         @Override
         public int getFieldIndex() {
-            return ArrayUtils.indexOf(PRIMITIVE_ADDRESSES, address);
+            return ArrayUtils.indexOf(BOOLEAN_ADDRESSES, address);
         }
     }
 
@@ -363,21 +383,21 @@ public abstract class Location {
         @Override
         public Object readProfiled(final AbstractPointersObject object, final IntValueProfile primitiveUsedMapProfile) {
             if (isSet(object, primitiveUsedMapProfile)) {
-                return UnsafeUtils.getBoolFromLongs(object.primitiveExtension, index);
+                return UnsafeUtils.getBool(object.booleanExtension, index);
             } else {
                 return NilObject.SINGLETON;
             }
         }
 
         private boolean isSet(final AbstractPointersObject object, final IntValueProfile primitiveUsedMapProfile) {
-            return (primitiveUsedMapProfile.profile(getPrimitiveUsedMap(object)) & usedMask) != 0;
+            return (primitiveUsedMapProfile.profile(getBooleanUsedMap(object)) & usedMask) != 0;
         }
 
         @Override
         public Object read(final AbstractPointersObject object) {
             CompilerAsserts.neverPartOfCompilation();
             if (isSet(object)) {
-                return UnsafeUtils.getBoolFromLongs(object.primitiveExtension, index);
+                return UnsafeUtils.getBool(object.booleanExtension, index);
             } else {
                 return NilObject.SINGLETON;
             }
@@ -385,14 +405,14 @@ public abstract class Location {
 
         @Override
         public boolean isSet(final AbstractPointersObject object) {
-            return (getPrimitiveUsedMap(object) & usedMask) != 0;
+            return (getBooleanUsedMap(object) & usedMask) != 0;
         }
 
         @Override
         public void writeProfiled(final AbstractPointersObject object, final Object value, final IntValueProfile primitiveUsedMapProfile) {
             if (value instanceof Boolean) {
-                putPrimitiveUsedMap(object, primitiveUsedMapProfile.profile(getPrimitiveUsedMap(object)) | usedMask);
-                UnsafeUtils.putBoolIntoLongs(object.primitiveExtension, index, (boolean) value);
+                putBooleanUsedMap(object, primitiveUsedMapProfile.profile(getBooleanUsedMap(object)) | usedMask);
+                UnsafeUtils.putBool(object.booleanExtension, index, (boolean) value);
             } else {
                 throw IllegalWriteException.SINGLETON;
             }
@@ -402,9 +422,8 @@ public abstract class Location {
         public void write(final AbstractPointersObject object, final Object value) {
             CompilerAsserts.neverPartOfCompilation();
             if (value instanceof Boolean) {
-                putPrimitiveUsedMap(object, getPrimitiveUsedMap(object) | usedMask);
-                object.primitiveExtension[index] = (boolean) value ? 1 : 0;
-                UnsafeUtils.putBoolIntoLongs(object.primitiveExtension, index, (boolean) value);
+                putBooleanUsedMap(object, getBooleanUsedMap(object) | usedMask);
+                UnsafeUtils.putBool(object.booleanExtension, index, (boolean) value);
             } else {
                 throw IllegalWriteException.SINGLETON;
             }

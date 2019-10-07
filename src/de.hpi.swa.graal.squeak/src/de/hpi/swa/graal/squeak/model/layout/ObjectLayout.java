@@ -14,6 +14,7 @@ import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
 public final class ObjectLayout {
     @CompilationFinal(dimensions = 1) private final Location[] locations;
+    private final int numBooleanExtension;
     private final int numPrimitiveExtension;
     private final int numObjectExtension;
 
@@ -24,6 +25,7 @@ public final class ObjectLayout {
         classObject.updateLayout(this);
         locations = new Location[instSize];
         Arrays.fill(locations, Location.UNINITIALIZED_LOCATION);
+        numBooleanExtension = 0;
         numPrimitiveExtension = 0;
         numObjectExtension = 0;
     }
@@ -32,6 +34,7 @@ public final class ObjectLayout {
         slowPathOperation();
         classObject.updateLayout(this);
         this.locations = locations;
+        numBooleanExtension = countBooleanExtension(locations);
         numPrimitiveExtension = countPrimitiveExtension(locations);
         numObjectExtension = countObjectExtension(locations);
     }
@@ -62,7 +65,12 @@ public final class ObjectLayout {
             assignGenericLocation(newLocations, index);
         }
 
-        if (oldLocation.isPrimitive()) {
+        if (oldLocation.isBool()) {
+            assert newLocations[index].isGeneric();
+            compressBooleansIfPossible(newLocations, oldLocation);
+        }
+
+        if (oldLocation.isPrimitive() && !oldLocation.isBool()) {
             assert newLocations[index].isGeneric();
             compressPrimitivesIfPossible(newLocations, oldLocation);
         }
@@ -97,6 +105,19 @@ public final class ObjectLayout {
         assignGenericLocation(newLocations, index);
     }
 
+    private static void compressBooleansIfPossible(final Location[] locations, final Location freeBooleanLocation) {
+        final int highestBooleanField = getHighestBooleanField(locations);
+        if (highestBooleanField < freeBooleanLocation.getFieldIndex()) {
+            return;
+        }
+        for (int i = 0; i < locations.length; i++) {
+            final Location location = locations[i];
+            if (location.isBool() && location.getFieldIndex() == highestBooleanField) {
+                locations[i] = Location.BOOL_LOCATIONS[freeBooleanLocation.getFieldIndex()];
+            }
+        }
+    }
+
     private static void compressPrimitivesIfPossible(final Location[] locations, final Location freePrimitiveLocation) {
         final int highestPrimitiveField = getHighestPrimitiveField(locations);
         if (highestPrimitiveField < freePrimitiveLocation.getFieldIndex()) {
@@ -104,10 +125,8 @@ public final class ObjectLayout {
         }
         for (int i = 0; i < locations.length; i++) {
             final Location location = locations[i];
-            if (location.isPrimitive() && location.getFieldIndex() == highestPrimitiveField) {
-                if (location.isBool()) {
-                    locations[i] = Location.BOOL_LOCATIONS[freePrimitiveLocation.getFieldIndex()];
-                } else if (location.isChar()) {
+            if (location.isPrimitive() && !location.isBool() && location.getFieldIndex() == highestPrimitiveField) {
+                if (location.isChar()) {
                     locations[i] = Location.CHAR_LOCATIONS[freePrimitiveLocation.getFieldIndex()];
                 } else if (location.isLong()) {
                     locations[i] = Location.LONG_LOCATIONS[freePrimitiveLocation.getFieldIndex()];
@@ -120,11 +139,22 @@ public final class ObjectLayout {
         }
     }
 
+    private static int getHighestBooleanField(final Location[] locations) {
+        int maxPrimitiveField = -1;
+        for (int i = 0; i < locations.length; i++) {
+            final Location location = locations[i];
+            if (location.isBool()) {
+                maxPrimitiveField = Math.max(location.getFieldIndex(), maxPrimitiveField);
+            }
+        }
+        return maxPrimitiveField;
+    }
+
     private static int getHighestPrimitiveField(final Location[] locations) {
         int maxPrimitiveField = -1;
         for (int i = 0; i < locations.length; i++) {
             final Location location = locations[i];
-            if (location.isPrimitive()) {
+            if (location.isPrimitive() && !location.isBool()) {
                 maxPrimitiveField = Math.max(location.getFieldIndex(), maxPrimitiveField);
             }
         }
@@ -144,12 +174,28 @@ public final class ObjectLayout {
 
     private static boolean areConsecutive(final Location[] locations) {
         CompilerAsserts.neverPartOfCompilation();
+        final int maxBooleanField = getHighestBooleanField(locations);
         final int maxPrimitiveField = getHighestPrimitiveField(locations);
         final int maxObjectField = getHighestObjectField(locations);
+        for (int i = 0; i <= maxBooleanField; i++) {
+            boolean found = false;
+            for (final Location location : locations) {
+                if (location.isBool() && location.getFieldIndex() == i) {
+                    if (found) {
+                        return false;
+                    } else {
+                        found = true;
+                    }
+                }
+            }
+            if (!found) {
+                return false;
+            }
+        }
         for (int i = 0; i <= maxPrimitiveField; i++) {
             boolean found = false;
             for (final Location location : locations) {
-                if (location.isPrimitive() && location.getFieldIndex() == i) {
+                if (location.isPrimitive() && !location.isBool() && location.getFieldIndex() == i) {
                     if (found) {
                         return false;
                     } else {
@@ -182,7 +228,7 @@ public final class ObjectLayout {
     private static boolean inUse(final Location[] locations, final Location targetlocation) {
         for (int i = 0; i < locations.length; i++) {
             final Location location = locations[i];
-            if (location.isGeneric() == targetlocation.isGeneric() && location.getFieldIndex() == targetlocation.getFieldIndex()) {
+            if (location.isGeneric() == targetlocation.isGeneric() && location.isBool() == targetlocation.isBool() && location.getFieldIndex() == targetlocation.getFieldIndex()) {
                 return true;
             }
         }
@@ -209,12 +255,21 @@ public final class ObjectLayout {
         return locations.length;
     }
 
+    public int getNumBooleanExtension() {
+        return numBooleanExtension;
+    }
+
     public int getNumPrimitiveExtension() {
         return numPrimitiveExtension;
     }
 
     public int getNumObjectExtension() {
         return numObjectExtension;
+    }
+
+    public boolean[] getFreshBooleanExtension() {
+        final int booleanExtUsed = getNumBooleanExtension();
+        return booleanExtUsed > 0 ? new boolean[booleanExtUsed] : null;
     }
 
     public long[] getFreshPrimitiveExtension() {
@@ -227,10 +282,20 @@ public final class ObjectLayout {
         return objectExtUsed > 0 ? ArrayUtils.withAll(objectExtUsed, NilObject.SINGLETON) : null;
     }
 
+    private static int countBooleanExtension(final Location[] locations) {
+        int count = 0;
+        for (final Location location : locations) {
+            if (location.isBool() && location.isExtension()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     private static int countPrimitiveExtension(final Location[] locations) {
         int count = 0;
         for (final Location location : locations) {
-            if (location.isPrimitive() && location.isExtension()) {
+            if (location.isPrimitive() && !location.isBool() && location.isExtension()) {
                 count++;
             }
         }

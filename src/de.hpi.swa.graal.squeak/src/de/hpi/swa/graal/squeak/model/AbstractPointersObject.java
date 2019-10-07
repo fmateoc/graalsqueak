@@ -20,6 +20,11 @@ import de.hpi.swa.graal.squeak.util.ArrayUtils;
 public abstract class AbstractPointersObject extends AbstractSqueakObjectWithClassAndHash {
     private ObjectLayout layout;
 
+    public int booleanUsedMap;
+    public boolean boolean0;
+    public boolean boolean1;
+    public boolean boolean2;
+
     public int primitiveUsedMap;
     public long primitive0;
     public long primitive1;
@@ -29,6 +34,7 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
     public Object object1 = NilObject.SINGLETON;
     public Object object2 = NilObject.SINGLETON;
 
+    public boolean[] booleanExtension;
     public long[] primitiveExtension;
     public Object[] objectExtension;
 
@@ -49,6 +55,11 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         super(original);
         layout = original.layout;
 
+        booleanUsedMap = original.booleanUsedMap;
+        boolean0 = original.boolean0;
+        boolean1 = original.boolean1;
+        boolean2 = original.boolean2;
+
         primitiveUsedMap = original.primitiveUsedMap;
         primitive0 = original.primitive0;
         primitive1 = original.primitive1;
@@ -58,6 +69,9 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         object1 = original.object1;
         object2 = original.object2;
 
+        if (original.booleanExtension != null) {
+            booleanExtension = original.booleanExtension.clone();
+        }
         if (original.primitiveExtension != null) {
             primitiveExtension = original.primitiveExtension.clone();
         }
@@ -68,6 +82,10 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
 
     public final void copyLayoutValuesFrom(final AbstractPointersObject anotherObject) {
         assert layout == anotherObject.layout;
+        booleanUsedMap = anotherObject.booleanUsedMap;
+        boolean0 = anotherObject.boolean0;
+        boolean1 = anotherObject.boolean1;
+        boolean2 = anotherObject.boolean2;
         primitiveUsedMap = anotherObject.primitiveUsedMap;
         primitive0 = anotherObject.primitive0;
         primitive1 = anotherObject.primitive1;
@@ -75,6 +93,9 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         object0 = anotherObject.object0;
         object1 = anotherObject.object1;
         object2 = anotherObject.object2;
+        if (anotherObject.booleanExtension != null) {
+            System.arraycopy(anotherObject.booleanExtension, 0, booleanExtension, 0, anotherObject.booleanExtension.length);
+        }
         if (anotherObject.primitiveExtension != null) {
             System.arraycopy(anotherObject.primitiveExtension, 0, primitiveExtension, 0, anotherObject.primitiveExtension.length);
         }
@@ -85,6 +106,7 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
 
     protected final void initializeLayoutAndExtensionsUnsafe() {
         layout = getSqueakClass().getLayout();
+        booleanExtension = layout.getFreshBooleanExtension();
         primitiveExtension = layout.getFreshPrimitiveExtension();
         objectExtension = layout.getFreshObjectExtension();
     }
@@ -134,6 +156,17 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
                 }
             }
         }
+        if (oldLayout.getNumBooleanExtension() != newLayout.getNumBooleanExtension()) {
+            // primExt has grown ...
+            if (booleanExtension == null) {
+                assert oldLayout.getNumBooleanExtension() == 0;
+                // ... primExt now needed
+                booleanExtension = newLayout.getFreshBooleanExtension();
+            } else {
+                // ... resize booleanExt
+                booleanExtension = Arrays.copyOf(booleanExtension, newLayout.getNumBooleanExtension());
+            }
+        }
         if (oldLayout.getNumPrimitiveExtension() != newLayout.getNumPrimitiveExtension()) {
             // primExt has grown ...
             if (primitiveExtension == null) {
@@ -159,6 +192,7 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
                 }
             }
         }
+        assert newLayout.getNumBooleanExtension() == 0 || newLayout.getNumBooleanExtension() == booleanExtension.length;
         assert newLayout.getNumPrimitiveExtension() == 0 || newLayout.getNumPrimitiveExtension() == primitiveExtension.length;
         assert newLayout.getNumObjectExtension() == 0 || newLayout.getNumObjectExtension() == objectExtension.length;
 
@@ -179,6 +213,7 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
             }
         }
         layout = theLayout;
+        assert layout.getNumBooleanExtension() == 0 || layout.getNumBooleanExtension() == booleanExtension.length;
         assert layout.getNumPrimitiveExtension() == 0 || layout.getNumPrimitiveExtension() == primitiveExtension.length;
         assert layout.getNumObjectExtension() == 0 || layout.getNumObjectExtension() == objectExtension.length;
     }
@@ -189,6 +224,12 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
 
         // Copy all values.
         final ObjectLayout otherLayout = other.layout;
+
+        final int otherBooleanUsedMap = other.booleanUsedMap;
+        final boolean otherBoolean0 = other.boolean0;
+        final boolean otherBoolean1 = other.boolean1;
+        final boolean otherBoolean2 = other.boolean2;
+
         final int otherPrimitiveUsedMap = other.primitiveUsedMap;
         final long otherPrimitive0 = other.primitive0;
         final long otherPrimitive1 = other.primitive1;
@@ -203,6 +244,12 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
 
         // Move content from this object to the other.
         other.layout = layout;
+
+        other.booleanUsedMap = booleanUsedMap;
+        other.boolean0 = boolean0;
+        other.boolean1 = boolean1;
+        other.boolean2 = boolean2;
+
         other.primitiveUsedMap = primitiveUsedMap;
         other.primitive0 = primitive0;
         other.primitive1 = primitive1;
@@ -217,6 +264,12 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
 
         // Move copied content to this object.
         layout = otherLayout;
+
+        booleanUsedMap = otherBooleanUsedMap;
+        boolean0 = otherBoolean0;
+        boolean1 = otherBoolean1;
+        boolean2 = otherBoolean2;
+
         primitiveUsedMap = otherPrimitiveUsedMap;
         primitive0 = otherPrimitive0;
         primitive1 = otherPrimitive1;

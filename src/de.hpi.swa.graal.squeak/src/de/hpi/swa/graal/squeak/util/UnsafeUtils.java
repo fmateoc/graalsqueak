@@ -38,6 +38,11 @@ public final class UnsafeUtils {
         }
     }
 
+    public static boolean getBool(final boolean[] array, final long index) {
+        assert 0 <= index && index < array.length;
+        return UNSAFE.getBoolean(array, Unsafe.ARRAY_BOOLEAN_BASE_OFFSET + index * Unsafe.ARRAY_BOOLEAN_INDEX_SCALE);
+    }
+
     public static boolean getBoolAt(final Object object, final long address) {
         return UNSAFE.getBoolean(object, address);
     }
@@ -178,6 +183,11 @@ public final class UnsafeUtils {
                 throw new RuntimeException("exception while trying to get Unsafe", e);
             }
         }
+    }
+
+    public static void putBool(final boolean[] array, final long index, final boolean value) {
+        assert 0 <= index && index < array.length;
+        UNSAFE.putBoolean(array, Unsafe.ARRAY_BOOLEAN_BASE_OFFSET + index * Unsafe.ARRAY_BOOLEAN_INDEX_SCALE, value);
     }
 
     public static void putBoolAt(final Object object, final long address, final boolean value) {
