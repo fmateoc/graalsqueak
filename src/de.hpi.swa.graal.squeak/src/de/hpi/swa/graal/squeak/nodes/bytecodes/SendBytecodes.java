@@ -5,9 +5,13 @@
  */
 package de.hpi.swa.graal.squeak.nodes.bytecodes;
 
+import java.lang.ref.WeakReference;
+
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.debug.DebuggerTags;
+import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrumentation.StandardTags;
 import com.oracle.truffle.api.instrumentation.Tag;
@@ -18,6 +22,7 @@ import com.oracle.truffle.api.profiles.ConditionProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonVirtualReturn;
+import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithClassAndHash;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
@@ -26,6 +31,7 @@ import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
 import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassNode;
+import de.hpi.swa.graal.squeak.nodes.bytecodes.SendBytecodesFactory.LookupClassNodeGen;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackPopNNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackPushNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.ControlPrimitives.PrimExitToDebuggerNode;
@@ -48,7 +54,7 @@ public final class SendBytecodes {
         private final BranchProfile nvrProfile = BranchProfile.create();
 
         private AbstractSendNode(final CompiledCodeObject code, final int index, final int numBytecodes, final Object sel, final int argcount) {
-            this(code, index, numBytecodes, sel, argcount, new LookupClassNode());
+            this(code, index, numBytecodes, sel, argcount, LookupClassNodeGen.create());
         }
 
         private AbstractSendNode(final CompiledCodeObject code, final int index, final int numBytecodes, final Object sel, final int argcount, final AbstractLookupClassNode lookupClassNode) {
@@ -128,11 +134,31 @@ public final class SendBytecodes {
     }
 
     @NodeInfo(cost = NodeCost.NONE)
-    protected static final class LookupClassNode extends AbstractLookupClassNode {
-        @Child private SqueakObjectClassNode lookupClassNode = SqueakObjectClassNode.create();
+    protected abstract static class LookupClassNode extends AbstractLookupClassNode {
 
-        @Override
-        protected ClassObject executeLookup(final Object receiver) {
+        @SuppressWarnings("unused")
+        @Specialization(guards = "receiver == unwrap(cachedReceiver)", assumptions = "unwrap(cachedReceiver).getClassStableAssumption()", limit = "1")
+        protected ClassObject doCached(final AbstractSqueakObjectWithClassAndHash receiver,
+                        @Cached("wrap(receiver)") final WeakReference<AbstractSqueakObjectWithClassAndHash> cachedReceiver,
+                        @Cached("doGenericSlow(receiver)") final ClassObject cachedClass) {
+            return cachedClass;
+        }
+
+        protected static final WeakReference<AbstractSqueakObjectWithClassAndHash> wrap(final AbstractSqueakObjectWithClassAndHash receiver) {
+            return new WeakReference<>(receiver);
+        }
+
+        protected static final AbstractSqueakObjectWithClassAndHash unwrap(final WeakReference<AbstractSqueakObjectWithClassAndHash> weakRef) {
+            return weakRef.get();
+        }
+
+        protected static final ClassObject doGenericSlow(final Object receiver) {
+            return SqueakObjectClassNode.getUncached().executeLookup(receiver);
+        }
+
+        @Specialization(replaces = "doCached")
+        protected ClassObject doGeneric(final Object receiver,
+                        @Cached final SqueakObjectClassNode lookupClassNode) {
             return lookupClassNode.executeLookup(receiver);
         }
     }

@@ -5,7 +5,9 @@
  */
 package de.hpi.swa.graal.squeak.model;
 
+import com.oracle.truffle.api.Assumption;
 import com.oracle.truffle.api.CompilerAsserts;
+import com.oracle.truffle.api.Truffle;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
@@ -15,6 +17,7 @@ import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
 public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSqueakObjectWithHash {
     private ClassObject squeakClass;
+    private Assumption classStableAssumption = Truffle.getRuntime().createAssumption("Class stability assumption");
 
     // For special/well-known objects only.
     protected AbstractSqueakObjectWithClassAndHash(final SqueakImageContext image) {
@@ -54,6 +57,10 @@ public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSquea
         return squeakClass;
     }
 
+    public final Assumption getClassStableAssumption() {
+        return classStableAssumption;
+    }
+
     public final String getSqueakClassName() {
         if (this instanceof ClassObject) {
             return getClassName() + " class";
@@ -66,8 +73,13 @@ public abstract class AbstractSqueakObjectWithClassAndHash extends AbstractSquea
         return this == image.metaClass;
     }
 
-    @Override
     public final void setSqueakClass(final ClassObject newClass) {
+        classStableAssumption.invalidate();
+        setSqueakClassUnsafe(newClass);
+    }
+
+    @Override
+    public final void setSqueakClassUnsafe(final ClassObject newClass) {
         squeakClass = newClass;
     }
 

@@ -44,7 +44,7 @@ public abstract class AbstractSqueakObjectWithHash extends AbstractSqueakObject 
         return getSqueakClass() == null;
     }
 
-    public void setSqueakClass(@SuppressWarnings("unused") final ClassObject classObject) {
+    public void setSqueakClassUnsafe(@SuppressWarnings("unused") final ClassObject classObject) {
         // Do nothing by default.
     }
 
