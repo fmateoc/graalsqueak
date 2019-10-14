@@ -15,6 +15,7 @@ import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.reading.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.WeakVariablePointersObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectIdentityNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.UpdateSqueakObjectHashNode;
 import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
@@ -102,8 +103,8 @@ public final class WeakVariablePointersObject extends AbstractPointersObject {
         UnsafeUtils.putWeakReference(variablePart, index, new WeakReference<>(value, image.weakPointersQueue));
     }
 
-    public boolean pointsTo(final Object thang) {
-        return layoutValuesPointTo(thang) || variablePartPointsTo(thang);
+    public boolean pointsTo(final SqueakObjectIdentityNode identityNode, final ConditionProfile isPrimitiveProfile, final Object thang) {
+        return layoutValuesPointTo(identityNode, isPrimitiveProfile, thang) || variablePartPointsTo(thang);
     }
 
     private boolean variablePartPointsTo(final Object thang) {

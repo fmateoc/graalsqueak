@@ -10,13 +10,16 @@ import java.util.Arrays;
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.profiles.ConditionProfile;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayout;
 import de.hpi.swa.graal.squeak.model.layout.SlotLocation;
 import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
+import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectIdentityNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.UpdateSqueakObjectHashNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 
@@ -252,9 +255,20 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         AbstractPointersObjectWriteNode.getUncached().execute(this, index, value);
     }
 
-    protected final boolean layoutValuesPointTo(final Object thang) {
-        // FIXME: primitive values?
-        return object0 == thang || object1 == thang || object2 == thang || objectExtension != null && ArrayUtils.contains(objectExtension, thang);
+    protected final boolean layoutValuesPointTo(final SqueakObjectIdentityNode identityNode, final ConditionProfile isPrimitiveProfile, final Object thang) {
+        final boolean pointTo = object0 == thang || object1 == thang || object2 == thang || objectExtension != null && ArrayUtils.contains(objectExtension, thang);
+        if (pointTo) {
+            return true;
+        }
+        if (isPrimitiveProfile.profile(SqueakGuards.isUsedJavaPrimitive(thang))) {
+            // TODO: This could be more efficient.
+            for (final SlotLocation slotLocation : getLayout().getLocations()) {
+                if (slotLocation.isPrimitive() && identityNode.execute(slotLocation.read(this), thang)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     protected final void layoutValuesBecomeOneWay(final UpdateSqueakObjectHashNode updateHashNode, final Object[] from, final Object[] to, final boolean copyHash) {

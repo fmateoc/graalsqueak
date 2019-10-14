@@ -210,6 +210,10 @@ public final class ObjectLayout {
         return locations[index];
     }
 
+    public SlotLocation[] getLocations() {
+        return locations;
+    }
+
     public int getInstSize() {
         return locations.length;
     }

@@ -105,7 +105,7 @@ public abstract class SlotLocation {
         return false;
     }
 
-    protected boolean isPrimitive() {
+    public boolean isPrimitive() {
         return false;
     }
 

@@ -19,6 +19,7 @@ import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.NodeFactory;
@@ -26,6 +27,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.nodes.ExplodeLoop;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
+import com.oracle.truffle.api.profiles.ConditionProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.SimulationPrimitiveFailed;
@@ -50,6 +52,7 @@ import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAtPut0Node;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectIdentityNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectShallowCopyNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.primitives.AbstractPrimitiveFactoryHolder;
@@ -279,18 +282,24 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
         }
 
         @Specialization
-        protected static final boolean doPointers(final PointersObject receiver, final Object thang) {
-            return BooleanObject.wrap(receiver.pointsTo(thang));
+        protected static final boolean doPointers(final PointersObject receiver, final Object thang,
+                        @Shared("identityNode") @Cached final SqueakObjectIdentityNode identityNode,
+                        @Shared("isPrimitiveProfile") @Cached("createBinaryProfile()") final ConditionProfile isPrimitiveProfile) {
+            return BooleanObject.wrap(receiver.pointsTo(identityNode, isPrimitiveProfile, thang));
         }
 
         @Specialization
-        protected static final boolean doVariablePointers(final VariablePointersObject receiver, final Object thang) {
-            return BooleanObject.wrap(receiver.pointsTo(thang));
+        protected static final boolean doVariablePointers(final VariablePointersObject receiver, final Object thang,
+                        @Shared("identityNode") @Cached final SqueakObjectIdentityNode identityNode,
+                        @Shared("isPrimitiveProfile") @Cached("createBinaryProfile()") final ConditionProfile isPrimitiveProfile) {
+            return BooleanObject.wrap(receiver.pointsTo(identityNode, isPrimitiveProfile, thang));
         }
 
         @Specialization
-        protected static final boolean doWeakPointers(final WeakVariablePointersObject receiver, final Object thang) {
-            return BooleanObject.wrap(receiver.pointsTo(thang));
+        protected static final boolean doWeakPointers(final WeakVariablePointersObject receiver, final Object thang,
+                        @Shared("identityNode") @Cached final SqueakObjectIdentityNode identityNode,
+                        @Shared("isPrimitiveProfile") @Cached("createBinaryProfile()") final ConditionProfile isPrimitiveProfile) {
+            return BooleanObject.wrap(receiver.pointsTo(identityNode, isPrimitiveProfile, thang));
         }
     }
 
