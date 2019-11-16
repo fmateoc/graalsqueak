@@ -51,11 +51,9 @@ import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.ASSOCIATION;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.ENVIRONMENT;
-import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.LINKED_LIST;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.MESSAGE;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.PROCESS_SCHEDULER;
-import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.SEMAPHORE;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.SMALLTALK_IMAGE;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.model.layout.SlotLocation;
@@ -182,7 +180,6 @@ public final class SqueakImageContext {
             // Load image.
             SqueakImageReader.load(this);
             getOutput().println("Preparing image for headless execution...");
-            LOG.fine(() -> "Fresh after load" + currentState());
             // Remove active context.
             getActiveProcessSlow().instVarAtPut0Slow(PROCESS.SUSPENDED_CONTEXT, NilObject.SINGLETON);
             // Modify StartUpList for headless execution.
@@ -199,7 +196,6 @@ public final class SqueakImageContext {
             evaluate("Utilities setAuthorInitials: 'GraalSqueak'");
             // Initialize fresh MorphicUIManager.
             evaluate("Project current instVarNamed: #uiManager put: MorphicUIManager new");
-            LOG.fine(() -> "After startup" + currentState());
         }
     }
 
@@ -267,8 +263,8 @@ public final class SqueakImageContext {
         final ContextObject doItContext = ContextObject.create(this, doItMethod.getSqueakContextSize());
         doItContext.atput0(CONTEXT.METHOD, doItMethod);
         doItContext.atput0(CONTEXT.INSTRUCTION_POINTER, (long) doItMethod.getInitialPC());
-        doItContext.atput0(CONTEXT.RECEIVER, nilClass);
-        doItContext.atput0(CONTEXT.STACKPOINTER, 0L);
+        doItContext.atput0(CONTEXT.RECEIVER, NilObject.SINGLETON);
+        doItContext.atput0(CONTEXT.STACKPOINTER, new Long(doItMethod.getNumTemps()));
         doItContext.atput0(CONTEXT.CLOSURE_OR_NIL, NilObject.SINGLETON);
         doItContext.atput0(CONTEXT.SENDER_OR_NIL, NilObject.SINGLETON);
         return ExecuteTopLevelContextNode.create(getLanguage(), doItContext, false);
@@ -582,80 +578,6 @@ public final class SqueakImageContext {
         if (lastSender[0] instanceof ContextObject) {
             getError().println("== Squeak frames ================================================================");
             ((ContextObject) lastSender[0]).printSqStackTrace();
-        }
-    }
-
-    public String currentState() {
-        final StringBuilder b = new StringBuilder();
-        b.append("\nImage processes state\n");
-        final PointersObject activeProcess = getActiveProcessSlow();
-        final long activePriority = (long) activeProcess.instVarAt0Slow(PROCESS.PRIORITY);
-        b.append("Active process @");
-        b.append(activeProcess.hashCode());
-        b.append(" priority ");
-        b.append(activePriority);
-        b.append('\n');
-        final Object interruptSema = getSpecialObject(SPECIAL_OBJECT.THE_INTERRUPT_SEMAPHORE);
-        printSemaphoreOrNil(b, "Interrupt semaphore @", interruptSema, true);
-        final Object timerSema = getSpecialObject(SPECIAL_OBJECT.THE_TIMER_SEMAPHORE);
-        printSemaphoreOrNil(b, "Timer semaphore @", timerSema, true);
-        final ArrayObject externalObjects = (ArrayObject) getSpecialObject(SPECIAL_OBJECT.EXTERNAL_OBJECTS_ARRAY);
-        if (!externalObjects.isEmptyType()) {
-            final Object[] semaphores = externalObjects.getObjectStorage();
-            for (int i = 0; i < semaphores.length; i++) {
-                printSemaphoreOrNil(b, "External semaphore at index " + (i + 1) + " @", semaphores[i], false);
-            }
-        }
-        final Object[] lists = ((ArrayObject) getScheduler().instVarAt0Slow(PROCESS_SCHEDULER.PROCESS_LISTS)).getObjectStorage();
-        for (int i = 0; i < lists.length; i++) {
-            printLinkedList(b, "Quiescent processes list at priority " + (i + 1), (PointersObject) lists[i]);
-        }
-        return b.toString();
-    }
-
-    private static void printSemaphoreOrNil(final StringBuilder b, final String label, final Object semaphoreOrNil, final boolean printIfNil) {
-        if (semaphoreOrNil instanceof PointersObject) {
-            b.append(label);
-            b.append(semaphoreOrNil.hashCode());
-            b.append(" with ");
-            b.append(((PointersObject) semaphoreOrNil).instVarAt0Slow(SEMAPHORE.EXCESS_SIGNALS));
-            b.append(" excess signals");
-            if (!printLinkedList(b, "", (PointersObject) semaphoreOrNil)) {
-                b.append(" and no processes\n");
-            }
-        } else {
-            if (printIfNil) {
-                b.append(label);
-                b.append(" is nil\n");
-            }
-        }
-    }
-
-    private static boolean printLinkedList(final StringBuilder b, final String label, final PointersObject linkedList) {
-        Object temp = linkedList.instVarAt0Slow(LINKED_LIST.FIRST_LINK);
-        if (temp instanceof PointersObject) {
-            b.append(label);
-            b.append(" and processes:\n");
-            while (temp instanceof PointersObject) {
-                final PointersObject aProcess = (PointersObject) temp;
-                final Object aContext = aProcess.instVarAt0Slow(PROCESS.SUSPENDED_CONTEXT);
-                if (aContext instanceof ContextObject) {
-                    b.append("\tprocess @");
-                    b.append(aProcess.hashCode());
-                    b.append(" with suspended context ");
-                    b.append(aContext);
-                    b.append(" and stack trace:\n");
-                    ((ContextObject) aContext).printSqMaterializedStackTraceOn(b);
-                } else {
-                    b.append("\tprocess @");
-                    b.append(aProcess.hashCode());
-                    b.append(" with suspended context nil\n");
-                }
-                temp = aProcess.instVarAt0Slow(PROCESS.NEXT_LINK);
-            }
-            return true;
-        } else {
-            return false;
         }
     }
 
