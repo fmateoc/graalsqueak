@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -170,10 +170,7 @@ public final class ObjectLayouts {
         OBJECT_MOVED,
         OBJECT_NOT_PINNED,
         CALLBACK_ERROR,
-        OPERATING_SYSTEM_ERROR,
-        FFI_EXCEPTION,
-        NEED_COMPACTION,
-        OPERATION_FAILED
+        OPERATING_SYSTEM_ERROR
     }
 
     public static final class EXCEPTION {
@@ -209,11 +206,7 @@ public final class ObjectLayouts {
     }
 
     public static final class METACLASS {
-        /**
-         * Relative offset to {@link CLASS_DESCRIPTION} for {@link ClassObject}.
-         */
-        public static final int THIS_CLASS = 0;
-
+        public static final int THIS_CLASS = 5;
         public static final int INST_SIZE = 6;
     }
 
@@ -286,7 +279,7 @@ public final class ObjectLayouts {
         public static final int THE_TIMER_SEMAPHORE = 29;
         public static final int THE_INTERRUPT_SEMAPHORE = 30;
         public static final int FLOAT_PROTO = 31;
-        public static final int CLASS_TRUFFLE_OBJECT = 32; // reusing unused slot for TruffleObject
+        public static final int CLASS_FOREIGN_OBJECT = 32; // reusing unused slot for ForeignObject
         public static final int SELECTOR_CANNOT_INTERPRET = 34;
         public static final int METHOD_CONTEXT_PROTO = 35;
         public static final int CLASS_BLOCK_CLOSURE = 36;

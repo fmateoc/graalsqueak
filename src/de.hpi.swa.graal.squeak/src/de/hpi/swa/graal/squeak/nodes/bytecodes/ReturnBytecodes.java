@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -80,8 +80,9 @@ public final class ReturnBytecodes {
             assert homeContext.getProcess() != null;
             final Object caller = homeContext.getFrameSender();
             if (caller == NilObject.SINGLETON || !homeContext.getProcess().isActiveProcess()) {
+                /** {@link getCannotReturnNode()} acts as {@link BranchProfile} */
                 getCannotReturnNode().executeSend(frame, getGetOrCreateContextNode().executeGet(frame, NilObject.SINGLETON), getReturnValue(frame));
-                assert false : "Should not reach";
+                throw SqueakException.create("Should not reach");
             }
             throw new NonLocalReturn(getReturnValue(frame), caller);
         }
@@ -182,7 +183,7 @@ public final class ReturnBytecodes {
             final Object caller = homeContext.getFrameSender();
             if (caller == NilObject.SINGLETON || homeContext.getProcess() != null && !homeContext.getProcess().isActiveProcess() || !currentContext.hasSender(homeContext)) {
                 getCannotReturnNode().executeSend(frame, currentContext, getReturnValue(frame));
-                assert false : "Should not reach";
+                throw SqueakException.create("Should not reach");
             }
             throw new NonLocalReturn(getReturnValue(frame), caller);
         }

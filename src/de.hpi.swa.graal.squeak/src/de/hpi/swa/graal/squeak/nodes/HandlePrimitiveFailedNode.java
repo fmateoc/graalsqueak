@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -17,20 +17,22 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.ERROR_TABLE;
+import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
+import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackPushNode;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 
 @NodeInfo(cost = NodeCost.NONE)
 public abstract class HandlePrimitiveFailedNode extends AbstractNodeWithCode {
     private static final TruffleLogger LOG = TruffleLogger.getLogger(SqueakLanguageConfig.ID, HandlePrimitiveFailedNode.class);
-    private static final boolean isLoggingEnabled = LOG.isLoggable(Level.FINE);
+    private static final boolean isLoggingEnabled = LOG.isLoggable(Level.FINER);
+
+    @Child protected ArrayObjectSizeNode sizeNode = ArrayObjectSizeNode.create();
 
     private static final ERROR_TABLE[] errors = ERROR_TABLE.values();
-    private final String errorString;
 
     protected HandlePrimitiveFailedNode(final CompiledCodeObject code) {
         super(code);
-        errorString = "Primitive failed in method " + code + " with reason ";
     }
 
     public static HandlePrimitiveFailedNode create(final CompiledCodeObject code) {
@@ -45,21 +47,22 @@ public abstract class HandlePrimitiveFailedNode extends AbstractNodeWithCode {
      * symbol into the corresponding temporary variable. See
      * StackInterpreter>>#getErrorObjectFromPrimFailCode for more information.
      */
-    @Specialization(guards = {"followedByExtendedStore(code)", "reasonCode < code.image.primitiveErrorTable.getObjectLength()"})
+    @Specialization(guards = {"followedByExtendedStore(code)", "reasonCode < sizeNode.execute(code.image.primitiveErrorTable)"})
     protected final void doHandleWithLookup(final VirtualFrame frame, final int reasonCode,
-                    @Cached("create(code)") final FrameStackPushNode pushNode) {
-        final Object reason = code.image.primitiveErrorTable.getObjectStorage()[reasonCode];
+                    @Cached("create(code)") final FrameStackPushNode pushNode,
+                    @Cached final ArrayObjectReadNode readNode) {
+        final Object reason = readNode.execute(code.image.primitiveErrorTable, reasonCode);
         if (isLoggingEnabled) {
-            LOG.fine(errorString + reason);
+            LOG.finer("Primitive failed in method " + code + " with reason " + reason);
         }
         pushNode.execute(frame, reason);
     }
 
-    @Specialization(guards = {"followedByExtendedStore(code)", "reasonCode >= code.image.primitiveErrorTable.getObjectLength()"})
+    @Specialization(guards = {"followedByExtendedStore(code)", "reasonCode >= sizeNode.execute(code.image.primitiveErrorTable)"})
     protected final void doHandleRawValue(final VirtualFrame frame, final int reasonCode,
                     @Cached("create(code)") final FrameStackPushNode pushNode) {
         if (isLoggingEnabled) {
-            LOG.fine(errorString + errors[reasonCode]);
+            LOG.finer("Primitive failed in method " + code + " with reason " + errors[reasonCode]);
         }
         pushNode.execute(frame, reasonCode);
     }
@@ -67,7 +70,7 @@ public abstract class HandlePrimitiveFailedNode extends AbstractNodeWithCode {
     @Specialization(guards = "!followedByExtendedStore(code)")
     protected final void doNothing(@SuppressWarnings("unused") final int reasonCode) {
         if (isLoggingEnabled) {
-            LOG.fine(errorString + errors[reasonCode]);
+            LOG.finer("Primitive failed in method " + code + " with reason " + errors[reasonCode]);
         }
     }
 

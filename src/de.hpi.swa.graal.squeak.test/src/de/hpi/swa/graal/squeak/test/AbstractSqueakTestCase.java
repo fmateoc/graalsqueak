@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -30,9 +30,9 @@ import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.CONTEXT;
-import de.hpi.swa.graal.squeak.nodes.DispatchUneagerlyNode;
 import de.hpi.swa.graal.squeak.nodes.ExecuteTopLevelContextNode;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
+import de.hpi.swa.graal.squeak.shared.SqueakLanguageOptions;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 import de.hpi.swa.graal.squeak.util.LogHandlerAccessor;
@@ -57,9 +57,8 @@ public abstract class AbstractSqueakTestCase {
         bytes[intbytes.length] = 0; // Set flagByte = 0 for no method trailer.
         if (literals.length == 0 || literals[literals.length - 1] != nilClassBinding) {
             return makeMethod(bytes, ArrayUtils.copyWithLast(literals, nilClassBinding));
-        } else {
-            return makeMethod(bytes, literals);
         }
+        return makeMethod(bytes, literals);
     }
 
     protected static long makeHeader(final int numArgs, final int numTemps, final int numLiterals, final boolean hasPrimitive, final boolean needsLargeFrame) { // shortcut
@@ -71,9 +70,10 @@ public abstract class AbstractSqueakTestCase {
     }
 
     protected static Object runMethod(final CompiledMethodObject code, final Object receiver, final Object... arguments) {
+        final VirtualFrame frame = createTestFrame(code);
         Object result = null;
         try {
-            result = DispatchUneagerlyNode.getUncached().executeDispatch(code, ArrayUtils.copyWithFirst(arguments, receiver), NilObject.SINGLETON);
+            result = createContext(code, receiver, arguments).execute(frame);
         } catch (NonLocalReturn | NonVirtualReturn | ProcessSwitch e) {
             fail("broken test");
         }
@@ -134,9 +134,9 @@ public abstract class AbstractSqueakTestCase {
         assert context == null && image == null;
         final Builder contextBuilder = Context.newBuilder();
         contextBuilder.allowAllAccess(true);
-        contextBuilder.option(SqueakLanguageConfig.ID + ".ImagePath", imagePath);
-        contextBuilder.option(SqueakLanguageConfig.ID + ".Headless", "true");
-        contextBuilder.option(SqueakLanguageConfig.ID + ".Testing", "true");
+        contextBuilder.option(SqueakLanguageConfig.ID + "." + SqueakLanguageOptions.IMAGE_PATH, imagePath);
+        contextBuilder.option(SqueakLanguageConfig.ID + "." + SqueakLanguageOptions.HEADLESS, "true");
+        contextBuilder.option(SqueakLanguageConfig.ID + "." + SqueakLanguageOptions.TESTING, "true");
         final String logLevel = System.getProperty("log.level");
         if (logLevel != null) {
             contextBuilder.option("log." + SqueakLanguageConfig.ID + ".level", logLevel);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -26,7 +26,6 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 @NodeInfo(cost = NodeCost.NONE)
 public abstract class DispatchEagerlyNode extends AbstractNodeWithCode {
     protected static final int INLINE_CACHE_SIZE = 6;
-    protected static final boolean TRUE = true;
 
     protected DispatchEagerlyNode(final CompiledCodeObject code) {
         super(code);

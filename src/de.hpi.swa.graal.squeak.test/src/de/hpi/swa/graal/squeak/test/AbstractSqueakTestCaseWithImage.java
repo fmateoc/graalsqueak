@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -49,7 +49,7 @@ public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
                                                                                                                                      // debugging
     private static final int PRIORITY_10_LIST_INDEX = 9;
     private static final int USER_PRIORITY_LIST_INDEX = 39;
-    private static final String PASSED_VALUE = "passed";
+    private static final String PASSED_VALUE = "'passed'";
 
     private static PointersObject idleProcess;
     private static volatile boolean testWithImageIsActive;     // for now we are single-threaded, so
@@ -298,28 +298,26 @@ public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
         if (!(result instanceof NativeObject) || !((NativeObject) result).isString()) {
             return TestResult.failure("did not return a ByteString, got " + result);
         }
-        final String testResult = ((NativeObject) result).asStringUnsafe();
+        final String testResult = ((NativeObject) result).toString();
         if (PASSED_VALUE.equals(testResult)) {
-            assert ((NativeObject) result).isByteType() : "Passing result should always be a ByteString";
             return TestResult.success(testResult);
         } else {
             final boolean shouldPass = (boolean) evaluate(shouldPassCommand(request));
             if (shouldPass) {
                 return TestResult.failure(testResult);
             } else {
-                return TestResult.failure("expected failure in Squeak");
+                return TestResult.success("expected failure in Squeak");
             }
         }
     }
 
     private static String testCommand(final TestRequest request) {
-        return String.format(
-                        "[(%s selector: #%s) runCase. '%s'] on: TestFailure, Error do: [:e | e signalerContext longStack]",
+        return String.format("[(%s selector: #%s) runCase. '%s'] on: TestFailure, Error do: [:e | e signalerContext longStack]",
                         request.testCase, request.testSelector, PASSED_VALUE);
     }
 
     private static String shouldPassCommand(final TestRequest request) {
-        return String.format("[(%s selector: #%s) shouldPass] on: Error do: [:e | false]", request.testCase, request.testSelector, PASSED_VALUE);
+        return String.format("[(%s selector: #%s) shouldPass] on: Error do: [:e | false]", request.testCase, request.testSelector);
     }
 
     protected static final class TestRequest {

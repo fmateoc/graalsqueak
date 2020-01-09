@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -214,7 +214,7 @@ public final class UnixOSProcessPlugin extends AbstractOSProcessPlugin {
         protected final ArrayObject doFileProtectionMask(@SuppressWarnings("unused") final Object receiver, final NativeObject pathString,
                         @Cached final BranchProfile errorProfile) {
             try {
-                final TruffleFile file = method.image.env.getTruffleFile(pathString.asStringUnsafe());
+                final TruffleFile file = method.image.env.getPublicTruffleFile(pathString.asStringUnsafe());
                 return getProtectionMask(file.getPosixPermissions());
             } catch (final IOException | UnsupportedOperationException | SecurityException e) {
                 errorProfile.enter();
@@ -240,7 +240,7 @@ public final class UnixOSProcessPlugin extends AbstractOSProcessPlugin {
         protected final ArrayObject doFileStat(@SuppressWarnings("unused") final Object receiver, final NativeObject pathString,
                         @Cached final BranchProfile errorProfile) {
             try {
-                final TruffleFile file = method.image.env.getTruffleFile(pathString.asStringUnsafe());
+                final TruffleFile file = method.image.env.getPublicTruffleFile(pathString.asStringUnsafe());
                 final long uid = file.getOwner().hashCode();
                 final long gid = file.getGroup().hashCode();
                 final ArrayObject mask = getProtectionMask(file.getPosixPermissions());
@@ -472,7 +472,7 @@ public final class UnixOSProcessPlugin extends AbstractOSProcessPlugin {
         protected final NativeObject doRealpath(@SuppressWarnings("unused") final Object receiver, final NativeObject pathString,
                         @Cached final BranchProfile errorProfile) {
             try {
-                return method.image.asByteString(method.image.env.getTruffleFile(pathString.asStringUnsafe()).getCanonicalFile().getPath());
+                return method.image.asByteString(method.image.env.getPublicTruffleFile(pathString.asStringUnsafe()).getCanonicalFile().getPath());
             } catch (final IOException e) {
                 errorProfile.enter();
                 throw PrimitiveFailed.GENERIC_ERROR;

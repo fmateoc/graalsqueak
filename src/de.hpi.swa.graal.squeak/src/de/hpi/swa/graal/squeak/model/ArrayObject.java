@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -38,7 +38,6 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
     public static final long LONG_NIL_TAG = Long.MIN_VALUE + 42; // Rather unlikely long.
     public static final double DOUBLE_NIL_TAG = Double.longBitsToDouble(0x7ff8000000000001L); // NaN+1.
     public static final long DOUBLE_NIL_TAG_LONG = Double.doubleToRawLongBits(DOUBLE_NIL_TAG);
-    public static final NativeObject NATIVE_OBJECT_NIL_TAG = null;
     public static final boolean ENABLE_STORAGE_STRATEGIES = true;
 
     private static final TruffleLogger LOG = TruffleLogger.getLogger(SqueakLanguageConfig.ID, ArrayObject.class);
@@ -88,10 +87,6 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
 
     public static boolean isLongNilTag(final long value) {
         return value == LONG_NIL_TAG;
-    }
-
-    public static boolean isNativeObjectNilTag(final NativeObject value) {
-        return value == NATIVE_OBJECT_NIL_TAG;
     }
 
     @Override
@@ -203,25 +198,6 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         return (long[]) storage;
     }
 
-    public NativeObject getNativeObject(final long index) {
-        assert isNativeObjectType();
-        return UnsafeUtils.getNativeObject((NativeObject[]) storage, index);
-    }
-
-    public void setNativeObject(final long index, final NativeObject value) {
-        assert isNativeObjectType();
-        UnsafeUtils.putNativeObject((NativeObject[]) storage, index, value);
-    }
-
-    public int getNativeObjectLength() {
-        return getNativeObjectStorage().length;
-    }
-
-    public NativeObject[] getNativeObjectStorage() {
-        assert isNativeObjectType();
-        return (NativeObject[]) storage;
-    }
-
     public Object getObject(final long index) {
         assert isObjectType();
         return UnsafeUtils.getObject((Object[]) storage, index);
@@ -279,17 +255,12 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         return storage instanceof long[];
     }
 
-    public boolean isNativeObjectType() {
-        return storage instanceof NativeObject[];
-    }
-
     public boolean isObjectType() {
-        // Cannot use instanceof here (NativeObject[] inherits from Object[]).
-        return storage.getClass() == Object[].class;
+        return storage instanceof Object[];
     }
 
     public boolean isTraceable() {
-        return isObjectType() || isNativeObjectType();
+        return isObjectType();
     }
 
     public boolean hasSameStorageType(final ArrayObject other) {
@@ -321,10 +292,6 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
 
     public static Object toObjectFromDouble(final double value) {
         return isDoubleNilTag(value) ? NilObject.SINGLETON : value;
-    }
-
-    public static Object toObjectFromNativeObject(final NativeObject value) {
-        return isNativeObjectNilTag(value) ? NilObject.SINGLETON : value;
     }
 
     public void transitionFromBooleansToObjects() {
@@ -386,10 +353,6 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         storage = longs;
     }
 
-    public void transitionFromEmptyToNatives() {
-        storage = new NativeObject[getEmptyStorage()];
-    }
-
     public void transitionFromEmptyToObjects() {
         storage = ArrayUtils.withAll(getEmptyLength(), NilObject.SINGLETON);
     }
@@ -402,18 +365,6 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         final Object[] objects = new Object[longs.length];
         for (int i = 0; i < longs.length; i++) {
             objects[i] = toObjectFromLong(longs[i]);
-        }
-        storage = objects;
-    }
-
-    public void transitionFromNativesToObjects() {
-        if (isLoggingEnabled) {
-            LOG.finer("transition from NativeObjects to Objects");
-        }
-        final NativeObject[] natives = getNativeObjectStorage();
-        final Object[] objects = new Object[natives.length];
-        for (int i = 0; i < natives.length; i++) {
-            objects[i] = toObjectFromNativeObject(natives[i]);
         }
         storage = objects;
     }

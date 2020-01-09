@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -11,8 +11,6 @@ import java.lang.ref.ReferenceQueue;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.graalvm.collections.EconomicMap;
 
@@ -108,8 +106,9 @@ public final class SqueakImageContext {
     public final NativeObject runWithInSelector = new NativeObject(this);
     public final ArrayObject primitiveErrorTable = new ArrayObject(this);
     public final ArrayObject specialSelectors = new ArrayObject(this);
-    @CompilationFinal public ClassObject smallFloatClass = null;
-    @CompilationFinal public ClassObject truffleObjectClass = null;
+    @CompilationFinal private ClassObject smallFloatClass = null;
+    @CompilationFinal private ClassObject byteSymbolClass = null;
+    @CompilationFinal private ClassObject foreignObjectClass = null;
 
     public final ArrayObject specialObjectsArray = new ArrayObject(this);
     public final ClassObject metaClass = new ClassObject(this);
@@ -166,8 +165,6 @@ public final class SqueakImageContext {
     @CompilationFinal(dimensions = 1) public static final byte[] DEBUG_SYNTAX_ERROR_SELECTOR_NAME = "debugSyntaxError:".getBytes();
     @CompilationFinal private NativeObject debugSyntaxErrorSelector = null;
 
-    public final Map<PointersObject, ContextObject> suspendedContexts = new HashMap<>();
-    @CompilationFinal public ClassObject byteSymbolClass;
     private final AbstractPointersObjectReadNode schedulerReadNode = AbstractPointersObjectReadNode.create();
     private final AbstractPointersObjectReadNode processReadNode = AbstractPointersObjectReadNode.create();
     private final AbstractPointersObjectReadNode semaphoreReadNode = AbstractPointersObjectReadNode.create();
@@ -274,7 +271,7 @@ public final class SqueakImageContext {
         doItContext.atput0(CONTEXT.METHOD, doItMethod);
         doItContext.atput0(CONTEXT.INSTRUCTION_POINTER, (long) doItMethod.getInitialPC());
         doItContext.atput0(CONTEXT.RECEIVER, NilObject.SINGLETON);
-        doItContext.atput0(CONTEXT.STACKPOINTER, new Long(doItMethod.getNumTemps()));
+        doItContext.atput0(CONTEXT.STACKPOINTER, (long) doItMethod.getNumTemps());
         doItContext.atput0(CONTEXT.CLOSURE_OR_NIL, NilObject.SINGLETON);
         doItContext.atput0(CONTEXT.SENDER_OR_NIL, NilObject.SINGLETON);
         doItContext.setProcess(getActiveProcess());
@@ -309,41 +306,60 @@ public final class SqueakImageContext {
         return debugErrorSelector;
     }
 
-    public void setDebugErrorSelector(final NativeObject debugErrorSelector) {
+    public void setDebugErrorSelector(final NativeObject nativeObject) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
-        this.debugErrorSelector = debugErrorSelector;
+        assert debugErrorSelector == null;
+        debugErrorSelector = nativeObject;
     }
 
     public NativeObject getDebugSyntaxErrorSelector() {
         return debugSyntaxErrorSelector;
     }
 
-    public void setDebugSyntaxErrorSelector(final NativeObject debugSyntaxErrorSelector) {
+    public void setDebugSyntaxErrorSelector(final NativeObject nativeObject) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
-        this.debugSyntaxErrorSelector = debugSyntaxErrorSelector;
+        assert debugSyntaxErrorSelector == null;
+        debugSyntaxErrorSelector = nativeObject;
     }
 
     public ClassObject getCompilerClass() {
         return compilerClass;
     }
 
-    public void setCompilerClass(final ClassObject compilerClass) {
+    public void setCompilerClass(final ClassObject classObject) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
-        this.compilerClass = compilerClass;
+        assert compilerClass == null;
+        compilerClass = classObject;
     }
 
     public ClassObject getParserClass() {
         return parserClass;
     }
 
-    public void setParserClass(final ClassObject parserClass) {
+    public void setParserClass(final ClassObject classObject) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
-        this.parserClass = parserClass;
+        assert parserClass == null;
+        parserClass = classObject;
     }
 
-    public void setSmallFloat(final ClassObject classObject) {
+    public ClassObject getSmallFloatClass() {
+        return smallFloatClass;
+    }
+
+    public void setSmallFloatClass(final ClassObject classObject) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
+        assert smallFloatClass == null;
         smallFloatClass = classObject;
+    }
+
+    public ClassObject getByteSymbolClass() {
+        return byteSymbolClass;
+    }
+
+    public void setByteSymbolClass(final ClassObject classObject) {
+        CompilerDirectives.transferToInterpreterAndInvalidate();
+        assert byteSymbolClass == null;
+        byteSymbolClass = classObject;
     }
 
     public ClassObject getWideStringClass() {
@@ -368,29 +384,17 @@ public final class SqueakImageContext {
 
     public void initializeAfterLoadingImage() {
         primitiveNodeFactory.initialize(this);
-        initializeContexts();
     }
 
-    private void initializeContexts() {
-        for (final PointersObject p : suspendedContexts.keySet()) {
-            AbstractSqueakObject currentContext = suspendedContexts.get(p);
-            while (currentContext != NilObject.SINGLETON) {
-                final ContextObject context = (ContextObject) currentContext;
-                context.setProcess(p);
-                currentContext = (AbstractSqueakObject) context.getFrameSender();
-            }
-        }
-        suspendedContexts.clear();
-    }
-
-    public ClassObject initializeTruffleObject() {
+    public ClassObject initializeForeignObject() {
         CompilerDirectives.transferToInterpreterAndInvalidate();
-        truffleObjectClass = new ClassObject(this);
-        return truffleObjectClass;
+        foreignObjectClass = new ClassObject(this);
+        return foreignObjectClass;
     }
 
-    public boolean supportsTruffleObject() {
-        return truffleObjectClass != null;
+    public ClassObject getForeignObjectClass() {
+        assert foreignObjectClass != null;
+        return foreignObjectClass;
     }
 
     public boolean supportsNFI() {
@@ -511,7 +515,11 @@ public final class SqueakImageContext {
     }
 
     public String[] getImageArguments() {
-        return env.getApplicationArguments();
+        if (options.imageArguments.length > 0) {
+            return options.imageArguments;
+        } else {
+            return env.getApplicationArguments();
+        }
     }
 
     public Source getLastParseRequestSource() {
@@ -551,10 +559,6 @@ public final class SqueakImageContext {
         return ArrayObject.createWithStorage(this, arrayClass, elements);
     }
 
-    public ArrayObject asArrayOfNativeObjects(final NativeObject... elements) {
-        return ArrayObject.createWithStorage(this, arrayClass, elements);
-    }
-
     public ArrayObject asArrayOfObjects(final Object... elements) {
         return ArrayObject.createWithStorage(this, arrayClass, elements);
     }
@@ -591,9 +595,8 @@ public final class SqueakImageContext {
         final PointersObject message = new PointersObject(this, messageClass);
         writeNode.execute(message, MESSAGE.SELECTOR, selector);
         writeNode.execute(message, MESSAGE.ARGUMENTS, asArrayOfObjects(arguments));
-        if (message.instsize() > MESSAGE.LOOKUP_CLASS) { // Early versions do not have lookupClass.
-            writeNode.execute(message, MESSAGE.LOOKUP_CLASS, rcvrClass);
-        }
+        assert message.instsize() > MESSAGE.LOOKUP_CLASS : "Early versions do not have lookupClass";
+        writeNode.execute(message, MESSAGE.LOOKUP_CLASS, rcvrClass);
         return message;
     }
 
@@ -603,7 +606,9 @@ public final class SqueakImageContext {
 
     @TruffleBoundary
     public void printToStdOut(final Object... arguments) {
-        getOutput().println(MiscUtils.format("[graalsqueak] %s", ArrayUtils.toJoinedString(" ", arguments)));
+        if (!options.isQuiet) {
+            getOutput().println(MiscUtils.format("[graalsqueak] %s", ArrayUtils.toJoinedString(" ", arguments)));
+        }
     }
 
     @TruffleBoundary

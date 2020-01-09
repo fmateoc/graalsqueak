@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -209,11 +209,11 @@ public class SqueakMiscellaneousTest extends AbstractSqueakTestCaseWithDummyImag
         final SqueakImageChunk chunk = new SqueakImageChunk(
                         null,
                         image,
-                        data, // 2 words
                         10, // float format, 32-bit words without padding word
                         34, // classid of BoxedFloat64
                         3833906, // identityHash for 1.0
-                        0 // position
+                        0, // position
+                        data // 2 words
         );
         chunk.setSqClass(image.floatClass);
         return chunk;

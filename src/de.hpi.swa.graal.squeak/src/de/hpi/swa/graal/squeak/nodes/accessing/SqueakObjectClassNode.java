@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -76,7 +76,7 @@ public abstract class SqueakObjectClassNode extends AbstractNode {
     @Specialization
     protected static final ClassObject doDouble(@SuppressWarnings("unused") final double value,
                     @Shared("image") @CachedContext(SqueakLanguage.class) final SqueakImageContext image) {
-        return image.smallFloatClass;
+        return image.getSmallFloatClass();
     }
 
     @Specialization
@@ -150,9 +150,8 @@ public abstract class SqueakObjectClassNode extends AbstractNode {
     }
 
     @Specialization(guards = {"!isAbstractSqueakObject(value)", "!isUsedJavaPrimitive(value)"})
-    protected static final ClassObject doTruffleObject(@SuppressWarnings("unused") final Object value,
+    protected static final ClassObject doForeignObject(@SuppressWarnings("unused") final Object value,
                     @Shared("image") @CachedContext(SqueakLanguage.class) final SqueakImageContext image) {
-        assert image.supportsTruffleObject();
-        return image.truffleObjectClass;
+        return image.getForeignObjectClass();
     }
 }

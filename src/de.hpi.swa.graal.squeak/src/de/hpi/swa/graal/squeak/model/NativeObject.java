@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -34,6 +34,7 @@ import de.hpi.swa.graal.squeak.interop.WrapToSqueakNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectWriteNode;
 import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
+import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.SqueakMessageInterceptor;
 import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
@@ -47,8 +48,8 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
     @CompilationFinal private Object storage;
 
     public NativeObject(final SqueakImageContext image) { // constructor for special selectors
-        super(image, -1, null);
-        storage = new byte[0];
+        super(image, AbstractSqueakObjectWithHash.HASH_UNINITIALIZED, null);
+        storage = ArrayUtils.EMPTY_ARRAY;
     }
 
     private NativeObject(final SqueakImageContext image, final ClassObject classObject, final Object storage) {
@@ -69,7 +70,7 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     public static NativeObject newNativeBytes(final SqueakImageChunk chunk) {
-        return new NativeObject(chunk.image, chunk.getHash(), chunk.getSqClass(), chunk.getBytes());
+        return new NativeObject(chunk.getImage(), chunk.getHash(), chunk.getSqClass(), chunk.getBytes());
     }
 
     public static NativeObject newNativeBytes(final SqueakImageContext img, final ClassObject klass, final byte[] bytes) {
@@ -81,7 +82,7 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     public static NativeObject newNativeInts(final SqueakImageChunk chunk) {
-        return new NativeObject(chunk.image, chunk.getHash(), chunk.getSqClass(), chunk.getInts());
+        return new NativeObject(chunk.getImage(), chunk.getHash(), chunk.getSqClass(), ArrayConversionUtils.intsFromBytes(chunk.getBytes()));
     }
 
     public static NativeObject newNativeInts(final SqueakImageContext img, final ClassObject klass, final int size) {
@@ -93,7 +94,7 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     public static NativeObject newNativeLongs(final SqueakImageChunk chunk) {
-        return new NativeObject(chunk.image, chunk.getHash(), chunk.getSqClass(), chunk.getLongs());
+        return new NativeObject(chunk.getImage(), chunk.getHash(), chunk.getSqClass(), ArrayConversionUtils.longsFromBytes(chunk.getBytes()));
     }
 
     public static NativeObject newNativeLongs(final SqueakImageContext img, final ClassObject klass, final int size) {
@@ -105,7 +106,7 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
     }
 
     public static NativeObject newNativeShorts(final SqueakImageChunk chunk) {
-        return new NativeObject(chunk.image, chunk.getHash(), chunk.getSqClass(), chunk.getShorts());
+        return new NativeObject(chunk.getImage(), chunk.getHash(), chunk.getSqClass(), ArrayConversionUtils.shortsFromBytes(chunk.getBytes()));
     }
 
     public static NativeObject newNativeShorts(final SqueakImageContext img, final ClassObject klass, final int size) {
@@ -118,25 +119,18 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
 
     @Override
     public void fillin(final SqueakImageChunk chunk) {
-        if (isByteType()) {
-            final byte[] bytes = chunk.getBytes();
+        final byte[] bytes = chunk.getBytes();
+        if (storage == ArrayUtils.EMPTY_ARRAY) { /* Fill in special selectors. */
             setStorage(bytes);
-            if (getSqueakClass() == image.byteSymbolClass) {
-                if (image.getDebugErrorSelector() == null && Arrays.equals(SqueakImageContext.DEBUG_ERROR_SELECTOR_NAME, bytes)) {
+        } else if (isByteType()) {
+            if (image.isHeadless()) {
+                if (image.getDebugErrorSelector() == null && Arrays.equals(SqueakImageContext.DEBUG_ERROR_SELECTOR_NAME, (byte[]) storage)) {
                     image.setDebugErrorSelector(this);
-                } else if (image.getDebugSyntaxErrorSelector() == null && Arrays.equals(SqueakImageContext.DEBUG_SYNTAX_ERROR_SELECTOR_NAME, bytes)) {
+                } else if (image.getDebugSyntaxErrorSelector() == null && Arrays.equals(SqueakImageContext.DEBUG_SYNTAX_ERROR_SELECTOR_NAME, (byte[]) storage)) {
                     image.setDebugSyntaxErrorSelector(this);
                 }
-                SqueakMessageInterceptor.notifyLoadedSymbol(this, bytes);
             }
-        } else if (isShortType()) {
-            setStorage(chunk.getShorts());
-        } else if (isIntType()) {
-            setStorage(chunk.getInts());
-        } else if (isLongType()) {
-            setStorage(chunk.getLongs());
-        } else {
-            throw SqueakException.create("Unsupported type");
+            SqueakMessageInterceptor.notifyLoadedSymbol(this, (byte[]) storage);
         }
     }
 
@@ -261,10 +255,6 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         return getSqueakClass().getFormat() == other.getFormat();
     }
 
-    public boolean hasSameStorageType(final NativeObject other) {
-        return storage.getClass() == other.storage.getClass();
-    }
-
     public boolean isByteType() {
         return storage instanceof byte[];
     }
@@ -297,54 +287,21 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
         return new String(ints, 0, ints.length);
     }
 
-    @TruffleBoundary
     @Override
     public String toString() {
         CompilerAsserts.neverPartOfCompilation();
         if (isByteType()) {
             final ClassObject squeakClass = getSqueakClass();
             if (squeakClass.isStringClass()) {
-                final String string = asStringUnsafe();
-                int i = string.length();
-                int j = string.indexOf(0);
-                final int k = string.indexOf('\n');
-                final int l = string.indexOf(REPLACEMENT_CHAR);
-                final int m = string.indexOf('\r');
-                if (m >= 0 || l >= 0 || k >= 0 || j >= 0 || i > 78) {
-                    if (k >= 0 && j >= 0) {
-                        if (k < j) {
-                            j = k;
-                        }
-                    } else if (k >= 0) {
-                        j = k;
-                    }
-                    if (l >= 0 && j >= 0) {
-                        if (l < j) {
-                            j = l;
-                        }
-                    } else if (l >= 0) {
-                        j = l;
-                    }
-                    if (m >= 0 && j >= 0) {
-                        if (m < j) {
-                            j = m;
-                        }
-                    } else if (m >= 0) {
-                        j = m;
-                    }
-                    if (i > 78) {
-                        i = 40;
-                    }
-                    if (j >= 0 && j < i) {
-                        i = j;
-                    }
-                    String suffix = "";
-                    if (i > 0) {
-                        suffix = ", starting with '" + string.substring(0, i) + "'";
-                    }
-                    return "a string of length " + string.length() + suffix;
+                final String fullString = asStringUnsafe();
+                final int fullLength = fullString.length();
+                /* Split at first non-printable character. */
+                final String displayString = fullString.split("[^\\p{Print}]", 2)[0];
+                if (fullLength <= 40 && fullLength == displayString.length()) {
+                    /* fullString is short and has printable characters only. */
+                    return "'" + fullString + "'";
                 }
-                return "'" + string + "'";
+                return String.format("'%.30s...' (string length: %s)", displayString, fullLength);
             } else if (squeakClass.isSymbolClass()) {
                 return "#" + asStringUnsafe();
             } else {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -324,7 +324,7 @@ public abstract class SlotLocation {
         }
 
         private boolean isSet(final AbstractPointersObject object, final IntValueProfile primitiveUsedMapProfile) {
-            return primitiveUsedMapProfile.profile(getPrimitiveUsedMap(object) & usedMask) != 0;
+            return (primitiveUsedMapProfile.profile(getPrimitiveUsedMap(object)) & usedMask) != 0;
         }
 
         @Override

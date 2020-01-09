@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -16,23 +16,24 @@ import java.util.Map;
 import java.util.Set;
 
 import org.graalvm.launcher.AbstractLanguageLauncher;
+import org.graalvm.nativeimage.ImageInfo;
 import org.graalvm.options.OptionCategory;
 import org.graalvm.polyglot.Context;
+import org.graalvm.polyglot.Engine;
 import org.graalvm.polyglot.PolyglotException;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.Value;
 
-import com.oracle.truffle.api.Truffle;
-import com.oracle.truffle.api.TruffleOptions;
-
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
+import de.hpi.swa.graal.squeak.shared.SqueakLanguageOptions;
 
 public final class GraalSqueakLauncher extends AbstractLanguageLauncher {
-    private static final String OPTION_IMAGE_PATH = SqueakLanguageConfig.ID + ".ImagePath";
-    private static final String OPTION_HEADLESS = SqueakLanguageConfig.ID + ".Headless";
-    private static final String OPTION_TRANSCRIPT_FORWARDING_FLAG = "--enable-transcript-forwarding";
+    private static final String HELP_FLAG = "--help";
     private static final String POLYGLOT_FLAG = "--polyglot";
-    private String[] remainingArguments;
+
+    private boolean headless = false;
+    private boolean quiet = false;
+    private String[] imageArguments;
     private String imagePath = "Squeak.image";
     private String sourceCode = null;
     private boolean enableTranscriptForwarding = false;
@@ -42,14 +43,14 @@ public final class GraalSqueakLauncher extends AbstractLanguageLauncher {
         if (arguments.length > 1 || arguments.length == 1 && !POLYGLOT_FLAG.equals(arguments[0])) {
             argumentsForLauncher = arguments;
         } else {
-            if (TruffleOptions.AOT) {
-                argumentsForLauncher = new String[]{"--help"};
+            if (ImageInfo.inImageCode()) {
+                argumentsForLauncher = new String[]{HELP_FLAG};
             } else {
                 final String image = FileChooser.run();
                 if (image != null) {
                     argumentsForLauncher = new String[]{POLYGLOT_FLAG, image};
                 } else {
-                    argumentsForLauncher = new String[]{"--help"};
+                    argumentsForLauncher = new String[]{HELP_FLAG};
                 }
             }
         }
@@ -58,23 +59,25 @@ public final class GraalSqueakLauncher extends AbstractLanguageLauncher {
 
     @Override
     protected List<String> preprocessArguments(final List<String> arguments, final Map<String, String> polyglotOptions) {
-        List<String> unrecognized = arguments;
+        final List<String> unrecognized = new ArrayList<>();
         for (int i = 0; i < arguments.size(); i++) {
             final String arg = arguments.get(i);
             if (fileExists(arg)) {
-                unrecognized = new ArrayList<>(arguments.subList(0, i));
                 imagePath = Paths.get(arg).toAbsolutePath().toString();
-                final List<String> remainingArgumentsList = arguments.subList(i + 1, arguments.size());
-                remainingArguments = remainingArgumentsList.toArray(new String[remainingArgumentsList.size()]);
+                final List<String> remainingArguments = arguments.subList(i + 1, arguments.size());
+                imageArguments = remainingArguments.toArray(new String[remainingArguments.size()]);
                 break;
-            } else if ("-c".equals(arg) || "--code".equals(arg)) {
-                arguments.remove(i);
-                sourceCode = arguments.get(i);
-                arguments.remove(i);
-                i--;
-            } else if (OPTION_TRANSCRIPT_FORWARDING_FLAG.equals(arg)) {
-                arguments.remove(i);
+            } else if (SqueakLanguageOptions.CODE_FLAG.equals(arg) || SqueakLanguageOptions.CODE_FLAG_SHORT.equals(arg)) {
+                sourceCode = arguments.get(++i);
+                headless = true;
+            } else if (SqueakLanguageOptions.HEADLESS_FLAG.equals(arg)) {
+                headless = true;
+            } else if (SqueakLanguageOptions.QUIET_FLAG.equals(arg)) {
+                quiet = true;
+            } else if (SqueakLanguageOptions.TRANSCRIPT_FORWARDING_FLAG.equals(arg)) {
                 enableTranscriptForwarding = true;
+            } else {
+                unrecognized.add(arg);
             }
         }
         return unrecognized;
@@ -86,11 +89,10 @@ public final class GraalSqueakLauncher extends AbstractLanguageLauncher {
     }
 
     protected int execute(final Context.Builder contextBuilder) {
-        contextBuilder.option(OPTION_IMAGE_PATH, imagePath);
-        if (sourceCode != null) {
-            contextBuilder.option(OPTION_HEADLESS, "true");
-        }
-        contextBuilder.arguments(getLanguageId(), remainingArguments);
+        contextBuilder.option(SqueakLanguageConfig.ID + "." + SqueakLanguageOptions.IMAGE_PATH, imagePath);
+        contextBuilder.option(SqueakLanguageConfig.ID + "." + SqueakLanguageOptions.HEADLESS, Boolean.toString(headless));
+        contextBuilder.option(SqueakLanguageConfig.ID + "." + SqueakLanguageOptions.QUIET, Boolean.toString(quiet));
+        contextBuilder.arguments(getLanguageId(), imageArguments);
         contextBuilder.allowAllAccess(true);
         final SqueakTranscriptForwarder out;
         final SqueakTranscriptForwarder err;
@@ -120,7 +122,7 @@ public final class GraalSqueakLauncher extends AbstractLanguageLauncher {
                 throw abort("A Squeak/Smalltalk image cannot return a result, it can only exit.");
             }
         } catch (final IllegalArgumentException e) {
-            if (e.getMessage().contains("Could not find option")) {
+            if (e.getMessage().contains("Could not find option with name " + SqueakLanguageConfig.ID)) {
                 final String thisPackageName = getClass().getPackage().getName();
                 final String parentPackageName = thisPackageName.substring(0, thisPackageName.lastIndexOf("."));
                 throw abort(String.format("Failed to load GraalSqueak. Please ensure '%s' is on the Java class path.", parentPackageName));
@@ -153,15 +155,28 @@ public final class GraalSqueakLauncher extends AbstractLanguageLauncher {
 
     @Override
     protected void printHelp(final OptionCategory maxCategory) {
-        println("usage: graalsqueak <image> [optional arguments]\n");
-        println("optional arguments:");
-        println("  -c CODE, --code CODE");
-        println("                        Smalltalk code to be executed in headless mode");
+        println("Usage: graalsqueak [options] <image file> [image arguments]\n");
+        println("Basic options:");
+        println("  %s \"<code>\", %s \"<code>\"\t\t%s", SqueakLanguageOptions.CODE_FLAG, SqueakLanguageOptions.CODE_FLAG_SHORT, SqueakLanguageOptions.CODE_HELP);
+        println("  %s\t\t\t\t%s", SqueakLanguageOptions.HEADLESS_FLAG, SqueakLanguageOptions.HEADLESS_HELP);
+        println("  %s\t\t\t\t%s", SqueakLanguageOptions.QUIET_FLAG, SqueakLanguageOptions.QUIET_HELP);
+        println("  %s\t%s", SqueakLanguageOptions.TRANSCRIPT_FORWARDING_FLAG, SqueakLanguageOptions.TRANSCRIPT_FORWARDING_HELP);
     }
 
     @Override
     protected void collectArguments(final Set<String> options) {
-        options.addAll(Arrays.asList("-c", "--code"));
+        options.addAll(Arrays.asList(SqueakLanguageOptions.CODE_FLAG, SqueakLanguageOptions.CODE_FLAG_SHORT, SqueakLanguageOptions.HEADLESS_FLAG, SqueakLanguageOptions.QUIET_FLAG,
+                        SqueakLanguageOptions.TRANSCRIPT_FORWARDING_FLAG));
+    }
+
+    @Override
+    protected String[] getDefaultLanguages() {
+        return new String[0]; // Allow all languages (similar to `--polyglot`)
+    }
+
+    @Override
+    protected VMType getDefaultVMType() {
+        return VMType.JVM;
     }
 
     private static boolean fileExists(final String path) {
@@ -172,15 +187,17 @@ public final class GraalSqueakLauncher extends AbstractLanguageLauncher {
         }
     }
 
-    private static void println(final String string, final Object... arguments) {
-        // Checkstyle: stop
-        System.out.println(String.format(string, arguments));
-        // Checkstyle: resume
+    private void println(final String string, final Object... arguments) {
+        if (!quiet) {
+            // Checkstyle: stop
+            System.out.println(String.format(string, arguments));
+            // Checkstyle: resume
+        }
     }
 
     private static String getRuntimeName() {
-        final String vmName = System.getProperty("java.vm.name", "unknown");
-        final String mode = Truffle.getRuntime().getName().equals("Interpreted") ? "interpreted" : "Graal-compiled";
-        return String.format("%s (%s)", vmName, mode);
+        try (Engine engine = Engine.create()) {
+            return engine.getImplementationName();
+        }
     }
 }

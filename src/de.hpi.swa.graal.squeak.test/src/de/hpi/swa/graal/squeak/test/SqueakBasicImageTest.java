@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -94,7 +94,7 @@ public class SqueakBasicImageTest extends AbstractSqueakTestCaseWithImage {
 
     @Test
     public void test10TinyBenchmarks() {
-        final String resultString = evaluate("1 tinyBenchmarks").toString();
+        final String resultString = context.eval(SqueakLanguageConfig.ID, "1 tinyBenchmarks").asString();
         assertTrue(resultString.contains("bytecodes/sec"));
         assertTrue(resultString.contains("sends/sec"));
         image.getOutput().println("tinyBenchmarks: " + resultString);

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+# Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
 #
 # Licensed under the MIT License.
 #
@@ -9,14 +9,22 @@ suite = {
     # ==========================================================================
     #  METADATA
     # ==========================================================================
-    "mxversion": "5.241.0",
+    "mxversion": "5.247.7",
     "name": "graalsqueak",
     "versionConflictResolution": "latest",
 
-    "version": "1.0.0-rc5",
+    "version": "1.0.0-rc6",
+    "graalsqueak:dependencyMap": {
+        "assets": "1.0.0-rc5",
+        "graalvm": "19.3.0",
+        "jdk8Update": "232",
+        "jvmci": "jvmci-19.3-b05",
+        "testImage": "GraalSqueakTestImage-19230-64bit.zip",
+    },
+
     "release": False,
     "groupId": "de.hpi.swa.graal.squeak",
-    "url": "https://github.com/hpi-swa/graalsqueak/",
+    "url": "https://github.com/hpi-swa/graalsqueak",
 
     "developer": {
         "name": "Fabio Niephaus and contributors",
@@ -38,7 +46,7 @@ suite = {
         "suites": [{
             "name": "truffle",
             "subdir": True,
-            "version": "8198641e1a5d0b6e8426c72f3c1b7e7e6818e9a4",
+            "version": "72d10ce1cd95b094d371e308e922a5960d8c35a8",
             "urls": [{
                 "url": "https://github.com/oracle/graal",
                 "kind": "git"
@@ -85,7 +93,6 @@ suite = {
                 "GRAALSQUEAK_SHARED",
                 "sdk:GRAAL_SDK",
                 "sdk:LAUNCHER_COMMON",
-                "truffle:TRUFFLE_API",
             ],
             "checkstyle": "de.hpi.swa.graal.squeak",
             "jacoco": "include",
@@ -134,7 +141,6 @@ suite = {
     "distributions": {
         "GRAALSQUEAK": {
             "description": "GraalSqueak engine",
-            "path": "graalsqueak.jar",
             "dependencies": [
                 "de.hpi.swa.graal.squeak",
             ],
@@ -143,29 +149,23 @@ suite = {
                 "truffle:TRUFFLE_API",
             ],
             "exclude": ["mx:JUNIT"],
-            "sourcesPath": "graalsqueak.src.zip",
         },
 
         "GRAALSQUEAK_SHARED": {
             "dependencies": [
                 "de.hpi.swa.graal.squeak.shared",
             ],
-            "path": "graalsqueak-shared.jar",
-            "sourcesPath": "graalsqueak-shared.src.zip",
         },
 
         "GRAALSQUEAK_LAUNCHER": {
-            "path": "graalsqueak-launcher.jar",
             "dependencies": [
                 "de.hpi.swa.graal.squeak.launcher",
             ],
             "distDependencies": [
                 "GRAALSQUEAK_SHARED",
                 "sdk:GRAAL_SDK",
-                "truffle:TRUFFLE_API",
                 "sdk:LAUNCHER_COMMON",
             ],
-            "sourcesPath": "graalsqueak-launcher.src.zip",
         },
 
         "GRAALSQUEAK_TCK": {
@@ -175,10 +175,13 @@ suite = {
             ],
             "exclude": ["mx:JUNIT"],
             "distDependencies": [
+                # <workaround>TCK does not load languages correctly in 19.3
+                # https://github.com/oracle/graal/commit/d5de10b9cc889104ac4c381fc17e8e92ff9cd186
+                "GRAALSQUEAK",
+                # </workaround>
                 "GRAALSQUEAK_SHARED",
                 "sdk:POLYGLOT_TCK",
             ],
-            "sourcesPath": "graalsqueak.tck.src.zip",
             "testDistribution": True,
         },
 
@@ -187,6 +190,7 @@ suite = {
             "platformDependent": True,
             "description": "GraalSqueak support distribution for the GraalVM",
             "layout": {
+                "LICENSE_GRAALSQUEAK.txt": "file:LICENSE",
                 "./": [
                     "file:mx.graalsqueak/native-image.properties",
                 ],
@@ -196,14 +200,12 @@ suite = {
 
         "GRAALSQUEAK_TEST": {
             "description": "JUnit and SUnit tests",
-            "path": "graalsqueak_test.jar",
             "javaCompliance": "8+",
             "dependencies": [
                 "de.hpi.swa.graal.squeak.test",
             ],
             "exclude": ["mx:JUNIT"],
             "distDependencies": ["GRAALSQUEAK"],
-            "sourcesPath": "graalsqueak.tests.src.zip",
             "testDistribution": True,
         },
     },

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -121,7 +121,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     @TruffleBoundary
     public String getClassName() {
         if (isAMetaClass()) {
-            final Object classInstance = pointers[METACLASS.THIS_CLASS];
+            final Object classInstance = pointers[CLASS_DESCRIPTION.SIZE - METACLASS.THIS_CLASS];
             if (classInstance != NilObject.SINGLETON) {
                 return ((ClassObject) classInstance).getClassNameUnsafe() + " class";
             } else {
@@ -241,7 +241,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
 
     /** ByteSymbol. */
     public boolean isSymbolClass() {
-        return this == image.byteSymbolClass;
+        return this == image.getByteSymbolClass();
     }
 
     /** WideString. */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -7,6 +7,7 @@ package de.hpi.swa.graal.squeak.model;
 
 import java.util.Arrays;
 
+import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
@@ -165,6 +166,7 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithHash {
 
     @Override
     public String toString() {
+        CompilerAsserts.neverPartOfCompilation();
         return "a BlockClosureObject @" + Integer.toHexString(hashCode()) + ", with " + (numArgs == -1 && block == null ? "no block" : getNumArgs() + " args") + " and " + copied.length +
                         " copied values, in " + outerContext;
     }

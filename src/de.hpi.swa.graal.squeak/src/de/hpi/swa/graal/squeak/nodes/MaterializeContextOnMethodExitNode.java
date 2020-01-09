@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -15,8 +15,6 @@ import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 
 public abstract class MaterializeContextOnMethodExitNode extends AbstractNodeWithCode {
-    protected static final boolean TRUE = true;
-
     protected MaterializeContextOnMethodExitNode(final CompiledCodeObject code) {
         super(code);
     }

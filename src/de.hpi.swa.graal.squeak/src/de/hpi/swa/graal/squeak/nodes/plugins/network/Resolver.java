@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019 Software Architecture Group, Hasso Plattner Institute
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
  *
  * Licensed under the MIT License.
  */
@@ -28,8 +28,8 @@ final class Resolver {
         }
     }
 
-    private static InetAddress anyLocalAddress = new InetSocketAddress(0).getAddress();
-    private static InetAddress loopbackAddress = InetAddress.getLoopbackAddress();
+    private static InetAddress anyLocalAddress = null;
+    private static InetAddress loopbackAddress = null;
 
     private static byte[] lastNameLookup;
     private static String lastAddressLookup;
@@ -38,10 +38,16 @@ final class Resolver {
     }
 
     protected static byte[] getAnyLocalAddress() {
+        if (anyLocalAddress == null) {
+            anyLocalAddress = new InetSocketAddress(0).getAddress();
+        }
         return anyLocalAddress.getAddress();
     }
 
     protected static byte[] getLoopbackAddress() {
+        if (loopbackAddress == null) {
+            loopbackAddress = InetAddress.getLoopbackAddress();
+        }
         return loopbackAddress.getAddress();
     }
 
