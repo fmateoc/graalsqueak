@@ -133,7 +133,7 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
             assert !layout.isValid() && layout != latestLayout : "Layout must have changed";
         }
         migrateToLayout(latestLayout);
-        return getSqueakClass().getLayout();
+        return getSqueakClass().getLayout(); /* Layout may have evolved again during migration. */
     }
 
     private void migrateToLayout(final ObjectLayout newLayout) {
@@ -183,7 +183,7 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
             final SlotLocation oldLocation = oldLayout.getLocation(i);
             final SlotLocation newLocation = newLayout.getLocation(i);
             if (oldLocation != newLocation && changes[i] != null) {
-                oldLocation.unSet(this);
+                oldLocation.unset(this);
                 final Object change = changes[i];
                 if (newLocation.canStore(change)) {
                     newLocation.writeMustSucceed(this, change);

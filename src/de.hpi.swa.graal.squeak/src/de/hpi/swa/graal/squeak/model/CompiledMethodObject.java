@@ -66,14 +66,15 @@ public final class CompiledMethodObject extends CompiledCodeObject {
     public String toString() {
         CompilerAsserts.neverPartOfCompilation();
         String className = "UnknownClass";
-        final ClassObject mclass = getMethodClassSlow();
-        if (mclass != null) {
-            className = mclass.getClassName();
+        final ClassObject methodClass = getMethodClassSlow();
+        if (methodClass != null) {
+            className = methodClass.getClassName();
         }
         return className + ">>" + getNotNilSelector();
     }
 
     public String getNotNilSelector() {
+        CompilerAsserts.neverPartOfCompilation();
         String selector = "DoIt";
         final NativeObject selectorObj = getCompiledInSelector();
         if (selectorObj != null) {
@@ -139,7 +140,7 @@ public final class CompiledMethodObject extends CompiledCodeObject {
 
     public boolean hasMethodClass(final AbstractPointersObjectReadNode readNode) {
         final AbstractSqueakObject mca = getMethodClassAssociation();
-        return mca != NilObject.SINGLETON && readNode.execute((AbstractPointersObject) getMethodClassAssociation(), CLASS_BINDING.VALUE) != NilObject.SINGLETON;
+        return mca != NilObject.SINGLETON && readNode.execute((AbstractPointersObject) mca, CLASS_BINDING.VALUE) != NilObject.SINGLETON;
     }
 
     public ClassObject getMethodClassSlow() {

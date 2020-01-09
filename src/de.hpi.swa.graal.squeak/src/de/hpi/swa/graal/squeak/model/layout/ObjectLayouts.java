@@ -149,8 +149,8 @@ public final class ObjectLayouts {
         public static final int OBSERVERS = 5;
     }
 
-    public static enum ERROR_TABLE {
-        GENERIC_ERROR,
+    public enum ERROR_TABLE {
+        GENERIC_ERROR, // nil
         BAD_RECEIVER,
         BAD_ARGUMENT,
         BAD_INDEX,
@@ -170,7 +170,10 @@ public final class ObjectLayouts {
         OBJECT_MOVED,
         OBJECT_NOT_PINNED,
         CALLBACK_ERROR,
-        OPERATING_SYSTEM_ERROR
+        OPERATING_SYSTEM_ERROR,
+        FFI_EXCEPTION,
+        NEED_COMPACTION,
+        OPERATION_FAILED
     }
 
     public static final class EXCEPTION {
