@@ -386,7 +386,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"!rhs.isZero()"})
-        protected static final Object doLongLargeInteger(final long lhs, final LargeIntegerObject rhs) {
+        protected static final long doLongLargeInteger(final long lhs, final LargeIntegerObject rhs) {
             return LargeIntegerObject.floorDivide(lhs, rhs);
         }
     }
@@ -408,7 +408,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"!rhs.isZero()"})
-        protected static final Object doLongLargeInteger(final long lhs, final LargeIntegerObject rhs) {
+        protected static final long doLongLargeInteger(final long lhs, final LargeIntegerObject rhs) {
             return LargeIntegerObject.divide(lhs, rhs);
         }
     }
@@ -546,7 +546,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
 
         @TruffleBoundary(transferToInterpreterOnException = false)
         @Specialization(guards = {"rhs != 0"})
-        protected static final Object doLargeIntegerLong(final LargeIntegerObject lhs, final long rhs) {
+        protected static final long doLargeIntegerLong(final LargeIntegerObject lhs, final long rhs) {
             return lhs.remainder(rhs);
         }
 
@@ -672,8 +672,8 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected static final boolean doLargeIntegerLong(final LargeIntegerObject lhs, final long rhs) {
-            return BooleanObject.wrap(lhs.compareTo(rhs) == 0);
+        protected static final boolean doLargeIntegerLong(@SuppressWarnings("unused") final LargeIntegerObject lhs, @SuppressWarnings("unused") final long rhs) {
+            return BooleanObject.FALSE;
         }
 
         @Specialization
@@ -697,8 +697,8 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected static final boolean doLargeIntegerLong(final LargeIntegerObject lhs, final long rhs) {
-            return BooleanObject.wrap(lhs.compareTo(rhs) != 0);
+        protected static final boolean doLargeIntegerLong(@SuppressWarnings("unused") final LargeIntegerObject lhs, @SuppressWarnings("unused") final long rhs) {
+            return BooleanObject.TRUE;
         }
 
         @Specialization
