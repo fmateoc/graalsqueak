@@ -142,7 +142,7 @@ public abstract class AbstractSqueakTestCase {
         final String logLevel = System.getProperty("log.level");
         if (logLevel != null) {
             contextBuilder.option("log." + SqueakLanguageConfig.ID + ".level", logLevel);
-            contextBuilder.logHandler(LogHandlerAccessor.createLogHandler());
+            contextBuilder.logHandler(LogHandlerAccessor.createLogHandler(System.getProperty("log.mode", "out")));
         }
         context = contextBuilder.build();
         context.initialize(SqueakLanguageConfig.ID);

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2017-2020 Software Architecture Group, Hasso Plattner Institute
+ *
+ * Licensed under the MIT License.
+ */
 package de.hpi.swa.graal.squeak.shared;
 
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
@@ -18,7 +23,6 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.AccessController;
@@ -29,14 +33,13 @@ import java.util.logging.LogRecord;
 
 import sun.nio.cs.ThreadLocalCoders;
 
-public class LogHandlerAccessor {
+public final class LogHandlerAccessor {
 
     private static final int GIG = (int) Math.pow(1024, 3);
 
-    public static Handler createLogHandler() {
+    public static Handler createLogHandler(final String mode) {
         PrintStream output = null;
-        final String out = System.getProperty("log.output", "out");
-        switch (out) {
+        switch (mode) {
             case "mapped":
                 return new MappedHandler();
             case "file":
@@ -52,10 +55,10 @@ public class LogHandlerAccessor {
     }
 
     protected static Path getLogPath() {
-        return Paths.get(".." + FileSystems.getDefault().getSeparator() + System.currentTimeMillis() + ".log");
+        return Paths.get(System.currentTimeMillis() + ".log");
     }
 
-    private static class MappedHandler extends Handler {
+    private static final class MappedHandler extends Handler {
         private MappedByteBuffer buffer;
         private Path path;
         private PrintStream originalOut = System.out;
@@ -121,7 +124,7 @@ public class LogHandlerAccessor {
                     }
 
                     @Override
-                    public void println(final char x[]) {
+                    public void println(final char[] x) {
                         println(String.valueOf(x));
                     }
 
@@ -192,12 +195,13 @@ public class LogHandlerAccessor {
 
     /**
      *
-     * Cleaner code courtesy of Luke Hutchison via a StackOverflow answer:
-     * https://stackoverflow.com/questions/2972986/how-to-unmap-a-file-from-memory-mapped-using-filechannel-in-java
+     * Cleaner code courtesy of Luke Hutchison via a StackOverflow answer.
+     * https://stackoverflow.com/questions/2972986/how-to-unmap-a-file-from-memory-mapped-using-
+     * filechannel-in-java
      *
      */
     private static class MappedBufferCleaner {
-        private static boolean PRE_JAVA_9 = System.getProperty("java.specification.version", "9").startsWith("1.");
+        private static final boolean PRE_JAVA_9 = System.getProperty("java.specification.version", "9").startsWith("1.");
 
         private static Method cleanMethod;
         private static Method attachmentMethod;
@@ -244,12 +248,12 @@ public class LogHandlerAccessor {
                         final ByteBuffer byteBuffer) {
             try {
                 if (cleanMethod == null) {
-                    System.out.println("Could not unmap ByteBuffer, cleanMethod == null");
+                    println("Could not unmap ByteBuffer, cleanMethod == null");
                     return false;
                 }
                 if (PRE_JAVA_9) {
                     if (attachmentMethod == null) {
-                        System.out.println("Could not unmap ByteBuffer, attachmentMethod == null");
+                        println("Could not unmap ByteBuffer, attachmentMethod == null");
                         return false;
                     }
                     // Make sure duplicates and slices are not cleaned, since this can result in
@@ -268,7 +272,7 @@ public class LogHandlerAccessor {
                     return true;
                 } else {
                     if (theUnsafe == null) {
-                        System.out.println("Could not unmap ByteBuffer, theUnsafe == null");
+                        println("Could not unmap ByteBuffer, theUnsafe == null");
                         return false;
                     }
                     // In JDK9+, calling the above code gives a reflection warning on stderr,
@@ -283,7 +287,7 @@ public class LogHandlerAccessor {
                     }
                 }
             } catch (final Exception e) {
-                System.out.println("Could not unmap ByteBuffer: " + e);
+                println("Could not unmap ByteBuffer: " + e);
                 return false;
             }
         }
@@ -305,7 +309,7 @@ public class LogHandlerAccessor {
         }
     }
 
-    private static class FileStreamHandler extends Handler {
+    private static final class FileStreamHandler extends Handler {
 
         private OutputStream stream;
         private FileChannel channel;
@@ -363,7 +367,7 @@ public class LogHandlerAccessor {
 
     }
 
-    private static class StandardPrintStreamHandler extends Handler {
+    private static final class StandardPrintStreamHandler extends Handler {
 
         private PrintStream stream;
 
@@ -385,5 +389,11 @@ public class LogHandlerAccessor {
         public void close() throws SecurityException {
             // do nothing
         }
+    }
+
+    private static void println(final String string) {
+        // Checkstyle: stop
+        System.out.println(string);
+        // Checkstyle: resume
     }
 }
