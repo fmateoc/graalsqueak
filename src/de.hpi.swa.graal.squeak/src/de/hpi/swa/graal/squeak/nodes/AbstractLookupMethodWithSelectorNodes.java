@@ -148,7 +148,7 @@ public abstract class AbstractLookupMethodWithSelectorNodes extends AbstractNode
         }
 
         protected static final boolean breakpointWasHit(final Object[] array, final NativeObject selector) {
-            return array[1] == SqueakMessageInterceptor.breakpointClassFor(selector);
+            return array[1] != null && array[1] == SqueakMessageInterceptor.breakpointClassFor(selector);
         }
     }
 
