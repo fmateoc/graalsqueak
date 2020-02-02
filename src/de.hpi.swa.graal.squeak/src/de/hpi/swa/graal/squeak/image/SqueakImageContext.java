@@ -585,6 +585,10 @@ public final class SqueakImageContext {
         return NativeObject.newNativeBytes(this, byteStringClass, MiscUtils.stringToBytes(value));
     }
 
+    public NativeObject asByteSymbol(final String value) {
+        return NativeObject.newNativeBytes(this, byteSymbolClass, MiscUtils.stringToBytes(value));
+    }
+
     public NativeObject asWideString(final String value) {
         return NativeObject.newNativeInts(this, getWideStringClass(), MiscUtils.stringToCodePointsArray(value));
     }
