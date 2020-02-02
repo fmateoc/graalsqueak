@@ -39,9 +39,9 @@ import de.hpi.swa.graal.squeak.util.LogUtils;
 
 public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
     private static final int SQUEAK_TIMEOUT_SECONDS = Integer.valueOf(System.getProperty("SQUEAK_TIMEOUT", DebugUtils.underDebug ? "2000" : "300"));    // generous
-    // default
-    // for
-    // debugging
+                                                                                                                                                        // default
+                                                                                                                                                        // for
+                                                                                                                                                        // debugging
     private static final int TIMEOUT_SECONDS = SQUEAK_TIMEOUT_SECONDS + 2;
     private static final int TEST_IMAGE_LOAD_TIMEOUT_SECONDS = Integer.valueOf(System.getProperty("IMAGE_LOAD_TIMEOUT", DebugUtils.underDebug ? "1000" : "20"));
     private static final int PRIORITY_10_LIST_INDEX = 9;
@@ -73,7 +73,6 @@ public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
         } catch (final ExecutionException e) {
             throw new IllegalStateException(e.getCause());
         } catch (final TimeoutException e) {
-            DebugUtils.dumpState(null);
             throw new IllegalStateException("Timed out while trying to load the image from " + imagePath +
                             ".\nMake sure the image is not currently loaded by another executable");
         }
@@ -202,7 +201,6 @@ public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
         try {
             return future.get(timeout, TimeUnit.SECONDS);
         } finally {
-            future.cancel(true);
             if (testWithImageIsActive) {
                 DebugUtils.dumpState(image);
                 if (context != null) {
@@ -210,6 +208,7 @@ public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
                 }
                 testWithImageIsActive = false;
             }
+            future.cancel(true);
         }
     }
 

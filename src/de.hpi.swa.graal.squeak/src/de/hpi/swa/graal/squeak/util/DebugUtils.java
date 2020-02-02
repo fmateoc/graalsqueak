@@ -71,17 +71,22 @@ public class DebugUtils {
     public static void dumpState(final SqueakImageContext image) {
         MiscUtils.gc();
         final StringBuilder sb = new StringBuilder("Thread dump");
-        DebugUtils.dumpThreads(sb);
+        dumpThreads(sb);
         System.err.println(sb.toString());
-        DebugUtils.forceGcWithHistogram();
+        if (image != null) {
+            try {
+                System.err.println(currentState(image));
+            } catch (final RuntimeException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static void dumpHeap() {
         try {
             ManagementFactoryHelper.getDiagnosticMXBean().dumpHeap(".." + FileSystems.getDefault().getSeparator() + System.currentTimeMillis() + ".hprof", true);
         } catch (final IOException e) {
             e.printStackTrace();
-        }
-        if (image != null) {
-            System.err.println(DebugUtils.currentState(image));
-            DebugUtils.printSqStackTrace();
         }
     }
 
@@ -269,12 +274,12 @@ public class DebugUtils {
 
         new FramesAndContextsIterator(
                         (frame, code) -> {
-                            PrintWriter err = null;
                             if (depth[0]++ > 50 && isTravisBuild) {
                                 return;
-                            } else if (!truffleFrames[0]) {
+                            }
+                            final PrintWriter err = FrameAccess.getMethod(frame).image.getError();
+                            if (!truffleFrames[0]) {
                                 truffleFrames[0] = true;
-                                err = FrameAccess.getMethod(frame).image.getError();
                                 err.println("== Truffle stack trace ===========================================================");
                             }
                             final Object sender = FrameAccess.getSender(frame);
@@ -284,12 +289,12 @@ public class DebugUtils {
                             err.println(MiscUtils.format("%s #(%s) [marker: %s, sender: %s]", context, argumentsString, marker, sender));
                         },
                         (context) -> {
-                            PrintWriter err = null;
                             if (depth[0]++ > 50 && isTravisBuild) {
                                 return;
-                            } else if (truffleFrames[0]) {
+                            }
+                            final PrintWriter err = context.image.getError();
+                            if (truffleFrames[0]) {
                                 truffleFrames[0] = false;
-                                err = context.image.getError();
                                 err.println("== Squeak frames ================================================================");
                             }
                             final Object[] rcvrAndArgs = context.getReceiverAndNArguments(context.getBlockOrMethod().getNumArgsAndCopied());
