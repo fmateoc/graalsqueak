@@ -102,6 +102,8 @@ public final class SqueakImageContext {
     public final ArrayObject specialSelectors = new ArrayObject(this);
     @CompilationFinal private ClassObject smallFloatClass = null;
     @CompilationFinal private ClassObject byteSymbolClass = null;
+    @CompilationFinal public ClassObject fractionClass = null;
+    @CompilationFinal public ClassObject associationClass = null;
     @CompilationFinal private ClassObject foreignObjectClass = null;
 
     public final ArrayObject specialObjectsArray = new ArrayObject(this);

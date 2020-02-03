@@ -437,6 +437,12 @@ public final class SqueakImageReader {
                     final ClassObject metaClassObject = classChunk.asClassObject(image.metaClass);
                     final ClassObject classObject = classInstance.asClassObject(metaClassObject);
                     classObject.fillin(classInstance);
+                    final String className = ((NativeObject) classObject.getOtherPointers()[CLASS.NAME]).asStringUnsafe();
+                    if (className.equals("Fraction")) {
+                        image.fractionClass = classObject;
+                    } else if (className.equals("Association")) {
+                        image.associationClass = classObject;
+                    }
                     if (inst.contains(classObject.getSuperclassOrNull())) {
                         inst.add(classObject);
                         classObject.setInstancesAreClasses();
