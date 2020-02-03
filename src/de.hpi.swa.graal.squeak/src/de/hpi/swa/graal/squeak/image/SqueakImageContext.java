@@ -19,8 +19,6 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
-import com.oracle.truffle.api.frame.Frame;
-import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.instrumentation.AllocationReporter;
 import com.oracle.truffle.api.profiles.ConditionProfile;
 import com.oracle.truffle.api.source.Source;
@@ -68,8 +66,9 @@ import de.hpi.swa.graal.squeak.shared.SqueakImageLocator;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 import de.hpi.swa.graal.squeak.tools.SqueakMessageInterceptor;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
-import de.hpi.swa.graal.squeak.util.FrameAccess;
+import de.hpi.swa.graal.squeak.util.DebugUtils;
 import de.hpi.swa.graal.squeak.util.InterruptHandlerState;
+import de.hpi.swa.graal.squeak.util.LogUtils;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
 public final class SqueakImageContext {
@@ -177,6 +176,7 @@ public final class SqueakImageContext {
             // Load image.
             SqueakImageReader.load(this);
             printToStdOut("Preparing image for headless execution...");
+            LogUtils.STARTUP.fine(() -> "Fresh after load" + DebugUtils.currentState(SqueakImageContext.this));
             // Remove active context.
             getActiveProcessSlow().instVarAtPut0Slow(PROCESS.SUSPENDED_CONTEXT, NilObject.SINGLETON);
             // Modify StartUpList for headless execution.
@@ -193,6 +193,8 @@ public final class SqueakImageContext {
             evaluate("Utilities setAuthorInitials: 'GraalSqueak'");
             // Initialize fresh MorphicUIManager.
             evaluate("Project current instVarNamed: #uiManager put: MorphicUIManager new");
+            //
+            LogUtils.STARTUP.fine(() -> "After newly loaded image startUp" + DebugUtils.currentState(SqueakImageContext.this));
         }
     }
 
@@ -215,6 +217,7 @@ public final class SqueakImageContext {
     public Object evaluate(final String sourceCode) {
         CompilerAsserts.neverPartOfCompilation("For testing or instrumentation only.");
         final Source source = Source.newBuilder(SqueakLanguageConfig.NAME, sourceCode, "<image#evaluate>").build();
+        LogUtils.STARTUP.fine("\nimage.evaluate " + sourceCode);
         return Truffle.getRuntime().createCallTarget(getDoItContextNode(source)).call();
     }
 
@@ -234,6 +237,7 @@ public final class SqueakImageContext {
     public ExecuteTopLevelContextNode getActiveContextNode() {
         final PointersObject activeProcess = getActiveProcessSlow();
         final ContextObject activeContext = (ContextObject) activeProcess.instVarAt0Slow(PROCESS.SUSPENDED_CONTEXT);
+        activeContext.setProcess(activeProcess);
         activeProcess.instVarAtPut0Slow(PROCESS.SUSPENDED_CONTEXT, NilObject.SINGLETON);
         return ExecuteTopLevelContextNode.create(getLanguage(), activeContext, true);
     }
@@ -312,20 +316,20 @@ public final class SqueakImageContext {
         return debugErrorSelector;
     }
 
-    public void setDebugErrorSelector(final NativeObject classObject) {
+    public void setDebugErrorSelector(final NativeObject nativeObject) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
         assert debugErrorSelector == null;
-        debugErrorSelector = classObject;
+        debugErrorSelector = nativeObject;
     }
 
     public NativeObject getDebugSyntaxErrorSelector() {
         return debugSyntaxErrorSelector;
     }
 
-    public void setDebugSyntaxErrorSelector(final NativeObject classObject) {
+    public void setDebugSyntaxErrorSelector(final NativeObject nativeObject) {
         CompilerDirectives.transferToInterpreterAndInvalidate();
         assert debugSyntaxErrorSelector == null;
-        debugSyntaxErrorSelector = classObject;
+        debugSyntaxErrorSelector = nativeObject;
     }
 
     public ClassObject getCompilerClass() {
@@ -466,11 +470,16 @@ public final class SqueakImageContext {
         if (resourcesPath == null) {
             CompilerDirectives.transferToInterpreter();
             final String languageHome = language.getTruffleLanguageHome();
+            Path path;
             if (languageHome != null) {
-                resourcesPath = Paths.get(language.getTruffleLanguageHome()).resolve("resources").toString();
+                path = Paths.get(language.getTruffleLanguageHome()).resolve("resources");
             } else { /* Fallback to image directory. */
-                resourcesPath = getImageDirectory();
+                path = Paths.get(getImagePath()).getParent();
+                if (path == null) {
+                    throw SqueakException.create("`parent` should not be `null`.");
+                }
             }
+            resourcesPath = path.toAbsolutePath().toString();
         }
         return resourcesPath;
     }
@@ -558,6 +567,10 @@ public final class SqueakImageContext {
         return NativeObject.newNativeBytes(this, byteStringClass, MiscUtils.stringToBytes(value));
     }
 
+    public NativeObject asByteSymbol(final String value) {
+        return NativeObject.newNativeBytes(this, byteSymbolClass, MiscUtils.stringToBytes(value));
+    }
+
     public NativeObject asWideString(final String value) {
         return NativeObject.newNativeInts(this, getWideStringClass(), MiscUtils.stringToCodePointsArray(value));
     }
@@ -611,36 +624,6 @@ public final class SqueakImageContext {
     @TruffleBoundary
     public void printToStdErr(final Object... arguments) {
         printToStdErr(ArrayUtils.toJoinedString(" ", arguments));
-    }
-
-    @TruffleBoundary
-    public void printSqStackTrace() {
-        CompilerDirectives.transferToInterpreter();
-        final boolean isTravisBuild = System.getenv().containsKey("TRAVIS");
-        final int[] depth = new int[1];
-        final Object[] lastSender = new Object[]{null};
-        getError().println("== Truffle stack trace ===========================================================");
-        Truffle.getRuntime().iterateFrames(frameInstance -> {
-            if (depth[0]++ > 50 && isTravisBuild) {
-                return null;
-            }
-            final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-            if (!FrameAccess.isGraalSqueakFrame(current)) {
-                return null;
-            }
-            final CompiledMethodObject method = FrameAccess.getMethod(current);
-            lastSender[0] = FrameAccess.getSender(current);
-            final Object marker = FrameAccess.getMarker(current, method);
-            final Object context = FrameAccess.getContext(current, method);
-            final String prefix = FrameAccess.getClosure(current) == null ? "" : "[] in ";
-            final String argumentsString = ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(current));
-            getError().println(MiscUtils.format("%s%s #(%s) [marker: %s, context: %s, sender: %s]", prefix, method, argumentsString, marker, context, lastSender[0]));
-            return null;
-        });
-        if (lastSender[0] instanceof ContextObject) {
-            getError().println("== Squeak frames ================================================================");
-            ((ContextObject) lastSender[0]).printSqStackTrace();
-        }
     }
 
     /*
