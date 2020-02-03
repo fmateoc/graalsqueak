@@ -6,6 +6,7 @@
 package de.hpi.swa.graal.squeak.nodes.primitives.impl;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.List;
 
 import com.oracle.truffle.api.CompilerDirectives;
@@ -47,14 +48,16 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(rewriteOn = ArithmeticException.class)
-        protected static final long doLong(final long lhs, final long rhs) {
-            return Math.addExact(lhs, rhs);
-        }
-
-        @Specialization(replaces = "doLong")
-        protected final Object doLongWithOverflow(final long lhs, final long rhs) {
-            return LargeIntegerObject.add(method.image, lhs, rhs);
+        @Specialization
+        protected final Object doLong(final long lhs, final long rhs,
+                        @Cached final BranchProfile overflowProfile) {
+            final long result = rhs + lhs;
+            // HD 2-12 Overflow iff both arguments have the opposite sign of the result
+            if (((lhs ^ result) & (rhs ^ result)) < 0) {
+                overflowProfile.enter();
+                return LargeIntegerObject.add(method.image, lhs, rhs);
+            }
+            return result;
         }
 
         @Specialization
@@ -76,14 +79,17 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(rewriteOn = ArithmeticException.class)
-        protected static final long doLong(final long lhs, final long rhs) {
-            return Math.subtractExact(lhs, rhs);
-        }
-
-        @Specialization(replaces = "doLong")
-        protected final Object doLongWithOverflow(final long lhs, final long rhs) {
-            return LargeIntegerObject.subtract(method.image, lhs, rhs);
+        @Specialization
+        protected final Object doLong(final long lhs, final long rhs,
+                        @Cached final BranchProfile overflowProfile) {
+            final long result = lhs - rhs;
+            // HD 2-12 Overflow iff the arguments have different signs and
+            // the sign of the result is different than the sign of lhs
+            if (((lhs ^ rhs) & (lhs ^ result)) < 0) {
+                overflowProfile.enter();
+                return LargeIntegerObject.subtract(method.image, lhs, rhs);
+            }
+            return result;
         }
 
         @Specialization
@@ -291,14 +297,23 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
-        @Specialization(rewriteOn = ArithmeticException.class)
-        protected static final long doLong(final long lhs, final long rhs) {
-            return Math.multiplyExact(lhs, rhs);
-        }
-
-        @Specialization(replaces = "doLong")
-        protected final Object doLongWithOverflow(final long lhs, final long rhs) {
-            return LargeIntegerObject.multiply(method.image, lhs, rhs);
+        @Specialization
+        protected final Object doLong(final long lhs, final long rhs,
+                        @Cached final BranchProfile possibleOverflowProfile,
+                        @Cached final BranchProfile overflowProfile) {
+            final long result = lhs * rhs;
+            if ((Math.abs(lhs) | Math.abs(rhs)) >>> 31 != 0) {
+                possibleOverflowProfile.enter();
+                // Some bits greater than 2^31 that might cause overflow
+                // Check the result using the divide operator
+                // and check for the special case of Long.MIN_VALUE * -1
+                if (rhs != 0 && result / rhs != lhs ||
+                                lhs == Long.MIN_VALUE && rhs == -1) {
+                    overflowProfile.enter();
+                    return LargeIntegerObject.multiply(method.image, lhs, rhs);
+                }
+            }
+            return result;
         }
 
         @Specialization
@@ -371,7 +386,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"!rhs.isZero()"})
-        protected static final Object doLongLargeInteger(final long lhs, final LargeIntegerObject rhs) {
+        protected static final long doLongLargeInteger(final long lhs, final LargeIntegerObject rhs) {
             return LargeIntegerObject.floorDivide(lhs, rhs);
         }
     }
@@ -393,7 +408,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization(guards = {"!rhs.isZero()"})
-        protected static final Object doLongLargeInteger(final long lhs, final LargeIntegerObject rhs) {
+        protected static final long doLongLargeInteger(final long lhs, final LargeIntegerObject rhs) {
             return LargeIntegerObject.divide(lhs, rhs);
         }
     }
@@ -490,7 +505,7 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
                      * -1 in check needed, because we do not want to shift a positive long into
                      * negative long (most significant bit indicates positive/negative).
                      */
-                    return LargeIntegerObject.shiftLeft(method.image, receiver, (int) arg);
+                    return LargeIntegerObject.reduceIfPossible(method.image, BigInteger.valueOf(receiver).shiftLeft((int) arg));
                 } else {
                     return receiver << arg;
                 }
@@ -529,8 +544,9 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
             super(method);
         }
 
+        @TruffleBoundary(transferToInterpreterOnException = false)
         @Specialization(guards = {"rhs != 0"})
-        protected static final Object doLargeIntegerLong(final LargeIntegerObject lhs, final long rhs) {
+        protected static final long doLargeIntegerLong(final LargeIntegerObject lhs, final long rhs) {
             return lhs.remainder(rhs);
         }
 
@@ -656,8 +672,8 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected static final boolean doLargeIntegerLong(final LargeIntegerObject lhs, final long rhs) {
-            return BooleanObject.wrap(lhs.compareTo(rhs) == 0);
+        protected static final boolean doLargeIntegerLong(@SuppressWarnings("unused") final LargeIntegerObject lhs, @SuppressWarnings("unused") final long rhs) {
+            return BooleanObject.FALSE;
         }
 
         @Specialization
@@ -681,8 +697,8 @@ public final class ArithmeticPrimitives extends AbstractPrimitiveFactoryHolder {
         }
 
         @Specialization
-        protected static final boolean doLargeIntegerLong(final LargeIntegerObject lhs, final long rhs) {
-            return BooleanObject.wrap(lhs.compareTo(rhs) != 0);
+        protected static final boolean doLargeIntegerLong(@SuppressWarnings("unused") final LargeIntegerObject lhs, @SuppressWarnings("unused") final long rhs) {
+            return BooleanObject.TRUE;
         }
 
         @Specialization
