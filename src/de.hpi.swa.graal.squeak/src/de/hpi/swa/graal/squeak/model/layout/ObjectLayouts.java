@@ -226,7 +226,11 @@ public final class ObjectLayouts {
     }
 
     public static final class METACLASS {
+        /**
+         * Relative offsets to {@link CLASS_DESCRIPTION} for {@link ClassObject}.
+         */
         public static final int THIS_CLASS = 5;
+
         public static final int INST_SIZE = 6;
     }
 

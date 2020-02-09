@@ -187,44 +187,44 @@ public final class PushBytecodes {
 
     @NodeInfo(cost = NodeCost.NONE)
     public static final class PushLiteralConstantNode extends AbstractPushNode {
-        private final Object literal;
+        private final int literalIndex;
 
         public PushLiteralConstantNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int literalIndex) {
             super(code, index, numBytecodes);
-            literal = code.getLiteral(literalIndex);
+            this.literalIndex = literalIndex;
         }
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            pushNode.execute(frame, literal);
+            pushNode.execute(frame, code.getLiteral(literalIndex));
         }
 
         @Override
         public String toString() {
             CompilerAsserts.neverPartOfCompilation();
-            return "pushConstant: " + literal;
+            return "pushConstant: " + code.getLiteral(literalIndex);
         }
     }
 
     @NodeInfo(cost = NodeCost.NONE)
     public static final class PushLiteralVariableNode extends AbstractPushNode {
         @Child private SqueakObjectAt0Node at0Node = SqueakObjectAt0Node.create();
-        private final Object literal;
+        private final int literalIndex;
 
         public PushLiteralVariableNode(final CompiledCodeObject code, final int index, final int numBytecodes, final int literalIndex) {
             super(code, index, numBytecodes);
-            literal = code.getLiteral(literalIndex);
+            this.literalIndex = literalIndex;
         }
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            pushNode.execute(frame, at0Node.execute(literal, 1));
+            pushNode.execute(frame, at0Node.execute(code.getLiteral(literalIndex), 1));
         }
 
         @Override
         public String toString() {
             CompilerAsserts.neverPartOfCompilation();
-            return "pushLitVar: " + at0Node.execute(literal, 1);
+            return "pushLitVar: " + code.getLiteral(literalIndex);
         }
     }
 

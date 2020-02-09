@@ -192,7 +192,7 @@ public abstract class AbstractLookupMethodWithSelectorNodes extends AbstractNode
         }
 
         protected final boolean breakpointWasHit(final Object[] array) {
-            return array[1] != null && array[1] == breakpointClass;
+            return array[1] == breakpointClass;
         }
     }
 }

@@ -115,7 +115,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         CompilerAsserts.neverPartOfCompilation();
         if (isAMetaClass()) {
             final Object classInstance = pointers[METACLASS.THIS_CLASS - CLASS_DESCRIPTION.SIZE];
-            if (classInstance != NilObject.SINGLETON) {
+            if (classInstance != NilObject.SINGLETON && ((ClassObject) classInstance).pointers[CLASS.NAME] != NilObject.SINGLETON) {
                 return ((ClassObject) classInstance).getClassNameUnsafe() + " class";
             } else {
                 return "Unknown metaclass";

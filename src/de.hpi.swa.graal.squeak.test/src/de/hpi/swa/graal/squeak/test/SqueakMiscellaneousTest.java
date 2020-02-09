@@ -30,7 +30,7 @@ public class SqueakMiscellaneousTest extends AbstractSqueakTestCaseWithDummyImag
     private static final String ALL_BYTECODES_EXPECTED_RESULT = String.join("\n", "1 <8B 1F 00> callPrimitive: 31",
                     "2 <1F> pushTemp: 15",
                     "3 <20> pushConstant: 'someSelector'",
-                    "4 <43> pushLitVar: UndefinedObject",
+                    "4 <43> pushLitVar: #UndefinedObject => UndefinedObject",
                     "5 <60> popIntoRcvr: 0",
                     "6 <61> popIntoRcvr: 1",
                     "7 <62> popIntoRcvr: 2",

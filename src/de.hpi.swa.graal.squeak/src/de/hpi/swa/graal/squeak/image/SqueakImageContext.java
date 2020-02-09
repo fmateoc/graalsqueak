@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.lang.ref.ReferenceQueue;
 import java.nio.channels.SeekableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -105,7 +106,6 @@ public final class SqueakImageContext {
     public final ArrayObject specialSelectors = new ArrayObject(this);
     @CompilationFinal private ClassObject smallFloatClass = null;
     @CompilationFinal private ClassObject byteSymbolClass = null;
-    @CompilationFinal public ClassObject fractionClass = null;
     @CompilationFinal private ClassObject foreignObjectClass = null;
 
     public final ArrayObject specialObjectsArray = new ArrayObject(this);
@@ -165,8 +165,6 @@ public final class SqueakImageContext {
     @CompilationFinal private NativeObject debugErrorSelector = null;
     @CompilationFinal(dimensions = 1) public static final byte[] DEBUG_SYNTAX_ERROR_SELECTOR_NAME = "debugSyntaxError:".getBytes();
     @CompilationFinal private NativeObject debugSyntaxErrorSelector = null;
-
-    @CompilationFinal public ClassObject associationClass;
 
     public SqueakImageContext(final SqueakLanguage squeakLanguage, final SqueakLanguage.Env environment) {
         language = squeakLanguage;

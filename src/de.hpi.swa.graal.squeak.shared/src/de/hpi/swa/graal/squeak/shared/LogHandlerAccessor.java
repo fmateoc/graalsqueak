@@ -23,6 +23,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.AccessController;
@@ -216,9 +217,8 @@ public final class LogHandlerAccessor {
 
     /**
      *
-     * Cleaner code courtesy of Luke Hutchison via a StackOverflow answer.
-     * https://stackoverflow.com/questions/2972986/how-to-unmap-a-file-from-memory-mapped-using-
-     * filechannel-in-java
+     * Cleaner code courtesy of Luke Hutchison via a StackOverflow answer:
+     * https://stackoverflow.com/questions/2972986/how-to-unmap-a-file-from-memory-mapped-using-filechannel-in-java
      *
      */
     private static class MappedBufferCleaner {

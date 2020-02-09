@@ -456,7 +456,6 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
         return reduceIfPossible(integer.subtract(floorDivide(integer, bValue).multiply(bValue)));
     }
 
-    @TruffleBoundary(transferToInterpreterOnException = false)
     public static Object floorMod(final long a, final LargeIntegerObject b) {
         assert !b.fitsIntoLong() : "non-reduced large integer!";
         if ((a ^ b.integer.signum()) < 0) {

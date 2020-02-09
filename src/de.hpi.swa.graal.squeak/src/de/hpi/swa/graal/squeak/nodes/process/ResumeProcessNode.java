@@ -43,7 +43,8 @@ public abstract class ResumeProcessNode extends AbstractNodeWithCode {
         final PointersObject currentProcess = code.image.getActiveProcess(pointersReadNode);
         putToSleepNode.executePutToSleep(currentProcess);
         final ContextObject thisContext = contextNode.executeGet(frame, currentProcess);
-        LogUtils.SCHEDULING.fine(() -> DebugUtils.logSwitch(newProcess, (int)pointersReadNode.executeLong(newProcess, PROCESS.PRIORITY), currentProcess, thisContext, (ContextObject) pointersReadNode.execute(newProcess, PROCESS.SUSPENDED_CONTEXT)));
+        LogUtils.SCHEDULING.fine(() -> DebugUtils.logSwitch(newProcess, (int) pointersReadNode.executeLong(newProcess, PROCESS.PRIORITY), currentProcess, thisContext,
+                        (ContextObject) pointersReadNode.execute(newProcess, PROCESS.SUSPENDED_CONTEXT)));
         thisContext.transferTo(pointersReadNode, pointersWriteNode, newProcess);
     }
 

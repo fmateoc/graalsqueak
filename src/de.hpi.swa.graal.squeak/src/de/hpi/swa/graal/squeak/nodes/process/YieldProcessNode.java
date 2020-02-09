@@ -20,8 +20,8 @@ import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadN
 public final class YieldProcessNode extends AbstractNodeWithCode {
     @Child private LinkProcessToListNode linkProcessToListNode;
     @Child private WakeHighestPriorityNode wakeHighestPriorityNode;
-    @Child private ArrayObjectReadNode arrayReadNode = ArrayObjectReadNode.create();
     @Child private AbstractPointersObjectReadNode pointersReadNode = AbstractPointersObjectReadNode.create();
+    @Child private ArrayObjectReadNode arrayReadNode = ArrayObjectReadNode.create();
 
     private YieldProcessNode(final CompiledCodeObject code) {
         super(code);

@@ -137,6 +137,9 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
                 SqueakMessageInterceptor.notifyLoadedSymbol(this, getByteStorage());
             }
         }
+        if (image.getByteSymbolClass() == getSqueakClass()) {
+            SqueakMessageInterceptor.notifyLoadedSymbol(this, getByteStorage());
+        }
     }
 
     @Override
