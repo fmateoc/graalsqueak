@@ -32,11 +32,11 @@ import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithClassAndHash;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithHash;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
+import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CharacterObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
-import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
@@ -107,42 +107,34 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
                 final Object[] arguments = current.getArguments();
                 for (int i = 0; i < arguments.length; i++) {
                     final Object argument = arguments[i];
-                    for (int j = 0; j < fromPointersLength; j++) {
-                        final Object fromPointer = fromPointers[j];
-                        if (argument == fromPointer) {
-                            final Object toPointer = toPointers[j];
-                            arguments[i] = toPointer;
-                            updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
-                        } else {
-                            pointersBecomeNode.execute(argument, fromPointers, toPointers, copyHash);
+                    if (argument != null) {
+                        for (int j = 0; j < fromPointersLength; j++) {
+                            final Object fromPointer = fromPointers[j];
+                            if (argument == fromPointer) {
+                                final Object toPointer = toPointers[j];
+                                arguments[i] = toPointer;
+                                updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
+                            } else {
+                                pointersBecomeNode.execute(argument, fromPointers, toPointers, copyHash);
+                            }
                         }
                     }
                 }
 
-                final CompiledCodeObject blockOrMethod = FrameAccess.getBlockOrMethod(current);
-                final ContextObject context = FrameAccess.getContext(current, blockOrMethod);
-                if (context != null) {
-                    for (int j = 0; j < fromPointersLength; j++) {
-                        final Object fromPointer = fromPointers[j];
-                        if (context == fromPointer) {
-                            final Object toPointer = toPointers[j];
-                            FrameAccess.setContext(current, blockOrMethod, (ContextObject) toPointer);
-                            updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
-                        } else {
-                            pointersBecomeNode.execute(context, fromPointers, toPointers, copyHash);
-                        }
+                final CompiledCodeObject blockOrMethod = arguments[2] != null ? ((BlockClosureObject) arguments[2]).getCompiledBlock() : (CompiledMethodObject) arguments[0];
+                final int stackp = FrameUtil.getIntSafe(current, blockOrMethod.getStackPointerSlot());
+                final FrameSlot[] stackSlots = blockOrMethod.getStackSlotsUnsafe();
+                final FrameDescriptor frameDescriptor = blockOrMethod.getFrameDescriptor();
+                for (int i = 0; i < stackp; i++) {
+                    final FrameSlot frameSlot = stackSlots[i];
+                    if (frameSlot == null) {
+                        return null; // Stop here, slot has not (yet) been created.
                     }
-                }
-
-                /*
-                 * use blockOrMethod.getNumStackSlots() here instead of stackPointer because in rare
-                 * cases, the stack is accessed behind the stackPointer.
-                 */
-                for (int i = 0; i < blockOrMethod.getNumStackSlots(); i++) {
-                    final FrameSlot frameSlot = blockOrMethod.getStackSlot(i);
-                    final FrameSlotKind frameSlotKind = blockOrMethod.getFrameDescriptor().getFrameSlotKind(frameSlot);
-                    if (frameSlotKind == FrameSlotKind.Object) {
-                        final Object stackObject = FrameUtil.getObjectSafe(current, frameSlot);
+                    if (current.isObject(frameSlot)) {
+                        final Object stackObject = current.getValue(frameSlot);
+                        if (stackObject == null) {
+                            return null;
+                        }
                         for (int j = 0; j < fromPointersLength; j++) {
                             final Object fromPointer = fromPointers[j];
                             if (stackObject == fromPointer) {
@@ -154,7 +146,7 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
                                 pointersBecomeNode.execute(stackObject, fromPointers, toPointers, copyHash);
                             }
                         }
-                    } else if (frameSlotKind == FrameSlotKind.Illegal) {
+                    } else if (frameDescriptor.getFrameSlotKind(frameSlot) == FrameSlotKind.Illegal) {
                         /** this slot and all following ones are not initialized, done. */
                         return null;
                     }

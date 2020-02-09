@@ -32,6 +32,7 @@ public final class YieldProcessNode extends AbstractNodeWithCode {
     }
 
     public void executeYield(final VirtualFrame frame, final PointersObject scheduler) {
+        assert scheduler == code.image.getScheduler();
         final PointersObject activeProcess = code.image.getActiveProcess(pointersReadNode);
         final long priority = pointersReadNode.executeLong(activeProcess, PROCESS.PRIORITY);
         final ArrayObject processLists = pointersReadNode.executeArray(scheduler, PROCESS_SCHEDULER.PROCESS_LISTS);

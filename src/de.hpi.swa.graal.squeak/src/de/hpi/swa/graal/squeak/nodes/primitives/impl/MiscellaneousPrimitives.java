@@ -13,7 +13,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
@@ -64,6 +63,7 @@ import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.InterruptHandlerState;
+import de.hpi.swa.graal.squeak.util.LogUtils;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 import de.hpi.swa.graal.squeak.util.NotProvided;
 import de.hpi.swa.graal.squeak.util.OSDetector;
@@ -82,13 +82,15 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
         }
 
         protected final void signalAtMilliseconds(final PointersObject semaphore, final long msTime) {
+            LogUtils.INTERRUPTS.fine(() -> "Setting the timer semaphore to @" + Integer.toHexString(semaphore.hashCode()) + " to be signalled in " + msTime + "ms");
             method.image.setSemaphore(SPECIAL_OBJECT.THE_TIMER_SEMAPHORE, semaphore);
             method.image.interrupt.setTimerSemaphore(semaphore);
             method.image.interrupt.setNextWakeupTick(msTime);
         }
 
         protected final void resetTimerSemaphore() {
-            method.image.setSemaphore(SPECIAL_OBJECT.THE_TIMER_SEMAPHORE, NilObject.SINGLETON);
+            LogUtils.INTERRUPTS.fine(() -> "Resetting the timer semaphore");
+                        method.image.setSemaphore(SPECIAL_OBJECT.THE_TIMER_SEMAPHORE, NilObject.SINGLETON);
             method.image.interrupt.setTimerSemaphore(null);
             method.image.interrupt.setNextWakeupTick(0);
         }

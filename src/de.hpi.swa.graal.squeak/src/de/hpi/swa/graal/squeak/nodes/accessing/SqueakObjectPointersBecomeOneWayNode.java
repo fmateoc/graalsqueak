@@ -10,9 +10,13 @@ import java.util.Arrays;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Fallback;
 import com.oracle.truffle.api.dsl.Specialization;
+import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
+import com.oracle.truffle.api.frame.FrameUtil;
+import com.oracle.truffle.api.frame.MaterializedFrame;
 
+import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
@@ -133,14 +137,16 @@ public abstract class SqueakObjectPointersBecomeOneWayNode extends AbstractNode 
             }
         }
         if (obj.hasMethodClass(readNode)) {
-            final ClassObject oldMethodClass = obj.getMethodClass(readNode);
+            final ClassObject oldMethodClass = (ClassObject) obj.getMethodClass(readNode);
             for (int i = 0; i < from.length; i++) {
                 if (from[i] == oldMethodClass) {
-                    final ClassObject newMethodClass = (ClassObject) to[i];
+                    final AbstractSqueakObject newMethodClass = (AbstractSqueakObject) to[i];
                     obj.setMethodClass(writeNode, newMethodClass);
                     updateHashNode.executeUpdate(oldMethodClass, newMethodClass, copyHash);
                     // TODO: flush method caches correct here?
-                    newMethodClass.invalidateMethodDictStableAssumption();
+                    if (newMethodClass instanceof ClassObject) {
+                        ((ClassObject) newMethodClass).invalidateMethodDictStableAssumption();
+                    }
                 }
             }
         }
@@ -152,27 +158,39 @@ public abstract class SqueakObjectPointersBecomeOneWayNode extends AbstractNode 
                     @Cached final ContextObjectWriteNode writeNode) {
         for (int i = 0; i < from.length; i++) {
             final Object fromPointer = from[i];
-            // Skip sender (for performance), pc, and sp.
+            final Object toPointer = to[i];
+            if (!obj.hasTruffleFrame()) {
+                return;
+            }
             // TODO: Check that all pointers are actually traced (obj.size()?).
-            for (int j = CONTEXT.METHOD; j < CONTEXT.TEMP_FRAME_START; j++) {
-                final Object newPointer = readNode.execute(obj, j);
-                if (newPointer == fromPointer) {
-                    final Object toPointer = to[i];
-                    writeNode.execute(obj, j, toPointer);
+            final MaterializedFrame truffleFrame = obj.getTruffleFrame();
+            final Object[] args = truffleFrame.getArguments();
+            for (int j = 0; j < args.length; j++) {
+                if (args[j] == fromPointer) {
+                    args[j] = toPointer;
                     updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
                 }
             }
-            final CompiledCodeObject blockOrMethod = obj.getBlockOrMethod();
-            for (int j = CONTEXT.TEMP_FRAME_START; j < obj.size(); j++) {
-                final FrameSlot stackSlot = blockOrMethod.getStackSlot(j - CONTEXT.TEMP_FRAME_START);
-                if (blockOrMethod.getFrameDescriptor().getFrameSlotKind(stackSlot) == FrameSlotKind.Illegal) {
-                    break; // This and all following slots are not (yet) in use.
+            final CompiledCodeObject code = args[2] != null ? ((BlockClosureObject) args[2]).getCompiledBlock() : (CompiledMethodObject) args[0];
+            final int stackp = FrameUtil.getIntSafe(truffleFrame, code.getStackPointerSlot());
+            final FrameSlot[] stackSlots = code.getStackSlotsUnsafe();
+            final FrameDescriptor frameDescriptor = code.getFrameDescriptor();
+            for (int j = 0; j < stackp; j++) {
+                final FrameSlot slot = stackSlots[j];
+                if (slot == null) {
+                    break; // Stop here, slot has not (yet) been created.
                 }
-                final Object newPointer = readNode.execute(obj, j);
-                if (newPointer == fromPointer) {
-                    final Object toPointer = to[i];
-                    writeNode.execute(obj, j, toPointer);
-                    updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
+                if (truffleFrame.isObject(slot)) {
+                    final Object newPointer = FrameUtil.getObjectSafe(truffleFrame, slot);
+                    if (newPointer == null) {
+                        break;
+                    }
+                    if (newPointer == fromPointer) {
+                        writeNode.execute(obj, j + CONTEXT.TEMP_FRAME_START, toPointer);
+                        updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
+                    }
+                } else if (frameDescriptor.getFrameSlotKind(slot) == FrameSlotKind.Illegal) {
+                    break; // Stop here, because this slot and all following are not used.
                 }
             }
         }

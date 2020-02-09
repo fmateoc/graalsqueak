@@ -34,6 +34,7 @@ import de.hpi.swa.graal.squeak.interop.LookupMethodByStringNode;
 import de.hpi.swa.graal.squeak.io.DisplayPoint;
 import de.hpi.swa.graal.squeak.io.SqueakDisplay;
 import de.hpi.swa.graal.squeak.io.SqueakDisplayInterface;
+import de.hpi.swa.graal.squeak.model.AbstractPointersObject;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithClassAndHash;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
@@ -105,7 +106,6 @@ public final class SqueakImageContext {
     @CompilationFinal private ClassObject smallFloatClass = null;
     @CompilationFinal private ClassObject byteSymbolClass = null;
     @CompilationFinal public ClassObject fractionClass = null;
-    @CompilationFinal public ClassObject associationClass = null;
     @CompilationFinal private ClassObject foreignObjectClass = null;
 
     public final ArrayObject specialObjectsArray = new ArrayObject(this);
@@ -165,6 +165,8 @@ public final class SqueakImageContext {
     @CompilationFinal private NativeObject debugErrorSelector = null;
     @CompilationFinal(dimensions = 1) public static final byte[] DEBUG_SYNTAX_ERROR_SELECTOR_NAME = "debugSyntaxError:".getBytes();
     @CompilationFinal private NativeObject debugSyntaxErrorSelector = null;
+
+    @CompilationFinal public ClassObject associationClass;
 
     public SqueakImageContext(final SqueakLanguage squeakLanguage, final SqueakLanguage.Env environment) {
         language = squeakLanguage;

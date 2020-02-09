@@ -7,7 +7,8 @@ import java.lang.management.LockInfo;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MonitorInfo;
 import java.lang.management.ThreadInfo;
-import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,7 @@ import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.PROCESS_SCHEDULER;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.SEMAPHORE;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
+import de.hpi.swa.graal.squeak.shared.LogHandlerAccessor;
 import sun.management.ManagementFactoryHelper;
 
 public class DebugUtils {
@@ -84,7 +86,8 @@ public class DebugUtils {
 
     public static void dumpHeap() {
         try {
-            ManagementFactoryHelper.getDiagnosticMXBean().dumpHeap(".." + FileSystems.getDefault().getSeparator() + System.currentTimeMillis() + ".hprof", true);
+            final Path path = Paths.get(LogHandlerAccessor.LOG_FOLDER, System.currentTimeMillis() + ".hprof");
+            ManagementFactoryHelper.getDiagnosticMXBean().dumpHeap(path.toString(), true);
         } catch (final IOException e) {
             e.printStackTrace();
         }
@@ -271,6 +274,7 @@ public class DebugUtils {
         final boolean isTravisBuild = System.getenv().containsKey("TRAVIS");
         final int[] depth = new int[1];
         final boolean[] truffleFrames = new boolean[1];
+        final boolean[] squeakFrames = new boolean[1];
 
         new FramesAndContextsIterator(
                         (frame, code) -> {
@@ -284,22 +288,22 @@ public class DebugUtils {
                             }
                             final Object sender = FrameAccess.getSender(frame);
                             final Object marker = FrameAccess.getMarker(frame, code);
-                            final Object context = FrameAccess.getContext(frame, code);
                             final String argumentsString = ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(frame));
-                            err.println(MiscUtils.format("%s #(%s) [marker: %s, sender: %s]", context, argumentsString, marker, sender));
+                            err.println(MiscUtils.format("%s #(%s) [marker: %s, sender: %s]", code, argumentsString, marker, sender));
                         },
                         (context) -> {
                             if (depth[0]++ > 50 && isTravisBuild) {
                                 return;
                             }
                             final PrintWriter err = context.image.getError();
-                            if (truffleFrames[0]) {
-                                truffleFrames[0] = false;
+                            if (!squeakFrames[0]) {
+                                squeakFrames[0] = true;
                                 err.println("== Squeak frames ================================================================");
                             }
                             final Object[] rcvrAndArgs = context.getReceiverAndNArguments(context.getBlockOrMethod().getNumArgsAndCopied());
                             err.println(MiscUtils.format("%s #(%s) [%s]", context, ArrayUtils.toJoinedString(", ", rcvrAndArgs), context.getFrameMarker()));
                         }).scanFor((FrameMarker) null, NilObject.SINGLETON, NilObject.SINGLETON);
+        System.err.println();
     }
 
     public static String logSwitch(final PointersObject newProcess, final int newPriority, final PointersObject currentProcess, final ContextObject thisContext, final ContextObject newContext) {

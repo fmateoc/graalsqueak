@@ -17,8 +17,10 @@ import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.SEMAPHORE;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
+import de.hpi.swa.graal.squeak.util.LogUtils;
 
 public abstract class SignalSemaphoreNode extends AbstractNode {
+
     @Child private ResumeProcessNode resumeProcessNode;
 
     protected SignalSemaphoreNode(final CompiledCodeObject code) {
@@ -35,13 +37,16 @@ public abstract class SignalSemaphoreNode extends AbstractNode {
     public static final void doSignalEmpty(final PointersObject semaphore,
                     @Shared("readNode") @Cached final AbstractPointersObjectReadNode readNode,
                     @Shared("writeNode") @Cached final AbstractPointersObjectWriteNode writeNode) {
-        writeNode.execute(semaphore, SEMAPHORE.EXCESS_SIGNALS, readNode.executeLong(semaphore, SEMAPHORE.EXCESS_SIGNALS) + 1);
+        final long excessSignals = readNode.executeLong(semaphore, SEMAPHORE.EXCESS_SIGNALS);
+        LogUtils.SCHEDULING.fine(() -> "Signalling empty semaphore @" + Integer.toHexString(semaphore.hashCode()) + " with initially " + excessSignals + " excessSignals");
+        writeNode.execute(semaphore, SEMAPHORE.EXCESS_SIGNALS, excessSignals + 1);
     }
 
     @Specialization(guards = {"semaphore.getSqueakClass().isSemaphoreClass()", "!semaphore.isEmptyList(readNode)"}, limit = "1")
     public final void doSignal(final VirtualFrame frame, final PointersObject semaphore,
                     @Shared("readNode") @Cached final AbstractPointersObjectReadNode readNode,
                     @Shared("writeNode") @Cached final AbstractPointersObjectWriteNode writeNode) {
+        LogUtils.SCHEDULING.fine(() -> "Attempting to resume process after non-empty semaphore @" + Integer.toHexString(semaphore.hashCode()) + " signal");
         resumeProcessNode.executeResume(frame, semaphore.removeFirstLinkOfList(readNode, writeNode));
     }
 

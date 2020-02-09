@@ -6,12 +6,12 @@
 package de.hpi.swa.graal.squeak.nodes.process;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
-import com.oracle.truffle.api.profiles.BranchProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
+import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.PROCESS_SCHEDULER;
@@ -21,18 +21,20 @@ import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.Abstr
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
+import de.hpi.swa.graal.squeak.util.DebugUtils;
+import de.hpi.swa.graal.squeak.util.LogUtils;
 
 public final class WakeHighestPriorityNode extends AbstractNodeWithImage {
+
     @Child private ArrayObjectReadNode arrayReadNode = ArrayObjectReadNode.create();
     @Child private ArrayObjectSizeNode arraySizeNode = ArrayObjectSizeNode.create();
     @Child private AbstractPointersObjectReadNode pointersReadNode = AbstractPointersObjectReadNode.create();
     @Child private AbstractPointersObjectWriteNode pointersWriteNode = AbstractPointersObjectWriteNode.create();
-    private final BranchProfile errorProfile = BranchProfile.create();
     @Child private GetOrCreateContextNode contextNode;
 
     private WakeHighestPriorityNode(final CompiledCodeObject code) {
         super(code.image);
-        contextNode = GetOrCreateContextNode.create(code, true);
+        contextNode = GetOrCreateContextNode.create(code);
     }
 
     public static WakeHighestPriorityNode create(final CompiledCodeObject code) {
@@ -48,13 +50,18 @@ public final class WakeHighestPriorityNode extends AbstractNodeWithImage {
             while (!processList.isEmptyList(pointersReadNode)) {
                 final PointersObject newProcess = processList.removeFirstLinkOfList(pointersReadNode, pointersWriteNode);
                 final Object newContext = pointersReadNode.execute(newProcess, PROCESS.SUSPENDED_CONTEXT);
+                final int priority = (int) (p + 1);
                 if (newContext instanceof ContextObject) {
-                    contextNode.executeGet(frame).transferTo(pointersReadNode, pointersWriteNode, newProcess);
+                    final ContextObject thisContext = contextNode.executeGet(frame, NilObject.SINGLETON);
+                    LogUtils.SCHEDULING.fine(() -> DebugUtils.logSwitch(newProcess, priority, image.getActiveProcess(pointersReadNode), thisContext, (ContextObject) newContext));
+                    thisContext.transferTo(pointersReadNode, pointersWriteNode, newProcess);
                     throw SqueakException.create("Should not be reached");
+                } else {
+                    LogUtils.SCHEDULING.severe(() -> "evicted zombie process from run queue " + priority);
                 }
             }
         }
-        errorProfile.enter();
         throw SqueakException.create("scheduler could not find a runnable process");
     }
+
 }
