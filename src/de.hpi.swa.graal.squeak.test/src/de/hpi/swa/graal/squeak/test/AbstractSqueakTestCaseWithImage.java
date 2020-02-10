@@ -78,6 +78,9 @@ public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
         if (!runsOnMXGate()) {
             // Patch TestCase>>#performTest, so errors are printed to stderr for debugging purposes.
             patchMethod("TestCase", "performTest", "performTest [self perform: testSelector asSymbol] on: Error do: [:e | e printVerboseOn: FileStream stderr. e signal]");
+            // The above patch is modifying the dependencies of the SUnit package, fix the
+            // associated test
+            patchMethod("PackageDependencyTest", "testSUnit", "testSUnit self testPackage: #SUnit dependsExactlyOn: #(#''Chronology-Core'' Collections Kernel System Files)");
         }
         image.getOutput().println("Image ready for testing...");
     }
