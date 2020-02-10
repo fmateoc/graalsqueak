@@ -36,26 +36,44 @@ import sun.nio.cs.ThreadLocalCoders;
 public final class LogHandlerAccessor {
 
     private static final int GIG = (int) Math.pow(1024, 3);
+    public static final String LOG_FOLDER = System.getProperty("log.folder", "");
+    private static boolean FIRST_TIME = true;
 
     public static Handler createLogHandler(final String mode) {
         PrintStream output = null;
         switch (mode) {
             case "mapped":
+                if (FIRST_TIME) {
+                    FIRST_TIME = false;
+                    System.out.println("GraalSqueak log handler logging to memory-mapped file in " + LOG_FOLDER);
+                }
                 return new MappedHandler();
             case "file":
+                if (FIRST_TIME) {
+                    FIRST_TIME = false;
+                    System.out.println("GraalSqueak log handler logging to log file in " + LOG_FOLDER);
+                }
                 return new FileStreamHandler();
             case "err":
+                if (FIRST_TIME) {
+                    FIRST_TIME = false;
+                    System.out.println("GraalSqueak log handler logging to standard err");
+                }
                 output = System.err;
                 break;
             case "out":
             default:
+                if (FIRST_TIME) {
+                    FIRST_TIME = false;
+                    System.out.println("GraalSqueak log handler logging to standard out");
+                }
                 output = System.out;
         }
         return new StandardPrintStreamHandler(output);
     }
 
     protected static Path getLogPath() {
-        return Paths.get(System.currentTimeMillis() + ".log");
+        return Paths.get(LOG_FOLDER, System.currentTimeMillis() + ".log");
     }
 
     private static final class MappedHandler extends Handler {
@@ -155,8 +173,11 @@ public final class LogHandlerAccessor {
 
         @Override
         public void publish(final LogRecord record) {
-            final CharsetEncoder encoder = ThreadLocalCoders.encoderFor(StandardCharsets.UTF_8);
             final String message = record.getMessage();
+            if (message == null) {
+                return;
+            }
+            final CharsetEncoder encoder = ThreadLocalCoders.encoderFor(StandardCharsets.UTF_8);
             if (buffer.position() + 1 + message.length() * encoder.maxBytesPerChar() >= GIG) {
                 close();
                 initializeMappedBuffer();
@@ -195,9 +216,8 @@ public final class LogHandlerAccessor {
 
     /**
      *
-     * Cleaner code courtesy of Luke Hutchison via a StackOverflow answer.
-     * https://stackoverflow.com/questions/2972986/how-to-unmap-a-file-from-memory-mapped-using-
-     * filechannel-in-java
+     * Cleaner code courtesy of Luke Hutchison via a StackOverflow answer:
+     * https://stackoverflow.com/questions/2972986/how-to-unmap-a-file-from-memory-mapped-using-filechannel-in-java
      *
      */
     private static class MappedBufferCleaner {
