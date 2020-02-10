@@ -160,10 +160,6 @@ public final class PointersObject extends AbstractPointersObject {
         if (superclass != null && "Binding".equals(superclass.getClassName())) {
             return readNode.execute(this, BINDING.KEY) + " => " + readNode.execute(this, BINDING.VALUE);
         }
-        final ClassObject superclass = getSqueakClass().getSuperclassOrNull();
-        if (superclass != null && superclass.getClassName().equals("Binding")) {
-            return readNode.execute(this, 0) + " => " + readNode.execute(this, 1);
-        }
         return super.toString();
     }
 

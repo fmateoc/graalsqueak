@@ -96,11 +96,11 @@ public final class WeakVariablePointersObject extends AbstractPointersObject {
     }
 
     public Object getFromVariablePart(final int index) {
-        return NilObject.nullToNil(variablePart[index].get());
+        return NilObject.nullToNil(UnsafeUtils.getWeakReference(variablePart, index).get());
     }
 
     public Object getFromVariablePart(final int index, final ConditionProfile nilProfile) {
-        return NilObject.nullToNil(variablePart[index].get(), nilProfile);
+        return NilObject.nullToNil(UnsafeUtils.getWeakReference(variablePart, index).get(), nilProfile);
     }
 
     private void putIntoVariablePart(final int index, final Object value) {

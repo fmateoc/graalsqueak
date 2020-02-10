@@ -247,7 +247,7 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
         return reduceIfPossible(image, value);
     }
 
-    public static Object reduceIfPossible(final SqueakImageContext image, final BigInteger value) {
+    private static Object reduceIfPossible(final SqueakImageContext image, final BigInteger value) {
         if (bitLength(value) < Long.SIZE) {
             return value.longValue();
         } else {

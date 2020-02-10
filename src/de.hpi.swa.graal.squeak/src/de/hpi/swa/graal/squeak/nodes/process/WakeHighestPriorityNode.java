@@ -6,6 +6,7 @@
 package de.hpi.swa.graal.squeak.nodes.process;
 
 import com.oracle.truffle.api.frame.VirtualFrame;
+import com.oracle.truffle.api.profiles.BranchProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
@@ -30,6 +31,7 @@ public final class WakeHighestPriorityNode extends AbstractNodeWithImage {
     @Child private ArrayObjectSizeNode arraySizeNode = ArrayObjectSizeNode.create();
     @Child private AbstractPointersObjectReadNode pointersReadNode = AbstractPointersObjectReadNode.create();
     @Child private AbstractPointersObjectWriteNode pointersWriteNode = AbstractPointersObjectWriteNode.create();
+    private final BranchProfile errorProfile = BranchProfile.create();
     @Child private GetOrCreateContextNode contextNode;
 
     private WakeHighestPriorityNode(final CompiledCodeObject code) {
@@ -61,7 +63,7 @@ public final class WakeHighestPriorityNode extends AbstractNodeWithImage {
                 }
             }
         }
+        errorProfile.enter();
         throw SqueakException.create("scheduler could not find a runnable process");
     }
-
 }

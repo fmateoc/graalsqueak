@@ -31,7 +31,6 @@ import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
-import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.ERROR_TABLE;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.AbstractBytecodeNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.JumpBytecodes.ConditionalJumpNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.JumpBytecodes.UnconditionalJumpNode;
@@ -195,9 +194,6 @@ public class ExecuteContextNode extends AbstractNodeWithCode implements Instrume
                          */
                         PRIMITIVES.fine(() -> callPrimitiveNode.primitiveNode.getClass().getSimpleName() + " failed (arguments: " +
                                         ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(frame)) + ")");
-                        /* continue with fallback code. */
-                    } catch (final AssertionError e) {
-                        getHandlePrimitiveFailedNode().executeHandle(frame, ERROR_TABLE.GENERIC_ERROR.ordinal());
                         /* continue with fallback code. */
                     }
                 }
