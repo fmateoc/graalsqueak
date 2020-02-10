@@ -12,6 +12,7 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.ASSOCIATION;
+import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectAt0Node;
 import de.hpi.swa.graal.squeak.nodes.context.SqueakObjectAtPutAndMarkContextsNode;
 import de.hpi.swa.graal.squeak.nodes.context.TemporaryWriteMarkContextsNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameSlotReadNode;
@@ -22,18 +23,22 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 public final class StoreBytecodes {
 
     private abstract static class AbstractStoreIntoAssociationNode extends AbstractStoreIntoNode {
-        protected final Object literal;
+        @Child private SqueakObjectAt0Node at0Node;
+        protected final long variableIndex;
 
         private AbstractStoreIntoAssociationNode(final CompiledCodeObject code, final int index, final int numBytecodes, final long variableIndex) {
             super(code, index, numBytecodes);
-            literal = code.getLiteral(variableIndex);
+            this.variableIndex = variableIndex;
             storeNode = SqueakObjectAtPutAndMarkContextsNode.create(ASSOCIATION.VALUE);
         }
 
         @Override
         public final String toString() {
             CompilerAsserts.neverPartOfCompilation();
-            return getTypeName() + "IntoLit: ";
+            if (at0Node == null) {
+                at0Node = insert(SqueakObjectAt0Node.create());
+            }
+            return getTypeName() + "IntoLit: " + at0Node.execute(code.getLiteral(variableIndex), ASSOCIATION.KEY);
         }
     }
 
@@ -115,7 +120,7 @@ public final class StoreBytecodes {
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            storeNode.executeWrite(literal, popNode.execute(frame));
+            storeNode.executeWrite(code.getLiteral(variableIndex), popNode.execute(frame));
         }
 
         @Override
@@ -191,7 +196,7 @@ public final class StoreBytecodes {
 
         @Override
         public void executeVoid(final VirtualFrame frame) {
-            storeNode.executeWrite(literal, topNode.execute(frame));
+            storeNode.executeWrite(code.getLiteral(variableIndex), topNode.execute(frame));
         }
 
         @Override
