@@ -434,11 +434,7 @@ public class ExecuteContextNode extends AbstractNodeWithCode implements Instrume
     public SourceSection getSourceSection() {
         if (section == null) {
             final Source source = code.getSource();
-            if (source.getName().equals(CompiledCodeObject.SOURCE_UNAVAILABLE_NAME)) {
-                section = source.createUnavailableSection();
-            } else {
-                section = source.createSection(1, 1, source.getLength());
-            }
+            section = source.createSection(1, 1, source.getLength());
         }
         return section;
     }
