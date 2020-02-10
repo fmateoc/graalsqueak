@@ -11,11 +11,11 @@ import com.oracle.truffle.api.nodes.ControlFlowException;
 import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.api.source.SourceSection;
 
-import de.hpi.swa.graal.squeak.image.SqueakImageContext;
+import de.hpi.swa.graal.squeak.SqueakLanguage;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.SYNTAX_ERROR_NOTIFICATION;
-import de.hpi.swa.graal.squeak.nodes.AbstractNodeWithImage;
+import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.DebugUtils;
@@ -96,10 +96,15 @@ public final class SqueakExceptions {
         private static final long serialVersionUID = 1L;
         private final FakeSourceCodeObjectNode dummyCodeObjectNode;
 
+        public SqueakSyntaxError(final String reason) {
+            super(reason);
+            dummyCodeObjectNode = null;
+        }
+
         public SqueakSyntaxError(final PointersObject syntaxErrorNotification) {
             super(((NativeObject) syntaxErrorNotification.instVarAt0Slow(SYNTAX_ERROR_NOTIFICATION.ERROR_MESSAGE)).asStringUnsafe());
             final int sourceOffset = (int) ((long) syntaxErrorNotification.instVarAt0Slow(SYNTAX_ERROR_NOTIFICATION.LOCATION) - 1);
-            dummyCodeObjectNode = new FakeSourceCodeObjectNode(syntaxErrorNotification.image, sourceOffset);
+            dummyCodeObjectNode = new FakeSourceCodeObjectNode(sourceOffset);
         }
 
         @Override
@@ -112,12 +117,11 @@ public final class SqueakExceptions {
             return true;
         }
 
-        protected class FakeSourceCodeObjectNode extends AbstractNodeWithImage {
+        protected static final class FakeSourceCodeObjectNode extends AbstractNode {
             private final int sourceOffset;
             private SourceSection sourceSection;
 
-            public FakeSourceCodeObjectNode(final SqueakImageContext image, final int sourceOffset) {
-                super(image);
+            public FakeSourceCodeObjectNode(final int sourceOffset) {
                 this.sourceOffset = sourceOffset;
             }
 
@@ -125,7 +129,7 @@ public final class SqueakExceptions {
             public SourceSection getSourceSection() {
                 if (sourceSection == null) {
                     // - 1 for previous character.
-                    sourceSection = image.getLastParseRequestSource().createSection(Math.max(sourceOffset - 1, 0), 1);
+                    sourceSection = SqueakLanguage.getContext().getLastParseRequestSource().createSection(Math.max(sourceOffset - 1, 0), 1);
                 }
                 return sourceSection;
             }

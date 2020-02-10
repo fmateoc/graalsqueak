@@ -17,7 +17,6 @@ import java.util.Locale;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
-import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Cached.Shared;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
@@ -542,9 +541,9 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
                 case 1002:  // operating system version
                     if (OSDetector.SINGLETON.isMacOS()) {
                         /* The image expects things like 1095, so convert 10.10.5 into 1010.5 */
-                        return System.getProperty("os.version").replaceFirst("\\.", "");
+                        return System.getProperty("os.version", "unknown").replaceFirst("\\.", "");
                     } else {
-                        return System.getProperty("os.version");
+                        return System.getProperty("os.version", "unknown");
                     }
                 case 1003:  // this platform's processor type
                     return "intel";
@@ -937,27 +936,13 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 255)
     protected abstract static class PrimMetaFailNode extends AbstractPrimitiveNode implements BinaryPrimitive {
-        protected static final boolean DEBUG_META_PRIMITIVE_FAILURES = false;
-
         public PrimMetaFailNode(final CompiledMethodObject method) {
             super(method);
         }
 
-        @Specialization(guards = "!DEBUG_META_PRIMITIVE_FAILURES")
+        @Specialization
         protected static final Object doFail(@SuppressWarnings("unused") final PointersObject proxy, final long reasonCode) {
             throw new SimulationPrimitiveFailed((int) reasonCode);
-        }
-
-        @Specialization(guards = "DEBUG_META_PRIMITIVE_FAILURES")
-        protected final Object doFailAndLog(@SuppressWarnings("unused") final PointersObject proxy, final long reasonCode) {
-            debugMetaPrimitiveFailures(reasonCode);
-            throw new SimulationPrimitiveFailed((int) reasonCode);
-        }
-
-        @TruffleBoundary
-        private void debugMetaPrimitiveFailures(final long reasonCode) {
-            final String target = Truffle.getRuntime().getCallerFrame().getCallTarget().toString();
-            method.image.printToStdErr("Simulation primitive failed (target:", target, "/ reasonCode:", reasonCode, ")");
         }
     }
 

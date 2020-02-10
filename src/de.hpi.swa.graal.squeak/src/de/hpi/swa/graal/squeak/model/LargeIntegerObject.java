@@ -78,6 +78,7 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
         // Nothing to do.
     }
 
+    @TruffleBoundary
     public static LargeIntegerObject createLongMinOverflowResult(final SqueakImageContext image) {
         return new LargeIntegerObject(image, LONG_MIN_OVERFLOW_RESULT);
     }
@@ -254,6 +255,7 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
         }
     }
 
+    @TruffleBoundary
     public Object reduceIfPossible() {
         if (bitLength < Long.SIZE) {
             return integer.longValue();
@@ -463,6 +465,11 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
     }
 
     @TruffleBoundary(transferToInterpreterOnException = false)
+    public long remainder(final long other) {
+        return integer.remainder(BigInteger.valueOf(other)).longValue();
+    }
+
+    @TruffleBoundary(transferToInterpreterOnException = false)
     public Object remainder(final LargeIntegerObject b) {
         return reduceIfPossible(integer.remainder(b.integer));
     }
@@ -542,7 +549,7 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
     }
 
     @TruffleBoundary(transferToInterpreterOnException = false)
-    public long toSigned() {
+    public long toSignedLong() {
         assert isPositive() && bitLength <= Long.SIZE;
         if (bitLength == Long.SIZE) {
             return integer.subtract(ONE_SHIFTED_BY_64).longValue();
@@ -602,6 +609,12 @@ public final class LargeIntegerObject extends AbstractSqueakObjectWithClassAndHa
             return reduceIfPossible(integer.abs().shiftLeft(b).negate());
         }
         return reduceIfPossible(integer.shiftLeft(b));
+    }
+
+    @TruffleBoundary(transferToInterpreterOnException = false)
+    public static Object shiftLeftPositive(final SqueakImageContext image, final long a, final int b) {
+        assert b >= 0 : "This method must be used with a positive 'b' argument";
+        return reduceIfPossible(image, BigInteger.valueOf(a).shiftLeft(b));
     }
 
     public BigInteger getBigInteger() {

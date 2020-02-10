@@ -85,7 +85,7 @@ public final class ArrayUtils {
 
     @TruffleBoundary
     public static void fillRandomly(final byte[] bytes) {
-        MiscUtils.RANDOM.nextBytes(bytes);
+        MiscUtils.getSecureRandom().nextBytes(bytes);
     }
 
     public static int indexOf(final long[] array, final long value) {

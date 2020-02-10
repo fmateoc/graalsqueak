@@ -11,8 +11,12 @@ import com.oracle.truffle.api.profiles.ConditionProfile;
 import de.hpi.swa.graal.squeak.image.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.SqueakImageWriter;
+import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.ASSOCIATION;
+import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.BINDING;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.FORM;
+import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.FRACTION;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.LINKED_LIST;
+import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.POINT;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
@@ -80,10 +84,6 @@ public final class PointersObject extends AbstractPointersObject {
         return layoutValuesPointTo(identityNode, isPrimitiveProfile, thang);
     }
 
-    public boolean isAssociation() {
-        return getSqueakClass() == image.associationClass;
-    }
-
     public boolean isActiveProcess(final AbstractPointersObjectReadNode readNode) {
         return this == image.getActiveProcess(readNode);
     }
@@ -94,10 +94,6 @@ public final class PointersObject extends AbstractPointersObject {
 
     public boolean isDisplay() {
         return this == image.getSpecialObject(SPECIAL_OBJECT.THE_DISPLAY);
-    }
-
-    public boolean isFraction() {
-        return getSqueakClass() == image.fractionClass;
     }
 
     public boolean isPoint() {
@@ -151,13 +147,18 @@ public final class PointersObject extends AbstractPointersObject {
         CompilerAsserts.neverPartOfCompilation();
         final AbstractPointersObjectReadNode readNode = AbstractPointersObjectReadNode.getUncached();
         if (isPoint()) {
-            return readNode.execute(this, 0) + "@" + readNode.execute(this, 1);
+            return readNode.execute(this, POINT.X) + "@" + readNode.execute(this, POINT.Y);
         }
-        if (isFraction()) {
-            return readNode.execute(this, 0) + " / " + readNode.execute(this, 1);
+        final String squeakClassName = getSqueakClass().getClassName();
+        if ("Fraction".equals(squeakClassName)) {
+            return readNode.execute(this, FRACTION.NUMERATOR) + " / " + readNode.execute(this, FRACTION.DENOMINATOR);
         }
-        if (isAssociation()) {
-            return readNode.execute(this, 0) + " -> " + readNode.execute(this, 1);
+        if ("Association".equals(squeakClassName)) {
+            return readNode.execute(this, ASSOCIATION.KEY) + " -> " + readNode.execute(this, ASSOCIATION.VALUE);
+        }
+        final ClassObject superclass = getSqueakClass().getSuperclassOrNull();
+        if (superclass != null && "Binding".equals(superclass.getClassName())) {
+            return readNode.execute(this, BINDING.KEY) + " => " + readNode.execute(this, BINDING.VALUE);
         }
         return super.toString();
     }

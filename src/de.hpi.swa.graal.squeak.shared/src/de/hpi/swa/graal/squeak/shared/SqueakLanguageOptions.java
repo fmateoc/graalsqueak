@@ -6,8 +6,7 @@
 package de.hpi.swa.graal.squeak.shared;
 
 public final class SqueakLanguageOptions {
-    public static final String CODE = "code";
-    public static final String CODE_FLAG = "--" + CODE;
+    public static final String CODE_FLAG = "--code";
     public static final String CODE_FLAG_SHORT = "-c";
     public static final String CODE_HELP = "Smalltalk code to be executed without display";
     public static final String HEADLESS = "headless";
@@ -24,6 +23,8 @@ public final class SqueakLanguageOptions {
     public static final String INTERRUPTS = "disable-interrupts";
     public static final String INTERRUPTS_FLAG = "--" + INTERRUPTS;
     public static final String INTERRUPTS_HELP = "Disable interrupt handler";
+    public static final String LOG_HANDLER_FLAG = "--log-handler";
+    public static final String LOG_HANDLER_HELP = "Enable log handler (supported modes are 'mapped', 'file', 'err', 'out')";
     public static final String QUIET = "quiet";
     public static final String QUIET_FLAG = "--" + QUIET;
     public static final String QUIET_HELP = "Operate quietly";
@@ -32,10 +33,11 @@ public final class SqueakLanguageOptions {
     public static final String STACK_DEPTH_PROTECTION = "stack-depth-protection";
     public static final String STACK_DEPTH_PROTECTION_FLAG = "--" + STACK_DEPTH_PROTECTION;
     public static final String STACK_DEPTH_PROTECTION_HELP = "Enable stack depth protection";
+    public static final String STORAGE_STRATEGIES = "storage-strategies";
+    public static final String STORAGE_STRATEGIES_HELP = "Disable storage strategy optimization for arrays";
     public static final String TESTING = "testing";
     public static final String TESTING_HELP = "For internal testing purposes only";
-    public static final String TRANSCRIPT_FORWARDING = "enable-transcript-forwarding";
-    public static final String TRANSCRIPT_FORWARDING_FLAG = "--" + TRANSCRIPT_FORWARDING;
+    public static final String TRANSCRIPT_FORWARDING_FLAG = "--enable-transcript-forwarding";
     public static final String TRANSCRIPT_FORWARDING_HELP = "Forward stdio to Smalltalk transcript";
 
     private SqueakLanguageOptions() {

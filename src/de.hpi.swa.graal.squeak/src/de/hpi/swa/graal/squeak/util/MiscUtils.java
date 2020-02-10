@@ -11,12 +11,15 @@ import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.RuntimeMXBean;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Properties;
-import java.util.Random;
 
+import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakInterrupt;
@@ -41,7 +44,7 @@ public final class MiscUtils {
     public static final long TIME_ZONE_OFFSET_MICROSECONDS = (Calendar.getInstance().get(Calendar.ZONE_OFFSET) + Calendar.getInstance().get(Calendar.DST_OFFSET)) * 1000L;
     public static final long TIME_ZONE_OFFSET_SECONDS = TIME_ZONE_OFFSET_MICROSECONDS / 1000 / 1000;
 
-    public static final Random RANDOM = new Random();
+    @CompilationFinal static SecureRandom random;
 
     private MiscUtils() {
     }
@@ -174,6 +177,15 @@ public final class MiscUtils {
         return MEMORY_BEAN.getObjectPendingFinalizationCount();
     }
 
+    public static SecureRandom getSecureRandom() {
+        /* SecureRandom must be initialized at (native image) runtime. */
+        if (random == null) {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            random = new SecureRandom();
+        }
+        return random;
+    }
+
     @TruffleBoundary
     public static long getStartTime() {
         return RUNTIME_BEAN.getStartTime();
@@ -242,6 +254,16 @@ public final class MiscUtils {
             Thread.currentThread().interrupt();
             throw new SqueakInterrupt();
         }
+    }
+
+    @TruffleBoundary
+    public static byte[] stringToBytes(final String value) {
+        return value.getBytes(StandardCharsets.UTF_8);
+    }
+
+    @TruffleBoundary
+    public static int[] stringToCodePointsArray(final String value) {
+        return value.codePoints().toArray();
     }
 
     @TruffleBoundary

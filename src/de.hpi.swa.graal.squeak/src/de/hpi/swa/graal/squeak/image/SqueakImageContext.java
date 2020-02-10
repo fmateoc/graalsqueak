@@ -27,7 +27,9 @@ import com.oracle.truffle.api.source.Source;
 import de.hpi.swa.graal.squeak.SqueakImage;
 import de.hpi.swa.graal.squeak.SqueakLanguage;
 import de.hpi.swa.graal.squeak.SqueakOptions.SqueakContextOptions;
+import de.hpi.swa.graal.squeak.exceptions.ProcessSwitch;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
+import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakSyntaxError;
 import de.hpi.swa.graal.squeak.interop.InteropMap;
 import de.hpi.swa.graal.squeak.interop.LookupMethodByStringNode;
 import de.hpi.swa.graal.squeak.io.DisplayPoint;
@@ -67,7 +69,6 @@ import de.hpi.swa.graal.squeak.nodes.plugins.network.SqueakSocket;
 import de.hpi.swa.graal.squeak.shared.SqueakImageLocator;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 import de.hpi.swa.graal.squeak.tools.SqueakMessageInterceptor;
-import de.hpi.swa.graal.squeak.util.ArrayConversionUtils;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.DebugUtils;
 import de.hpi.swa.graal.squeak.util.InterruptHandlerState;
@@ -104,7 +105,6 @@ public final class SqueakImageContext {
     public final ArrayObject specialSelectors = new ArrayObject(this);
     @CompilationFinal private ClassObject smallFloatClass = null;
     @CompilationFinal private ClassObject byteSymbolClass = null;
-    @CompilationFinal public ClassObject fractionClass = null;
     @CompilationFinal private ClassObject foreignObjectClass = null;
 
     public final ArrayObject specialObjectsArray = new ArrayObject(this);
@@ -145,6 +145,7 @@ public final class SqueakImageContext {
 
     @CompilationFinal private ClassObject compilerClass = null;
     @CompilationFinal private ClassObject parserClass = null;
+    @CompilationFinal private PointersObject parserSharedInstance = null;
     @CompilationFinal private PointersObject scheduler = null;
     @CompilationFinal private ClassObject wideStringClass = null;
 
@@ -163,8 +164,6 @@ public final class SqueakImageContext {
     @CompilationFinal private NativeObject debugErrorSelector = null;
     @CompilationFinal(dimensions = 1) public static final byte[] DEBUG_SYNTAX_ERROR_SELECTOR_NAME = "debugSyntaxError:".getBytes();
     @CompilationFinal private NativeObject debugSyntaxErrorSelector = null;
-
-    @CompilationFinal public ClassObject associationClass;
 
     public SqueakImageContext(final SqueakLanguage squeakLanguage, final SqueakLanguage.Env environment) {
         language = squeakLanguage;
@@ -260,9 +259,23 @@ public final class SqueakImageContext {
         assert parserClass != null;
         assert compilerClass != null;
 
-        final AbstractSqueakObjectWithClassAndHash parser = (AbstractSqueakObjectWithClassAndHash) parserClass.send("new");
-        final AbstractSqueakObjectWithClassAndHash methodNode = (AbstractSqueakObjectWithClassAndHash) parser.send(
-                        "parse:class:noPattern:notifying:ifFail:", asByteString(source), nilClass, BooleanObject.TRUE, NilObject.SINGLETON, BlockClosureObject.create(this, 0));
+        if (parserSharedInstance == null) {
+            CompilerDirectives.transferToInterpreterAndInvalidate();
+            parserSharedInstance = (PointersObject) parserClass.send("new");
+        }
+        final PointersObject methodNode;
+        try {
+            methodNode = (PointersObject) parserSharedInstance.send("parse:class:noPattern:notifying:ifFail:",
+                            asByteString(source), nilClass, BooleanObject.TRUE, NilObject.SINGLETON, BlockClosureObject.create(this, 0));
+        } catch (final ProcessSwitch e) {
+            /*
+             * A ProcessSwitch exception is thrown in case of a syntax error to open the
+             * corresponding window. Fail with an appropriate exception here. This way, it is clear
+             * why code execution failed (e.g. when requested through the Polyglot API).
+             */
+            CompilerDirectives.transferToInterpreter();
+            throw new SqueakSyntaxError("Syntax Error in \"" + source + "\"");
+        }
         final CompiledMethodObject doItMethod = (CompiledMethodObject) methodNode.send("generate");
 
         final ContextObject doItContext = ContextObject.create(this, doItMethod.getSqueakContextSize());
@@ -475,11 +488,16 @@ public final class SqueakImageContext {
         if (resourcesPath == null) {
             CompilerDirectives.transferToInterpreter();
             final String languageHome = language.getTruffleLanguageHome();
+            final Path path;
             if (languageHome != null) {
-                resourcesPath = Paths.get(language.getTruffleLanguageHome()).resolve("resources").toString();
+                path = Paths.get(language.getTruffleLanguageHome()).resolve("resources");
             } else { /* Fallback to image directory. */
-                resourcesPath = getImageDirectory();
+                path = Paths.get(getImagePath()).getParent();
+                if (path == null) {
+                    throw SqueakException.create("`parent` should not be `null`.");
+                }
             }
+            resourcesPath = path.toAbsolutePath().toString();
         }
         return resourcesPath;
     }
@@ -564,11 +582,11 @@ public final class SqueakImageContext {
     }
 
     public NativeObject asByteString(final String value) {
-        return NativeObject.newNativeBytes(this, byteStringClass, value.getBytes(StandardCharsets.UTF_8));
+        return NativeObject.newNativeBytes(this, byteStringClass, MiscUtils.stringToBytes(value));
     }
 
     public NativeObject asWideString(final String value) {
-        return NativeObject.newNativeInts(this, getWideStringClass(), ArrayConversionUtils.stringToCodePointsArray(value));
+        return NativeObject.newNativeInts(this, getWideStringClass(), MiscUtils.stringToCodePointsArray(value));
     }
 
     public NativeObject asString(final String value, final ConditionProfile wideStringProfile) {
@@ -633,10 +651,5 @@ public final class SqueakImageContext {
     public <T extends Object> T reportNewAllocationResult(final T value) {
         allocationReporter.onReturnValue(value, 0, AllocationReporter.SIZE_UNKNOWN);
         return value;
-    }
-
-    public AbstractPointersObject scheduler() {
-        // DebugUtils access
-        return scheduler;
     }
 }
