@@ -5,7 +5,8 @@
  */
 package de.hpi.swa.graal.squeak.nodes;
 
-import java.util.logging.Level;
+import static de.hpi.swa.graal.squeak.util.LogUtils.SCHEDULING;
+import static java.util.logging.Level.FINE;
 
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.frame.FrameDescriptor;
@@ -28,8 +29,8 @@ import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.nodes.context.UnwindContextChainNode;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
+import de.hpi.swa.graal.squeak.util.DebugUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
-import de.hpi.swa.graal.squeak.util.LogUtils;
 
 public final class ExecuteTopLevelContextNode extends RootNode {
     private final SqueakImageContext image;
@@ -86,20 +87,25 @@ public final class ExecuteTopLevelContextNode extends RootNode {
             assert sender == NilObject.SINGLETON || ((ContextObject) sender).hasTruffleFrame();
             try {
                 image.lastSeenContext = null;  // Reset materialization mechanism.
-                // doIt: activeContext.printSqStackTrace();
+                final ContextObject active = activeContext;
+                SCHEDULING.fine(() -> {
+                    final StringBuilder b = new StringBuilder("Starting top level stack trace:\n");
+                    DebugUtils.printSqMaterializedStackTraceOn(b, active);
+                    return b.toString();
+                });
                 final Object result = callNode.call(activeContext.getCallTarget());
                 activeContext = unwindContextChainNode.executeUnwind(sender, sender, result);
-                LogUtils.SCHEDULING.log(Level.FINE, "Local Return on top-level: {0}", activeContext);
+                SCHEDULING.log(FINE, "Local Return on top-level: {0}", activeContext);
             } catch (final ProcessSwitch ps) {
                 activeContext = ps.getNewContext();
-                LogUtils.SCHEDULING.log(Level.FINE, "Process Switch: {0}", activeContext);
+                SCHEDULING.log(FINE, "Process Switch: {0}", activeContext);
             } catch (final NonLocalReturn nlr) {
                 final ContextObject target = (ContextObject) nlr.getTargetContextOrMarker();
                 activeContext = unwindContextChainNode.executeUnwind(sender, target, nlr.getReturnValue());
-                LogUtils.SCHEDULING.log(Level.FINE, "Non Local Return on top-level: {0}", activeContext);
+                SCHEDULING.log(FINE, "Non Local Return on top-level: {0}", activeContext);
             } catch (final NonVirtualReturn nvr) {
                 activeContext = unwindContextChainNode.executeUnwind(nvr.getCurrentContext(), nvr.getTargetContext(), nvr.getReturnValue());
-                LogUtils.SCHEDULING.log(Level.FINE, "Non Virtual Return on top-level: {0}", activeContext);
+                SCHEDULING.log(FINE, "Non Virtual Return on top-level: {0}", activeContext);
             }
             assert image.stackDepth == 0 : "Stack depth should be zero before switching to another context";
         }
