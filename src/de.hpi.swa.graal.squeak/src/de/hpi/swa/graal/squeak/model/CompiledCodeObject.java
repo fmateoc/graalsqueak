@@ -8,7 +8,6 @@ package de.hpi.swa.graal.squeak.model;
 import java.util.Arrays;
 
 import com.oracle.truffle.api.Assumption;
-import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
@@ -39,7 +38,7 @@ import de.hpi.swa.graal.squeak.util.MiscUtils;
 
 @ExportLibrary(InteropLibrary.class)
 public abstract class CompiledCodeObject extends AbstractSqueakObjectWithHash {
-    private static final String SOURCE_UNAVAILABLE_NAME = "<unavailable>";
+    public static final String SOURCE_UNAVAILABLE_NAME = "<unavailable>";
     public static final String SOURCE_UNAVAILABLE_CONTENTS = "Source unavailable";
 
     public enum SLOT_IDENTIFIER {
@@ -109,15 +108,16 @@ public abstract class CompiledCodeObject extends AbstractSqueakObjectWithHash {
     }
 
     public final Source getSource() {
-        CompilerAsserts.neverPartOfCompilation();
         if (source == null) {
-            String name;
+            String name = null;
             String contents;
             try {
                 name = toString();
                 contents = CompiledCodeObjectPrinter.getString(this);
             } catch (final RuntimeException e) {
-                name = SOURCE_UNAVAILABLE_NAME;
+                if (name == null) {
+                    name = SOURCE_UNAVAILABLE_NAME;
+                }
                 contents = SOURCE_UNAVAILABLE_CONTENTS;
             }
             source = Source.newBuilder(SqueakLanguageConfig.ID, contents, name).mimeType("text/plain").build();

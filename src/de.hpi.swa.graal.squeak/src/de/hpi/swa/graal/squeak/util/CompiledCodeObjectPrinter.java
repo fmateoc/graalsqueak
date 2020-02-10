@@ -5,6 +5,8 @@
  */
 package de.hpi.swa.graal.squeak.util;
 
+import com.oracle.truffle.api.CompilerAsserts;
+
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.AbstractBytecodeNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodes.PushClosureNode;
@@ -13,6 +15,7 @@ import de.hpi.swa.graal.squeak.nodes.bytecodes.ReturnBytecodes.ReturnTopFromBloc
 public class CompiledCodeObjectPrinter {
 
     public static String getString(final CompiledCodeObject code) {
+        CompilerAsserts.neverPartOfCompilation();
         final StringBuilder sb = new StringBuilder();
         long index = 1;
         long indent = 0;
