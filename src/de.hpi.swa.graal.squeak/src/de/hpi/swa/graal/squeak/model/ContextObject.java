@@ -13,9 +13,10 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
-import com.oracle.truffle.api.frame.Frame;
-import com.oracle.truffle.api.frame.FrameInstance;
+import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameSlot;
+import com.oracle.truffle.api.frame.FrameSlotKind;
+import com.oracle.truffle.api.frame.FrameUtil;
 import com.oracle.truffle.api.frame.MaterializedFrame;
 import com.oracle.truffle.api.profiles.ConditionProfile;
 
@@ -32,11 +33,12 @@ import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.MiscellaneousBytecodes.CallPrimitiveNode;
-import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
-import de.hpi.swa.graal.squeak.util.MiscUtils;
+import de.hpi.swa.graal.squeak.util.FramesAndContextsIterator;
+import de.hpi.swa.graal.squeak.util.LogUtils;
 
 public final class ContextObject extends AbstractSqueakObjectWithHash {
+
     private static final int NIL_PC_VALUE = -1;
 
     @CompilationFinal private MaterializedFrame truffleFrame;
@@ -330,11 +332,16 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         return (ContextObject) getSender();
     }
 
+    public boolean hasSender(final ContextObject context) {
+        return FramesAndContextsIterator.Empty.scanFor(this, context, context) == context;
+    }
+
     /**
      * Sets the sender of a ContextObject.
      */
     public void setSender(final ContextObject value) {
-        if (!hasModifiedSender && truffleFrame != null && FrameAccess.getSender(truffleFrame) != value.getFrameMarker()) {
+        Object sender = null;
+        if (!hasModifiedSender && truffleFrame != null && (sender = FrameAccess.getSender(truffleFrame)) != value && sender != value.getFrameMarker()) {
             hasModifiedSender = true;
         }
         FrameAccess.setSender(getOrCreateTruffleFrame(), value);
@@ -345,6 +352,7 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
             hasModifiedSender = false;
         }
         FrameAccess.setSender(getOrCreateTruffleFrame(), NilObject.SINGLETON);
+        setProcess(null);
     }
 
     public Object getInstructionPointer(final ConditionProfile nilProfile) {
@@ -445,7 +453,7 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
     @TruffleBoundary
     public void atTempPut(final int index, final Object value) {
         FrameAccess.setArgumentIfInRange(getOrCreateTruffleFrame(), index, value);
-        FrameAccess.setStackSlot(truffleFrame, getBlockOrMethod().getStackSlot(index), value);
+        FrameAccess.setStackSlot(truffleFrame, getBlockOrMethod().getStackSlot(index, value), value);
     }
 
     public void terminate() {
@@ -543,7 +551,7 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         escaped = otherEscaped;
     }
 
-    private Object[] getReceiverAndNArguments(final int numArgs) {
+    public Object[] getReceiverAndNArguments(final int numArgs) {
         final Object[] arguments = new Object[1 + numArgs];
         arguments[0] = getReceiver();
         for (int i = 0; i < numArgs; i++) {
@@ -554,39 +562,20 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
 
     public void transferTo(final AbstractPointersObjectReadNode readNode, final AbstractPointersObjectWriteNode writeNode, final PointersObject newProcess) {
         // Record a process to be awakened on the next interpreter cycle.
-        final PointersObject scheduler = newProcess.image.getScheduler();
-        assert newProcess != newProcess.image.getActiveProcess(readNode) : "trying to switch to already active process";
-        // overwritten in next line.
         final PointersObject currentProcess = newProcess.image.getActiveProcess(readNode);
-        writeNode.execute(scheduler, PROCESS_SCHEDULER.ACTIVE_PROCESS, newProcess);
+        assert newProcess != currentProcess : "trying to switch to already active process";
+        // overwritten in next line.
+        writeNode.execute(image.getScheduler(), PROCESS_SCHEDULER.ACTIVE_PROCESS, newProcess);
         writeNode.execute(currentProcess, PROCESS.SUSPENDED_CONTEXT, this);
+        setProcess(currentProcess);
         final ContextObject newActiveContext = (ContextObject) readNode.execute(newProcess, PROCESS.SUSPENDED_CONTEXT);
         newActiveContext.setProcess(newProcess);
         writeNode.execute(newProcess, PROCESS.SUSPENDED_CONTEXT, NilObject.SINGLETON);
         if (CompilerDirectives.isPartialEvaluationConstant(newActiveContext)) {
-            throw ProcessSwitch.create(newActiveContext);
+            throw ProcessSwitch.create(newActiveContext, this, currentProcess);
         } else {
             // Avoid further PE if newActiveContext is not a PE constant.
-            throw ProcessSwitch.createWithBoundary(newActiveContext);
-        }
-    }
-
-    /*
-     * Helper function for debugging purposes.
-     */
-    @TruffleBoundary
-    public void printSqStackTrace() {
-        ContextObject current = this;
-        while (current != null) {
-            final CompiledCodeObject code = current.getBlockOrMethod();
-            final Object[] rcvrAndArgs = current.getReceiverAndNArguments(code.getNumArgsAndCopied());
-            code.image.getOutput().println(MiscUtils.format("%s #(%s) [%s]", current, ArrayUtils.toJoinedString(", ", rcvrAndArgs), current.getFrameMarker()));
-            final Object sender = current.getSender();
-            if (sender == NilObject.SINGLETON) {
-                break;
-            } else {
-                current = (ContextObject) sender;
-            }
+            throw ProcessSwitch.createWithBoundary(newActiveContext, this, currentProcess);
         }
     }
 
@@ -624,13 +613,30 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
     }
 
     public void traceObjects(final ObjectTracer tracer) {
+        tracer.addIfUnmarked(process);
         if (hasTruffleFrame()) {
-            tracer.addIfUnmarked(getFrameSender());
-            tracer.addIfUnmarked(getMethod());
-            tracer.addIfUnmarked(getClosure());
-            tracer.addIfUnmarked(getReceiver());
-            for (int i = 0; i < getBlockOrMethod().getNumStackSlots(); i++) {
-                tracer.addIfUnmarked(atTemp(i));
+            final Object[] args = truffleFrame.getArguments();
+            for (final Object arg : args) {
+                tracer.addIfUnmarked(arg);
+            }
+            final CompiledCodeObject code = args[2] != null ? ((BlockClosureObject) args[2]).getCompiledBlock() : (CompiledMethodObject) args[0];
+            final int stackp = FrameUtil.getIntSafe(truffleFrame, code.getStackPointerSlot());
+            final FrameSlot[] stackSlots = code.getStackSlotsUnsafe();
+            final FrameDescriptor frameDescriptor = code.getFrameDescriptor();
+            for (int i = 0; i < stackp; i++) {
+                final FrameSlot slot = stackSlots[i];
+                if (slot == null) {
+                    break; // Stop here, slot has not (yet) been created.
+                }
+                if (truffleFrame.isObject(slot)) {
+                    final Object stackObject = FrameUtil.getObjectSafe(truffleFrame, slot);
+                    if (stackObject == null) {
+                        break;
+                    }
+                    tracer.addIfUnmarked(stackObject);
+                } else if (frameDescriptor.getFrameSlotKind(slot) == FrameSlotKind.Illegal) {
+                    break; // Stop here, because this slot and all following are not used.
+                }
             }
         }
     }
@@ -669,8 +675,14 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         return process;
     }
 
-    public void setProcess(final PointersObject process) {
-        assert process != null && (this.process == null || this.process == process);
-        this.process = process;
+    public void setProcess(final PointersObject aProcess) {
+        if (process == aProcess) {
+            return;
+        }
+        assert aProcess != null && process == null || aProcess == null && getFrameSender() == NilObject.SINGLETON;
+        if (aProcess != null) {
+            LogUtils.SCHEDULING.finer(() -> "Setting process @" + Integer.toHexString(aProcess.hashCode()) + " as owner of context @" + Integer.toHexString(hashCode()));
+        }
+        process = aProcess;
     }
 }
