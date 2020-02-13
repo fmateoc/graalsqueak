@@ -5,18 +5,10 @@
  */
 package de.hpi.swa.graal.squeak.nodes.primitives.impl;
 
-import java.lang.management.ManagementFactory;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.util.List;
 import java.util.logging.Level;
-
-import javax.management.InstanceNotFoundException;
-import javax.management.MBeanException;
-import javax.management.MBeanServer;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
-import javax.management.ReflectionException;
 
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
@@ -33,7 +25,6 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import com.oracle.truffle.api.profiles.BranchProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
-import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakQuit;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithClassAndHash;
@@ -565,24 +556,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
 
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 130)
-    protected abstract static class PrimFullGCNode extends AbstractPrimitiveNode implements UnaryPrimitiveWithoutFallback {
-        private static final MBeanServer SERVER = TruffleOptions.AOT ? null : ManagementFactory.getPlatformMBeanServer();
-        private static final String OPERATION_NAME = "gcRun";
-        private static final Object[] PARAMS = new Object[]{null};
-        private static final String[] SIGNATURE = new String[]{String[].class.getName()};
-        private static final ObjectName OBJECT_NAME;
-
-        static {
-            if (TruffleOptions.AOT) {
-                OBJECT_NAME = null;
-            } else {
-                try {
-                    OBJECT_NAME = new ObjectName("com.sun.management:type=DiagnosticCommand");
-                } catch (final MalformedObjectNameException e) {
-                    throw SqueakException.illegalState(e);
-                }
-            }
-        }
+    public abstract static class PrimFullGCNode extends AbstractPrimitiveNode implements UnaryPrimitiveWithoutFallback {
 
         protected PrimFullGCNode(final CompiledMethodObject method) {
             super(method);
@@ -594,24 +568,12 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                 /* System.gc() triggers full GC by default in SVM (see https://git.io/JvY7g). */
                 MiscUtils.systemGC();
             } else {
-                forceFullGC();
+                MiscUtils.forceFullGC();
             }
             if (hasPendingFinalizations()) {
                 method.image.interrupt.setPendingFinalizations(true);
             }
             return MiscUtils.runtimeFreeMemory();
-        }
-
-        /**
-         * {@link System#gc()} does not force a GC, but the DiagnosticCommand "gcRun" does.
-         */
-        @TruffleBoundary
-        private static void forceFullGC() {
-            try {
-                SERVER.invoke(OBJECT_NAME, OPERATION_NAME, PARAMS, SIGNATURE);
-            } catch (InstanceNotFoundException | ReflectionException | MBeanException e) {
-                throw SqueakException.illegalState(e);
-            }
         }
 
         @TruffleBoundary
