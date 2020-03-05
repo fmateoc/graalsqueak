@@ -285,6 +285,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
                 } else if (image.getParserClass() == null && "Parser".equals(className)) {
                     image.setParserClass(this);
                 }
+                SqueakMessageInterceptor.notifyLoadedClass(this, className);
             }
         } else if (needsSqueakHash()) {
             setSqueakHash(image.getNextClassHash());
