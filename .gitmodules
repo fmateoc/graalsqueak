@@ -1,4 +1,3 @@
 [submodule "src/image"]
 	path = src/image
 	url = https://github.com/hpi-swa/graalsqueak.git
-	branch = image
