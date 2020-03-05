@@ -5,6 +5,10 @@
  */
 package de.hpi.swa.graal.squeak.util;
 
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.INTERRUPTS;
+
+import java.util.logging.Level;
+
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.Node;
@@ -16,8 +20,9 @@ import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.SPECIAL_OBJECT;
 import de.hpi.swa.graal.squeak.nodes.process.SignalSemaphoreNode;
 
 public final class InterruptHandlerNode extends Node {
-    @Child private SignalSemaphoreNode signalSemaporeNode;
+    private static final LoggerWrapper LOG = LoggerWrapper.get(INTERRUPTS, Level.FINE);
 
+    @Child private SignalSemaphoreNode signalSemaporeNode;
     private final Object[] specialObjects;
     private final InterruptHandlerState istate;
     private final boolean enableTimerInterrupts;
@@ -42,31 +47,32 @@ public final class InterruptHandlerNode extends Node {
         if (istate.interruptPending()) {
             /* Exclude user interrupt case from compilation. */
             CompilerDirectives.transferToInterpreter();
-            LogUtils.INTERRUPTS.fine("User interrupt");
             istate.interruptPending = false; // reset interrupt flag
+            assert LOG.fine("Signalling interrupt semaphore @%s in interrupt handler", c -> c.add(Integer.toHexString(istate.getInterruptSemaphore().hashCode())));
             signalSemaporeNode.executeSignal(frame, istate.getInterruptSemaphore());
         }
         if (enableTimerInterrupts && istate.nextWakeUpTickTrigger()) {
             nextWakeupTickProfile.enter();
-            LogUtils.INTERRUPTS.fine("Timer interrupt");
             istate.nextWakeupTick = 0; // reset timer interrupt
+            assert LOG.fine("Signalling timer semaphore @%s in interrupt handler", c -> c.add(Integer.toHexString(istate.getTimerSemaphore().hashCode())));
             signalSemaporeNode.executeSignal(frame, istate.getTimerSemaphore());
         }
         if (istate.pendingFinalizationSignals()) { // signal any pending finalizations
             pendingFinalizationSignalsProfile.enter();
-            LogUtils.INTERRUPTS.fine("Finalization interrupt");
             istate.setPendingFinalizations(false);
+            assert LOG.fine("Signalling finalization semaphore @%s in interrupt handler", c -> c.add(Integer.toHexString(specialObjects[SPECIAL_OBJECT.THE_FINALIZATION_SEMAPHORE].hashCode())));
             signalSemaporeNode.executeSignal(frame, specialObjects[SPECIAL_OBJECT.THE_FINALIZATION_SEMAPHORE]);
         }
         if (istate.hasSemaphoresToSignal()) {
             hasSemaphoresToSignalProfile.enter();
-            LogUtils.INTERRUPTS.fine("Semaphore interrupt");
             final ArrayObject externalObjects = (ArrayObject) specialObjects[SPECIAL_OBJECT.EXTERNAL_OBJECTS_ARRAY];
             if (!externalObjects.isEmptyType()) { // signal external semaphores
                 final Object[] semaphores = externalObjects.getObjectStorage();
                 Integer semaIndex;
                 while ((semaIndex = istate.nextSemaphoreToSignal()) != null) {
-                    signalSemaporeNode.executeSignal(frame, semaphores[semaIndex - 1]);
+                    final Object semaphore = semaphores[semaIndex - 1];
+                    assert LOG.fine("Signalling external semaphore @%s in interrupt handler", c -> c.add(Integer.toHexString(semaphore.hashCode())));
+                    signalSemaporeNode.executeSignal(frame, semaphore);
                 }
             }
         }

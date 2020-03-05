@@ -5,6 +5,8 @@
  */
 package de.hpi.swa.graal.squeak.nodes.primitives;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -50,7 +52,9 @@ import de.hpi.swa.graal.squeak.nodes.plugins.Win32OSProcessPlugin;
 import de.hpi.swa.graal.squeak.nodes.plugins.ZipPlugin;
 import de.hpi.swa.graal.squeak.nodes.plugins.network.SocketPlugin;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.ArithmeticPrimitives;
+import de.hpi.swa.graal.squeak.nodes.primitives.impl.ArithmeticPrimitivesFactory;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.ArrayStreamPrimitives;
+import de.hpi.swa.graal.squeak.nodes.primitives.impl.ArrayStreamPrimitivesFactory;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.BlockClosurePrimitives;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.ContextPrimitives;
 import de.hpi.swa.graal.squeak.nodes.primitives.impl.ControlPrimitives;
@@ -65,6 +69,7 @@ public final class PrimitiveNodeFactory {
     private static final int PRIMITIVE_LOAD_INST_VAR_LOWER_INDEX = 264;
     private static final int PRIMITIVE_LOAD_INST_VAR_UPPER_INDEX = 520;
     private static final int MAX_PRIMITIVE_INDEX = 575;
+    private static final List<Integer> FAST_PRIMITIVES = new ArrayList<>();
     @CompilationFinal(dimensions = 1) private static final byte[] NULL_MODULE_NAME = NullPlugin.class.getSimpleName().getBytes();
 
     // Using an array instead of a HashMap requires type-checking to be disabled here.
@@ -83,6 +88,27 @@ public final class PrimitiveNodeFactory {
                         new MiscellaneousPrimitives(),
                         new StoragePrimitives()};
         fillPrimitiveTable(indexPrimitives);
+
+        FAST_PRIMITIVES.addAll(Arrays.asList(68, 70, 71, 73, 74, 75, 94, 105, 110, 111, 169, 170, 171, 175, 187));
+
+        for (final NodeFactory<? extends AbstractPrimitiveNode> factory : ArithmeticPrimitivesFactory.getFactories()) {
+            final Class<? extends AbstractPrimitiveNode> primitiveClass = factory.getNodeClass();
+            final SqueakPrimitive primitive = primitiveClass.getAnnotation(SqueakPrimitive.class);
+            if (primitive != null) {
+                for (final int index : primitive.indices()) {
+                    FAST_PRIMITIVES.add(index);
+                }
+            }
+        }
+        for (final NodeFactory<? extends AbstractPrimitiveNode> factory : ArrayStreamPrimitivesFactory.getFactories()) {
+            final Class<? extends AbstractPrimitiveNode> primitiveClass = factory.getNodeClass();
+            final SqueakPrimitive primitive = primitiveClass.getAnnotation(SqueakPrimitive.class);
+            if (primitive != null) {
+                for (final int index : primitive.indices()) {
+                    FAST_PRIMITIVES.add(index);
+                }
+            }
+        }
 
         final AbstractPrimitiveFactoryHolder[] plugins = new AbstractPrimitiveFactoryHolder[]{
                         new B2DPlugin(),
@@ -132,6 +158,10 @@ public final class PrimitiveNodeFactory {
             }
         }
         return null;
+    }
+
+    public static boolean doesNotNeedInitialization(final int primitiveIndex) {
+        return PRIMITIVE_LOAD_INST_VAR_LOWER_INDEX <= primitiveIndex && primitiveIndex <= PRIMITIVE_LOAD_INST_VAR_UPPER_INDEX || FAST_PRIMITIVES.contains(primitiveIndex);
     }
 
     public static AbstractPrimitiveNode namedFor(final CompiledMethodObject method) {

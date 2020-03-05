@@ -5,12 +5,15 @@
  */
 package de.hpi.swa.graal.squeak.nodes.plugins;
 
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.INTEROP;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 
 import com.oracle.truffle.api.CallTarget;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
@@ -62,10 +65,11 @@ import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.TernaryPrimi
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.UnaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.UnaryPrimitiveWithoutFallback;
 import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
-import de.hpi.swa.graal.squeak.util.LogUtils;
+import de.hpi.swa.graal.squeak.util.LoggerWrapper;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 
 public final class PolyglotPlugin extends AbstractPrimitiveFactoryHolder {
+    private static final LoggerWrapper LOG = LoggerWrapper.get(INTEROP, Level.FINE);
     private static final String EVAL_SOURCE_NAME = "<eval>";
 
     /**
@@ -1515,7 +1519,7 @@ public final class PolyglotPlugin extends AbstractPrimitiveFactoryHolder {
         }
 
         protected static final void setLastError(final Exception e) {
-            LogUtils.INTEROP.fine(() -> MiscUtils.toString(e));
+            assert LOG.fine(() -> MiscUtils.toString(e));
             lastError = e;
         }
     }

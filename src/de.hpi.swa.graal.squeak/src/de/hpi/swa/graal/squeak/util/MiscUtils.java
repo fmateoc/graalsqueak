@@ -18,17 +18,51 @@ import java.util.Calendar;
 import java.util.List;
 import java.util.Properties;
 
+import javax.management.InstanceNotFoundException;
+import javax.management.MBeanException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.management.ReflectionException;
+
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
+import com.oracle.truffle.api.TruffleOptions;
 
+import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakInterrupt;
+import sun.misc.GC;
+import sun.misc.JavaLangRefAccess;
+import sun.misc.SharedSecrets;
 
 public final class MiscUtils {
     private static final CompilationMXBean COMPILATION_BEAN = ManagementFactory.getCompilationMXBean();
     private static final MemoryMXBean MEMORY_BEAN = ManagementFactory.getMemoryMXBean();
     private static final RuntimeMXBean RUNTIME_BEAN = ManagementFactory.getRuntimeMXBean();
     private static final List<GarbageCollectorMXBean> GC_BEANS = ManagementFactory.getGarbageCollectorMXBeans();
+    public static final MBeanServer SERVER = TruffleOptions.AOT ? null : ManagementFactory.getPlatformMBeanServer();
+    public static final String OPERATION_NAME = "gcClassHistogram";
+    public static final Object[] PARAMS = new Object[]{null};
+    public static final String[] SIGNATURE = new String[]{String[].class.getName()};
+    public static final ObjectName OBJECT_NAME;
+
+    static {
+        if (TruffleOptions.AOT) {
+            OBJECT_NAME = null;
+        } else {
+            try {
+                OBJECT_NAME = new ObjectName("com.sun.management:type=DiagnosticCommand");
+            } catch (final MalformedObjectNameException e) {
+                throw SqueakException.illegalState(e);
+            }
+        }
+    }
+
+    // number of sleeps with exponentially increasing delay before giving up on waiting for the gc
+    // to happen:
+    // 1, 2, 4, 8, 16, 32, 64, 128, 256 (total 511 ms ~ 0.5 s)
+    private static final int MAX_SLEEPS = 9;
 
     // The delta between Squeak Epoch (January 1st 1901) and POSIX Epoch (January 1st 1970)
     public static final long EPOCH_DELTA_SECONDS = (69L * 365 + 17) * 24 * 3600;
@@ -81,6 +115,69 @@ public final class MiscUtils {
             totalCollectionTime += Math.max(gcBean.getCollectionTime(), 0);
         }
         return totalCollectionTime;
+    }
+
+    public static void gc() {
+        final JavaLangRefAccess jlra = SharedSecrets.getJavaLangRefAccess();
+        final long previousInspectionAge = GC.maxObjectInspectionAge();
+        final long start = System.nanoTime();
+        // retry while helping enqueue pending Reference objects
+        // which includes executing pending Cleaner(s) which includes
+        // Cleaner(s) that free direct buffer memory
+        while (jlra.tryHandlePendingReference()) {
+            if (GC.maxObjectInspectionAge() < previousInspectionAge) {
+                return;
+            }
+        }
+        // trigger VM's Reference processing
+        System.gc();
+        final long gcDuration = (System.nanoTime() - start) / 1000;
+
+        // a retry loop with exponential back-off delays
+        // (this gives VM some time to do it's job)
+        boolean interrupted = false;
+        try {
+            long sleepTime = 1;
+            int sleeps = 0;
+            while (true) {
+                if (GC.maxObjectInspectionAge() < previousInspectionAge + gcDuration) {
+                    System.out.println("Successfully triggered a garbage collect");
+                    return;
+                }
+                if (sleeps >= MAX_SLEEPS) {
+                    break;
+                }
+                if (!jlra.tryHandlePendingReference()) {
+                    try {
+                        Thread.sleep(sleepTime);
+                        sleepTime <<= 1;
+                        sleeps++;
+                    } catch (final InterruptedException e) {
+                        interrupted = true;
+                    }
+                }
+            }
+            // no luck
+            forceFullGC();
+
+        } finally {
+            if (interrupted) {
+                // don't swallow interrupts
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    /**
+     * {@link System#gc()} does not force a GC, but the DiagnosticCommand "gcClassHistogram" does.
+     */
+    @TruffleBoundary
+    public static Object forceFullGC() {
+        try {
+            return SERVER.invoke(OBJECT_NAME, OPERATION_NAME, PARAMS, SIGNATURE);
+        } catch (InstanceNotFoundException | ReflectionException | MBeanException e) {
+            throw SqueakException.illegalState(e);
+        }
     }
 
     @TruffleBoundary
@@ -192,7 +289,6 @@ public final class MiscUtils {
         try {
             Thread.sleep(millis);
         } catch (final InterruptedException e) {
-            Thread.currentThread().interrupt();
             throw new SqueakInterrupt();
         }
     }

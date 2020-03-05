@@ -12,15 +12,19 @@ import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.Frame;
+import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameSlot;
+import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.FrameUtil;
 
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithHash;
+import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
+import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectPointersBecomeOneWayNode;
 
@@ -113,21 +117,32 @@ public final class ObjectGraphUtils {
         private void addObjectsFromTruffleFrames() {
             CompilerAsserts.neverPartOfCompilation();
             Truffle.getRuntime().iterateFrames(frameInstance -> {
-                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
+                final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_WRITE);
                 if (!FrameAccess.isGraalSqueakFrame(current)) {
                     return null;
                 }
-                for (final Object argument : current.getArguments()) {
-                    addIfUnmarked(argument);
+                final Object[] args = current.getArguments();
+                for (final Object arg : args) {
+                    addIfUnmarked(arg);
                 }
-                final CompiledCodeObject blockOrMethod = FrameAccess.getBlockOrMethod(current);
-                addIfUnmarked(FrameAccess.getContext(current, blockOrMethod));
-                for (final FrameSlot slot : blockOrMethod.getStackSlotsUnsafe()) {
+                final CompiledCodeObject code = args[2] != null ? ((BlockClosureObject) args[2]).getCompiledBlock() : (CompiledMethodObject) args[0];
+                addIfUnmarked(FrameUtil.getObjectSafe(current, code.getThisContextSlot()));
+                final int stackp = FrameUtil.getIntSafe(current, code.getStackPointerSlot());
+                final FrameSlot[] stackSlots = code.getStackSlotsUnsafe();
+                final FrameDescriptor frameDescriptor = code.getFrameDescriptor();
+                for (int i = 0; i < stackp; i++) {
+                    final FrameSlot slot = stackSlots[i];
                     if (slot == null) {
                         return null; // Stop here, slot has not (yet) been created.
                     }
                     if (current.isObject(slot)) {
-                        addIfUnmarked(FrameUtil.getObjectSafe(current, slot));
+                        final Object stackObject = FrameUtil.getObjectSafe(current, slot);
+                        if (stackObject == null) {
+                            return null;
+                        }
+                        addIfUnmarked(stackObject);
+                    } else if (frameDescriptor.getFrameSlotKind(slot) == FrameSlotKind.Illegal) {
+                        return null; // Stop here, because this slot and all following are not used.
                     }
                 }
                 return null;

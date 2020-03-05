@@ -5,18 +5,13 @@
  */
 package de.hpi.swa.graal.squeak.nodes.primitives.impl;
 
-import java.lang.management.ManagementFactory;
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.GC;
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.SCHEDULING;
+
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.util.List;
 import java.util.logging.Level;
-
-import javax.management.InstanceNotFoundException;
-import javax.management.MBeanException;
-import javax.management.MBeanServer;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
-import javax.management.ReflectionException;
 
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
@@ -33,7 +28,6 @@ import com.oracle.truffle.api.nodes.NodeInfo;
 import com.oracle.truffle.api.profiles.BranchProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
-import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakQuit;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithClassAndHash;
@@ -48,10 +42,10 @@ import de.hpi.swa.graal.squeak.model.PointersObject;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.MUTEX;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.SEMAPHORE;
+import de.hpi.swa.graal.squeak.nodes.AbstractLookupMethodWithSelectorNodes.LookupMethodNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchEagerlyNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
 import de.hpi.swa.graal.squeak.nodes.InheritsFromNode;
-import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
@@ -84,11 +78,13 @@ import de.hpi.swa.graal.squeak.nodes.process.SignalSemaphoreNode;
 import de.hpi.swa.graal.squeak.nodes.process.WakeHighestPriorityNode;
 import de.hpi.swa.graal.squeak.nodes.process.YieldProcessNode;
 import de.hpi.swa.graal.squeak.util.InterruptHandlerNode;
-import de.hpi.swa.graal.squeak.util.LogUtils;
+import de.hpi.swa.graal.squeak.util.LoggerWrapper;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 import de.hpi.swa.graal.squeak.util.NotProvided;
 
 public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
+    private static final LoggerWrapper SCHEDULING_LOG = LoggerWrapper.get(SCHEDULING, Level.FINE);
+    private static final LoggerWrapper GC_LOG = LoggerWrapper.get(GC, Level.FINE);
 
     @Override
     public List<NodeFactory<? extends AbstractPrimitiveNode>> getFactories() {
@@ -213,6 +209,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         protected final Object doSignal(final VirtualFrame frame, final PointersObject receiver,
                         @Cached final StackPushForPrimitivesNode pushNode) {
             pushNode.executeWrite(frame, receiver); // keep receiver on stack
+            assert SCHEDULING_LOG.fine("Signalling semaphore @%s in primitive 85 signal", c -> c.add(Integer.toHexString(receiver.hashCode())));
             signalSemaphoreNode.executeSignal(frame, receiver);
             return AbstractSendNode.NO_RESULT;
         }
@@ -233,6 +230,8 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                         @Shared("pushNode") @Cached final StackPushForPrimitivesNode pushNode) {
             pushNode.executeWrite(frame, receiver); // keep receiver on stack
             final long excessSignals = pointersReadNode.executeLong(receiver, SEMAPHORE.EXCESS_SIGNALS);
+            assert SCHEDULING_LOG.fine("Wait sent to empty semaphore @%s with initially %d excessSignals in primitive 86 wait",
+                            c -> c.add(Integer.toHexString(receiver.hashCode())).add(excessSignals));
             writeNode.execute(receiver, SEMAPHORE.EXCESS_SIGNALS, excessSignals - 1);
             return AbstractSendNode.NO_RESULT;
         }
@@ -243,7 +242,10 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                         @Cached final LinkProcessToListNode linkProcessToListNode,
                         @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
             pushNode.executeWrite(frame, receiver); // keep receiver on stack
-            linkProcessToListNode.executeLink(method.image.getActiveProcess(pointersReadNode), receiver);
+            final PointersObject activeProcess = method.image.getActiveProcess(pointersReadNode);
+            linkProcessToListNode.executeLink(activeProcess, receiver);
+            assert SCHEDULING_LOG.fine("Blocking active process @%s on semaphore @%s in primitive 86 wait",
+                            c -> c.add(Integer.toHexString(activeProcess.hashCode())).add(Integer.toHexString(receiver.hashCode())));
             wakeHighestPriorityNode.executeWake(frame);
             return AbstractSendNode.NO_RESULT;
         }
@@ -274,6 +276,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             }
             // keep receiver on stack before resuming other process
             pushNode.executeWrite(frame, receiver);
+            assert SCHEDULING_LOG.fine("Attempting to resume process @%s in primitive 87 Resume", c -> c.add(Integer.toHexString(receiver.hashCode())));
             resumeProcessNode.executeResume(frame, receiver);
             return AbstractSendNode.NO_RESULT;
         }
@@ -293,6 +296,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                         @Cached final StackPushForPrimitivesNode pushNode,
                         @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
             pushNode.executeWrite(frame, NilObject.SINGLETON);
+            assert SCHEDULING_LOG.fine("Suspending active process @%s in primitive 88 suspend", c -> c.add(Integer.toHexString(receiver.hashCode())));
             wakeHighestPriorityNode.executeWake(frame);
             return AbstractSendNode.NO_RESULT; // result already pushed above
         }
@@ -302,8 +306,9 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                         @Cached final RemoveProcessFromListNode removeProcessNode,
                         @Cached final AbstractPointersObjectWriteNode writeNode) {
             final PointersObject oldList = readNode.executePointers(receiver, PROCESS.LIST);
-            removeProcessNode.executeRemove(receiver, oldList);
             writeNode.execute(receiver, PROCESS.LIST, NilObject.SINGLETON);
+            assert SCHEDULING_LOG.fine("Suspending non-active process @%s in primitive 88 suspend", c -> c.add(Integer.toHexString(receiver.hashCode())));
+            removeProcessNode.executeRemove(receiver, oldList);
             return oldList;
         }
 
@@ -496,7 +501,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
 
         @Specialization(guards = "receiver.hasMethodClass(readNode)")
         protected final CompiledMethodObject doFlush(final CompiledMethodObject receiver) {
-            receiver.getMethodClass(readNode).invalidateMethodDictStableAssumption();
+            ((ClassObject) receiver.getMethodClass(readNode)).invalidateMethodDictStableAssumption();
             return receiver;
         }
     }
@@ -557,24 +562,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
 
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 130)
-    protected abstract static class PrimFullGCNode extends AbstractPrimitiveNode implements UnaryPrimitiveWithoutFallback {
-        private static final MBeanServer SERVER = TruffleOptions.AOT ? null : ManagementFactory.getPlatformMBeanServer();
-        private static final String OPERATION_NAME = "gcRun";
-        private static final Object[] PARAMS = new Object[]{null};
-        private static final String[] SIGNATURE = new String[]{String[].class.getName()};
-        private static final ObjectName OBJECT_NAME;
-
-        static {
-            if (TruffleOptions.AOT) {
-                OBJECT_NAME = null;
-            } else {
-                try {
-                    OBJECT_NAME = new ObjectName("com.sun.management:type=DiagnosticCommand");
-                } catch (final MalformedObjectNameException e) {
-                    throw SqueakException.illegalState(e);
-                }
-            }
-        }
+    public abstract static class PrimFullGCNode extends AbstractPrimitiveNode implements UnaryPrimitiveWithoutFallback {
 
         protected PrimFullGCNode(final CompiledMethodObject method) {
             super(method);
@@ -586,24 +574,12 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                 /* System.gc() triggers full GC by default in SVM (see https://git.io/JvY7g). */
                 MiscUtils.systemGC();
             } else {
-                forceFullGC();
+                MiscUtils.forceFullGC();
             }
             if (hasPendingFinalizations()) {
                 method.image.interrupt.setPendingFinalizations(true);
             }
             return MiscUtils.runtimeFreeMemory();
-        }
-
-        /**
-         * {@link System#gc()} does not force a GC, but the DiagnosticCommand "gcRun" does.
-         */
-        @TruffleBoundary
-        private static void forceFullGC() {
-            try {
-                SERVER.invoke(OBJECT_NAME, OPERATION_NAME, PARAMS, SIGNATURE);
-            } catch (InstanceNotFoundException | ReflectionException | MBeanException e) {
-                throw SqueakException.illegalState(e);
-            }
         }
 
         @TruffleBoundary
@@ -615,7 +591,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                 count++;
                 element = queue.poll();
             }
-            LogUtils.GC.log(Level.FINE, "Number of garbage collected WeakPointersObjects: {0}", count);
+            assert GC_LOG.fine("Number of garbage collected WeakPointersObjects: %d", count);
             return count > 0;
         }
     }
@@ -710,6 +686,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             pushNode.executeWrite(frame, mutex); // keep receiver on stack
             final PointersObject owningProcess = mutex.removeFirstLinkOfList(readNode, writeNode);
             writeNode.execute(mutex, MUTEX.OWNER, owningProcess);
+            assert SCHEDULING_LOG.fine("Attempting to resume process @%s in primitive 185 ExitCriticalSection", c -> c.add(Integer.toHexString(owningProcess.hashCode())));
             resumeProcessNode.executeResume(frame, owningProcess);
             return AbstractSendNode.NO_RESULT;
         }
@@ -743,7 +720,9 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                         @Shared("linkProcessToListNode") @Cached final LinkProcessToListNode linkProcessToListNode,
                         @Shared("wakeHighestPriorityNode") @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
             pushNode.executeWrite(frame, BooleanObject.FALSE);
-            linkProcessToListNode.executeLink(method.image.getActiveProcess(readNode), mutex);
+            final PointersObject activeProcess = method.image.getActiveProcess(readNode);
+            linkProcessToListNode.executeLink(activeProcess, mutex);
+            assert SCHEDULING_LOG.fine("Blocking active process @%s on mutex in primitive 186 EnterCriticalSection", c -> c.add(Integer.toHexString(activeProcess.hashCode())));
             wakeHighestPriorityNode.executeWake(frame);
             return AbstractSendNode.NO_RESULT;
         }
@@ -768,6 +747,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                         @Shared("wakeHighestPriorityNode") @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
             pushNode.executeWrite(frame, BooleanObject.FALSE);
             linkProcessToListNode.executeLink(effectiveProcess, mutex);
+            assert SCHEDULING_LOG.fine("Blocking active process @%s on mutex in primitive 186 EnterCriticalSection", c -> c.add(Integer.toHexString(effectiveProcess.hashCode())));
             wakeHighestPriorityNode.executeWake(frame);
             return AbstractSendNode.NO_RESULT;
         }

@@ -36,11 +36,13 @@ public final class MiscellaneousBytecodes {
 
         @Child public AbstractPrimitiveNode primitiveNode;
         private final int primitiveIndex;
+        public final boolean doesNotNeedInitialization;
 
         public CallPrimitiveNode(final CompiledMethodObject method, final int index, final int byte1, final int byte2) {
             super(method, index, NUM_BYTECODES);
             primitiveIndex = byte1 + (byte2 << 8);
             primitiveNode = PrimitiveNodeFactory.forIndex(method, primitiveIndex);
+            doesNotNeedInitialization = PrimitiveNodeFactory.doesNotNeedInitialization(primitiveIndex);
             assert method.hasPrimitive();
         }
 

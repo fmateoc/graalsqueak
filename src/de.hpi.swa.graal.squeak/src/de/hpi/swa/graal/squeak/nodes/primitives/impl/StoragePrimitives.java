@@ -22,6 +22,7 @@ import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameSlot;
+import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.FrameUtil;
 import com.oracle.truffle.api.nodes.NodeCost;
 import com.oracle.truffle.api.nodes.NodeInfo;
@@ -35,6 +36,7 @@ import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithClassAndHash;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObjectWithHash;
 import de.hpi.swa.graal.squeak.model.ArrayObject;
+import de.hpi.swa.graal.squeak.model.BlockClosureObject;
 import de.hpi.swa.graal.squeak.model.CharacterObject;
 import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
@@ -101,19 +103,21 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
                 final Object[] arguments = current.getArguments();
                 for (int i = 0; i < arguments.length; i++) {
                     final Object argument = arguments[i];
-                    for (int j = 0; j < fromPointersLength; j++) {
-                        final Object fromPointer = fromPointers[j];
-                        if (argument == fromPointer) {
-                            final Object toPointer = toPointers[j];
-                            arguments[i] = toPointer;
-                            updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
-                        } else {
-                            pointersBecomeNode.execute(argument, fromPointers, toPointers, copyHash);
+                    if (argument != null) {
+                        for (int j = 0; j < fromPointersLength; j++) {
+                            final Object fromPointer = fromPointers[j];
+                            if (argument == fromPointer) {
+                                final Object toPointer = toPointers[j];
+                                arguments[i] = toPointer;
+                                updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
+                            } else {
+                                pointersBecomeNode.execute(argument, fromPointers, toPointers, copyHash);
+                            }
                         }
                     }
                 }
 
-                final CompiledCodeObject blockOrMethod = FrameAccess.getBlockOrMethod(current);
+                final CompiledCodeObject blockOrMethod = arguments[2] != null ? ((BlockClosureObject) arguments[2]).getCompiledBlock() : (CompiledMethodObject) arguments[0];
                 final ContextObject context = FrameAccess.getContext(current, blockOrMethod);
                 if (context != null) {
                     for (int j = 0; j < fromPointersLength; j++) {
@@ -127,28 +131,33 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
                         }
                     }
                 }
-
-                /*
-                 * use blockOrMethod.getStackSlotsUnsafe() here instead of stackPointer because in
-                 * rare cases, the stack is accessed behind the stackPointer.
-                 */
-                for (final FrameSlot slot : blockOrMethod.getStackSlotsUnsafe()) {
-                    if (slot == null) {
+                final int stackp = FrameUtil.getIntSafe(current, blockOrMethod.getStackPointerSlot());
+                final FrameSlot[] stackSlots = blockOrMethod.getStackSlotsUnsafe();
+                final FrameDescriptor frameDescriptor = blockOrMethod.getFrameDescriptor();
+                for (int i = 0; i < stackp; i++) {
+                    final FrameSlot frameSlot = stackSlots[i];
+                    if (frameSlot == null) {
                         return null; // Stop here, slot has not (yet) been created.
                     }
-                    if (current.isObject(slot)) {
-                        final Object stackObject = FrameUtil.getObjectSafe(current, slot);
+                    if (current.isObject(frameSlot)) {
+                        final Object stackObject = FrameUtil.getObjectSafe(current, frameSlot);
+                        if (stackObject == null) {
+                            return null;
+                        }
                         for (int j = 0; j < fromPointersLength; j++) {
                             final Object fromPointer = fromPointers[j];
                             if (stackObject == fromPointer) {
                                 final Object toPointer = toPointers[j];
                                 assert toPointer != null : "Unexpected `null` value";
-                                current.setObject(slot, toPointer);
+                                current.setObject(frameSlot, toPointer);
                                 updateHashNode.executeUpdate(fromPointer, toPointer, copyHash);
                             } else {
                                 pointersBecomeNode.execute(stackObject, fromPointers, toPointers, copyHash);
                             }
                         }
+                    } else if (frameDescriptor.getFrameSlotKind(frameSlot) == FrameSlotKind.Illegal) {
+                        /** this slot and all following ones are not initialized, done. */
+                        return null;
                     }
                 }
                 return null;

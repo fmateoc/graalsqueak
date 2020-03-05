@@ -36,6 +36,7 @@ import de.hpi.swa.graal.squeak.interop.WrapToSqueakNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.NativeObjectNodes.NativeObjectWriteNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
+import de.hpi.swa.graal.squeak.util.SqueakMessageInterceptor;
 import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
 @ExportLibrary(InteropLibrary.class)
@@ -130,6 +131,9 @@ public final class NativeObject extends AbstractSqueakObjectWithClassAndHash {
             } else if (image.getDebugSyntaxErrorSelector() == null && Arrays.equals(SqueakImageContext.DEBUG_SYNTAX_ERROR_SELECTOR_NAME, getByteStorage())) {
                 image.setDebugSyntaxErrorSelector(this);
             }
+        }
+        if (image.getByteSymbolClass() == getSqueakClass()) {
+            SqueakMessageInterceptor.notifyLoadedSymbol(this, chunk.getBytes());
         }
     }
 

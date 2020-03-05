@@ -5,6 +5,8 @@
  */
 package de.hpi.swa.graal.squeak.nodes.plugins.network;
 
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.IO;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -15,14 +17,13 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
+import java.util.logging.Level;
 
-import com.oracle.truffle.api.TruffleLogger;
-
-import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
+import de.hpi.swa.graal.squeak.util.LoggerWrapper;
 
 final class SqueakTCPSocket extends SqueakSocket {
 
-    private static final TruffleLogger LOG = TruffleLogger.getLogger(SqueakLanguageConfig.ID, SqueakTCPSocket.class);
+    private static final LoggerWrapper LOG = LoggerWrapper.get(IO, Level.FINER);
 
     private SocketChannel clientChannel;
     private ServerSocketChannel serverChannel;
@@ -91,7 +92,7 @@ final class SqueakTCPSocket extends SqueakSocket {
         }
 
         final Status status = listening ? serverStatus() : clientStatus();
-        LOG.finer(() -> handle + " " + status);
+        assert LOG.finer(() -> handle + " " + status);
         return status;
     }
 

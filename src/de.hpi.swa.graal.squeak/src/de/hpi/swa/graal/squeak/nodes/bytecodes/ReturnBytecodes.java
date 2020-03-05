@@ -82,10 +82,9 @@ public final class ReturnBytecodes {
             final ContextObject homeContext = FrameAccess.getClosure(frame).getHomeContext();
             assert homeContext.getProcess() != null;
             final Object caller = homeContext.getFrameSender();
-            final boolean homeContextNotOnTheStack = homeContext.getProcess() != code.image.getActiveProcess(readNode);
-            if (caller == NilObject.SINGLETON || homeContextNotOnTheStack) {
+            if (caller == NilObject.SINGLETON || homeContext.getProcess() != code.image.getActiveProcess(readNode)) {
                 /** {@link getCannotReturnNode()} acts as {@link BranchProfile} */
-                getCannotReturnNode().executeSend(frame, getGetOrCreateContextNode().executeGet(frame), getReturnValue(frame));
+                getCannotReturnNode().executeSend(frame, getGetOrCreateContextNode().executeGet(frame, NilObject.SINGLETON), getReturnValue(frame));
                 throw SqueakException.create("Should not reach");
             }
             throw new NonLocalReturn(getReturnValue(frame), caller);
@@ -94,7 +93,7 @@ public final class ReturnBytecodes {
         private GetOrCreateContextNode getGetOrCreateContextNode() {
             if (getOrCreateContextNode == null) {
                 CompilerDirectives.transferToInterpreterAndInvalidate();
-                getOrCreateContextNode = insert(GetOrCreateContextNode.create(code, true));
+                getOrCreateContextNode = insert(GetOrCreateContextNode.create(code));
             }
             return getOrCreateContextNode;
         }
@@ -178,12 +177,9 @@ public final class ReturnBytecodes {
                         @Cached final AbstractPointersObjectReadNode readNode) {
             // Target is sender of closure's home context.
             final ContextObject homeContext = FrameAccess.getClosure(frame).getHomeContext();
-            assert homeContext.getProcess() != null;
-            final boolean homeContextNotOnTheStack = homeContext.getProcess() != code.image.getActiveProcess(readNode);
+            final ContextObject currentContext = FrameAccess.getContext(frame);
             final Object caller = homeContext.getFrameSender();
-            if (caller == NilObject.SINGLETON || homeContextNotOnTheStack) {
-                final ContextObject currentContext = FrameAccess.getContext(frame);
-                assert currentContext != null;
+            if (caller == NilObject.SINGLETON || homeContext.getProcess() != null && homeContext.getProcess() != code.image.getActiveProcess(readNode) || !currentContext.hasSender(homeContext)) {
                 getCannotReturnNode().executeSend(frame, currentContext, getReturnValue(frame));
                 throw SqueakException.create("Should not reach");
             }

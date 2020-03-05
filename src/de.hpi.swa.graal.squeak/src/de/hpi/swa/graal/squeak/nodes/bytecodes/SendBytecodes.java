@@ -22,9 +22,9 @@ import de.hpi.swa.graal.squeak.model.ClassObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
+import de.hpi.swa.graal.squeak.nodes.AbstractLookupMethodWithSelectorNodes.AbstractLookupMethodWithSelectorNode;
 import de.hpi.swa.graal.squeak.nodes.AbstractNode;
 import de.hpi.swa.graal.squeak.nodes.DispatchSendNode;
-import de.hpi.swa.graal.squeak.nodes.LookupMethodNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectClassNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackPopNNode;
@@ -39,7 +39,7 @@ public final class SendBytecodes {
         private final int argumentCount;
 
         @Child private AbstractLookupClassNode lookupClassNode;
-        @Child private LookupMethodNode lookupMethodNode = LookupMethodNode.create();
+        @Child private AbstractLookupMethodWithSelectorNode lookupMethodNode;
         @Child private DispatchSendNode dispatchSendNode;
         @Child private FrameStackPopNNode popNNode;
         @Child private FrameStackPushNode pushNode;
@@ -57,6 +57,7 @@ public final class SendBytecodes {
             selector = sel instanceof NativeObject ? (NativeObject) sel : code.image.doesNotUnderstand;
             argumentCount = argcount;
             this.lookupClassNode = lookupClassNode;
+            lookupMethodNode = AbstractLookupMethodWithSelectorNode.create(selector);
             dispatchSendNode = DispatchSendNode.create(code);
             popNNode = FrameStackPopNNode.create(code, 1 + argumentCount); // receiver + arguments.
         }
@@ -69,7 +70,7 @@ public final class SendBytecodes {
         public final void executeVoid(final VirtualFrame frame) {
             final Object[] rcvrAndArgs = popNNode.execute(frame);
             final ClassObject rcvrClass = lookupClassNode.executeLookup(rcvrAndArgs[0]);
-            final Object lookupResult = lookupMethodNode.executeLookup(rcvrClass, selector);
+            final Object lookupResult = lookupMethodNode.executeLookup(rcvrClass);
             try {
                 final Object result = dispatchSendNode.executeSend(frame, selector, lookupResult, rcvrClass, rcvrAndArgs);
                 assert result != null : "Result of a message send should not be null";
@@ -149,7 +150,7 @@ public final class SendBytecodes {
 
         @Override
         protected ClassObject executeLookup(final Object receiver) {
-            final ClassObject methodClass = method.getMethodClass(readNode);
+            final ClassObject methodClass = (ClassObject) method.getMethodClass(readNode);
             final ClassObject superclass = methodClass.getSuperclassOrNull();
             return hasSuperclassProfile.profile(superclass == null) ? methodClass : superclass;
         }

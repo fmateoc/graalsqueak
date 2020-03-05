@@ -5,7 +5,6 @@
  */
 package de.hpi.swa.graal.squeak.nodes.bytecodes;
 
-import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
@@ -64,7 +63,6 @@ public abstract class AbstractBytecodeNode extends AbstractNode {
 
     @Override
     public final SourceSection getSourceSection() {
-        CompilerAsserts.neverPartOfCompilation();
         if (sourceSection == null) {
             final Source source = code.getSource();
             if (CompiledCodeObject.SOURCE_UNAVAILABLE_CONTENTS.equals(source.getCharacters())) {
