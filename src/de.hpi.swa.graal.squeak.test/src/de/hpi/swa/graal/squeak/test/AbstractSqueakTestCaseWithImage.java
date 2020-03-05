@@ -5,6 +5,7 @@
  */
 package de.hpi.swa.graal.squeak.test;
 
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.TESTING;
 import static org.junit.Assert.assertNotEquals;
 
 import java.io.File;
@@ -17,6 +18,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
+import java.util.logging.Level;
 
 import org.junit.AfterClass;
 import org.junit.Assume;
@@ -35,9 +37,10 @@ import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.PROCESS_SCHEDULER;
 import de.hpi.swa.graal.squeak.nodes.ExecuteTopLevelContextNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.util.DebugUtils;
-import de.hpi.swa.graal.squeak.util.LogUtils;
+import de.hpi.swa.graal.squeak.util.LoggerWrapper;
 
 public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
+    private static final LoggerWrapper LOG = LoggerWrapper.get(TESTING, Level.FINE);
     private static final int SQUEAK_TIMEOUT_SECONDS = Integer.valueOf(System.getProperty("SQUEAK_TIMEOUT", DebugUtils.underDebug ? "2000" : "300"));    // generous
                                                                                                                                                         // default
                                                                                                                                                         // for
@@ -155,7 +158,7 @@ public class AbstractSqueakTestCaseWithImage extends AbstractSqueakTestCase {
     protected static Object evaluate(final String expression) {
         context.enter();
         try {
-            LogUtils.TESTING.fine(() -> "\nEvaluating " + expression + DebugUtils.currentState(image));
+            assert LOG.fine(() -> "\nEvaluating " + expression + DebugUtils.currentState(image));
             final ExecuteTopLevelContextNode doItContextNode = image.getDoItContextNode(expression);
             return Truffle.getRuntime().createCallTarget(doItContextNode).call();
         } finally {

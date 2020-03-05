@@ -5,6 +5,8 @@
  */
 package de.hpi.swa.graal.squeak.nodes.plugins;
 
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.IO;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -18,11 +20,11 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.TruffleFile;
-import com.oracle.truffle.api.TruffleLogger;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Cached.Exclusive;
 import com.oracle.truffle.api.dsl.GenerateNodeFactory;
@@ -50,13 +52,13 @@ import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.QuinaryPrimi
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.TernaryPrimitive;
 import de.hpi.swa.graal.squeak.nodes.primitives.PrimitiveInterfaces.UnaryPrimitiveWithoutFallback;
 import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
-import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
+import de.hpi.swa.graal.squeak.util.LoggerWrapper;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 import de.hpi.swa.graal.squeak.util.OSDetector;
 import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
 public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
-    private static final TruffleLogger LOG = TruffleLogger.getLogger(SqueakLanguageConfig.ID, FilePlugin.class);
+    private static final LoggerWrapper LOG = LoggerWrapper.get(IO, Level.FINE);
 
     public static final class STDIO_HANDLES {
         public static final long IN = 0;
@@ -114,10 +116,10 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
             final SeekableByteChannel file = truffleFile.newByteChannel(options);
             final long fileId = file.hashCode();
             image.filePluginHandles.put(fileId, file);
-            LOG.fine(() -> "File Handle Creation SUCCEEDED: " + truffleFile.getPath() + " (fileID: " + fileId + ", " + ", writable: " + writableFlag + ")");
+            assert LOG.fine(() -> "File Handle Creation SUCCEEDED: " + truffleFile.getPath() + " (fileID: " + fileId + ", " + ", writable: " + writableFlag + ")");
             return fileId;
         } catch (IOException | UnsupportedOperationException | SecurityException e) {
-            LOG.fine(() -> "File Handle Creation FAILED: " + truffleFile.getPath() + " (writable: " + writableFlag + ")");
+            assert LOG.fine(() -> "File Handle Creation FAILED: " + truffleFile.getPath() + " (writable: " + writableFlag + ")");
             throw PrimitiveFailed.GENERIC_ERROR;
         }
     }
@@ -361,9 +363,9 @@ public final class FilePlugin extends AbstractPrimitiveFactoryHolder {
         protected final Object doClose(final Object receiver, final long fileDescriptor) {
             try {
                 getFileOrPrimFail(fileDescriptor).close();
-                LOG.fine(() -> "File Closed SUCCEEDED: " + fileDescriptor);
+                assert LOG.fine(() -> "File Closed SUCCEEDED: " + fileDescriptor);
             } catch (final IOException e) {
-                LOG.fine(() -> "File Closed FAILED: " + fileDescriptor);
+                assert LOG.fine(() -> "File Closed FAILED: " + fileDescriptor);
                 throw PrimitiveFailed.GENERIC_ERROR;
             }
             return receiver;

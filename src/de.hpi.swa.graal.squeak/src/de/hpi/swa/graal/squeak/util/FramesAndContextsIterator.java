@@ -1,9 +1,12 @@
 package de.hpi.swa.graal.squeak.util;
 
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.ITERATE_FRAMES;
+
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.logging.Level;
 
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
@@ -20,6 +23,7 @@ import de.hpi.swa.graal.squeak.model.FrameMarker;
 import de.hpi.swa.graal.squeak.model.NilObject;
 
 public class FramesAndContextsIterator {
+    private static final LoggerWrapper LOG = LoggerWrapper.get(ITERATE_FRAMES, Level.FINE);
 
     public static final FramesAndContextsIterator Empty = new FramesAndContextsIterator();
 
@@ -77,7 +81,7 @@ public class FramesAndContextsIterator {
 
     @TruffleBoundary
     public AbstractSqueakObject scanFor(final FrameMarker start, final AbstractSqueakObject end, final AbstractSqueakObject endReturnValue) {
-        LogUtils.ITERATE_FRAMES.fine(() -> "Inside FramesAndContextsIterator.scanFor with args: " + start + ", " + end);
+        assert LOG.fine("Inside FramesAndContextsIterator.scanFor with args: %s, %s", start, end);
         final Object[] lastSender = new Object[1];
         final boolean[] foundMyself = {false};
         final ContextObject result = Truffle.getRuntime().iterateFrames((frameInstance) -> {

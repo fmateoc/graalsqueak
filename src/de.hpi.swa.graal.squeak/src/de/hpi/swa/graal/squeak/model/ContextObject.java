@@ -5,7 +5,10 @@
  */
 package de.hpi.swa.graal.squeak.model;
 
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.SCHEDULING;
+
 import java.util.Arrays;
+import java.util.logging.Level;
 
 import com.oracle.truffle.api.CallTarget;
 import com.oracle.truffle.api.CompilerAsserts;
@@ -35,9 +38,10 @@ import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.Abstr
 import de.hpi.swa.graal.squeak.nodes.bytecodes.MiscellaneousBytecodes.CallPrimitiveNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 import de.hpi.swa.graal.squeak.util.FramesAndContextsIterator;
-import de.hpi.swa.graal.squeak.util.LogUtils;
+import de.hpi.swa.graal.squeak.util.LoggerWrapper;
 
 public final class ContextObject extends AbstractSqueakObjectWithHash {
+    private static final LoggerWrapper LOG = LoggerWrapper.get(SCHEDULING, Level.FINER);
 
     private static final int NIL_PC_VALUE = -1;
 
@@ -681,7 +685,7 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
         }
         assert aProcess != null && process == null || aProcess == null && getFrameSender() == NilObject.SINGLETON;
         if (aProcess != null) {
-            LogUtils.SCHEDULING.finer(() -> "Setting process @" + Integer.toHexString(aProcess.hashCode()) + " as owner of context @" + Integer.toHexString(hashCode()));
+            assert LOG.finer("Setting process @%s as owner of context @%s", c -> c.add(Integer.toHexString(aProcess.hashCode())).add(Integer.toHexString(hashCode())));
         }
         process = aProcess;
     }

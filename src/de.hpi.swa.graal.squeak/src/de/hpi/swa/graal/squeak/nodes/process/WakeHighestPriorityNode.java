@@ -5,6 +5,10 @@
  */
 package de.hpi.swa.graal.squeak.nodes.process;
 
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.SCHEDULING;
+
+import java.util.logging.Level;
+
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.profiles.BranchProfile;
 
@@ -23,9 +27,10 @@ import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.Abstr
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.util.DebugUtils;
-import de.hpi.swa.graal.squeak.util.LogUtils;
+import de.hpi.swa.graal.squeak.util.LoggerWrapper;
 
 public final class WakeHighestPriorityNode extends AbstractNodeWithImage {
+    private static final LoggerWrapper LOG = LoggerWrapper.get(SCHEDULING, Level.FINE);
 
     @Child private ArrayObjectReadNode arrayReadNode = ArrayObjectReadNode.create();
     @Child private ArrayObjectSizeNode arraySizeNode = ArrayObjectSizeNode.create();
@@ -55,11 +60,11 @@ public final class WakeHighestPriorityNode extends AbstractNodeWithImage {
                 final int priority = (int) (p + 1);
                 if (newContext instanceof ContextObject) {
                     final ContextObject thisContext = contextNode.executeGet(frame, NilObject.SINGLETON);
-                    LogUtils.SCHEDULING.fine(() -> DebugUtils.logSwitch(newProcess, priority, image.getActiveProcess(pointersReadNode), thisContext, (ContextObject) newContext));
+                    assert LOG.fine(() -> DebugUtils.logSwitch(newProcess, priority, image.getActiveProcess(pointersReadNode), thisContext, (ContextObject) newContext));
                     thisContext.transferTo(pointersReadNode, pointersWriteNode, newProcess);
                     throw SqueakException.create("Should not be reached");
                 } else {
-                    LogUtils.SCHEDULING.severe(() -> "evicted zombie process from run queue " + priority);
+                    assert LOG.severe("evicted zombie process from run queue %d", priority);
                 }
             }
         }

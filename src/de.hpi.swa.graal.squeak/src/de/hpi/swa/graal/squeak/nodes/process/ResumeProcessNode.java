@@ -5,6 +5,10 @@
  */
 package de.hpi.swa.graal.squeak.nodes.process;
 
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.SCHEDULING;
+
+import java.util.logging.Level;
+
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
@@ -18,9 +22,11 @@ import de.hpi.swa.graal.squeak.nodes.GetOrCreateContextNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.util.DebugUtils;
-import de.hpi.swa.graal.squeak.util.LogUtils;
+import de.hpi.swa.graal.squeak.util.LoggerWrapper;
 
 public abstract class ResumeProcessNode extends AbstractNodeWithCode {
+    private static final LoggerWrapper LOG = LoggerWrapper.get(SCHEDULING, Level.FINE);
+
     @Child private AbstractPointersObjectReadNode pointersReadNode = AbstractPointersObjectReadNode.create();
 
     @Child private PutToSleepNode putToSleepNode;
@@ -43,7 +49,7 @@ public abstract class ResumeProcessNode extends AbstractNodeWithCode {
         final PointersObject currentProcess = code.image.getActiveProcess(pointersReadNode);
         putToSleepNode.executePutToSleep(currentProcess);
         final ContextObject thisContext = contextNode.executeGet(frame, currentProcess);
-        LogUtils.SCHEDULING.fine(() -> DebugUtils.logSwitch(newProcess, (int) pointersReadNode.executeLong(newProcess, PROCESS.PRIORITY), currentProcess, thisContext,
+        assert LOG.fine(() -> DebugUtils.logSwitch(newProcess, (int) pointersReadNode.executeLong(newProcess, PROCESS.PRIORITY), currentProcess, thisContext,
                         (ContextObject) pointersReadNode.execute(newProcess, PROCESS.SUSPENDED_CONTEXT)));
         thisContext.transferTo(pointersReadNode, pointersWriteNode, newProcess);
     }
@@ -51,7 +57,7 @@ public abstract class ResumeProcessNode extends AbstractNodeWithCode {
     @Specialization(guards = "!hasHigherPriority(newProcess)")
     protected final void doSleep(final PointersObject newProcess) {
         putToSleepNode.executePutToSleep(newProcess);
-        LogUtils.SCHEDULING.fine(() -> DebugUtils.logNoSwitch(newProcess));
+        assert LOG.fine(() -> DebugUtils.logNoSwitch(newProcess));
     }
 
     protected final boolean hasHigherPriority(final PointersObject newProcess) {

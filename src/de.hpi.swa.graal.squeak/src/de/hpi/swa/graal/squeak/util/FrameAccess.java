@@ -5,19 +5,18 @@
  */
 package de.hpi.swa.graal.squeak.util;
 
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.ITERATE_FRAMES;
+
 import java.util.Arrays;
+import java.util.logging.Level;
 
 import com.oracle.truffle.api.CompilerAsserts;
-import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
-import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.frame.Frame;
 import com.oracle.truffle.api.frame.FrameDescriptor;
-import com.oracle.truffle.api.frame.FrameInstance;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.FrameUtil;
-import com.oracle.truffle.api.frame.MaterializedFrame;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
@@ -72,6 +71,8 @@ import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackPushNode;
  * </pre>
  */
 public final class FrameAccess {
+    private static final LoggerWrapper LOG = LoggerWrapper.get(ITERATE_FRAMES, Level.FINE);
+
     private enum ArgumentIndicies {
         METHOD, // 0
         SENDER_OR_SENDER_MARKER, // 1
@@ -302,24 +303,17 @@ public final class FrameAccess {
     }
 
     @TruffleBoundary
-    public static MaterializedFrame findFrameForMarker(final FrameMarker frameMarker) {
-        CompilerDirectives.bailout("Finding materializable frames should never be part of compiled code as it triggers deopts");
-        LogUtils.ITERATE_FRAMES.fine("Iterating frames to find a marker...");
-        final Frame frame = Truffle.getRuntime().iterateFrames(frameInstance -> {
-            final Frame current = frameInstance.getFrame(FrameInstance.FrameAccess.READ_ONLY);
-            if (!isGraalSqueakFrame(current)) {
-                return null;
-            }
-            LogUtils.ITERATE_FRAMES.fine(() -> "..." + FrameAccess.getMethod(current).toString());
-            if (frameMarker == getMarker(current)) {
-                return frameInstance.getFrame(FrameInstance.FrameAccess.MATERIALIZE);
-            }
-            return null;
-        });
-        if (frame == null) {
+    public static ContextObject findContextForMarker(final FrameMarker frameMarker) {
+        assert LOG.fine("Iterating frames to find a marker...");
+        final ContextObject context = (ContextObject) new FramesAndContextsIterator(
+                        (bool, code) -> {
+                            assert LOG.finer("...%s", code);
+                            return bool;
+                        }, null).scanFor(frameMarker, NilObject.SINGLETON, NilObject.SINGLETON);
+        if (context == null) {
             throw SqueakException.create("Could not find frame for:", frameMarker);
         } else {
-            return frame.materialize();
+            return context;
         }
     }
 }

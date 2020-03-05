@@ -5,6 +5,8 @@
  */
 package de.hpi.swa.graal.squeak.nodes.primitives.impl;
 
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.INTERRUPTS;
+
 import java.awt.DisplayMode;
 import java.awt.GraphicsEnvironment;
 import java.io.File;
@@ -13,6 +15,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.logging.Level;
 
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
@@ -64,12 +67,13 @@ import de.hpi.swa.graal.squeak.nodes.primitives.SqueakPrimitive;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.InterruptHandlerState;
-import de.hpi.swa.graal.squeak.util.LogUtils;
+import de.hpi.swa.graal.squeak.util.LoggerWrapper;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 import de.hpi.swa.graal.squeak.util.NotProvided;
 import de.hpi.swa.graal.squeak.util.OSDetector;
 
 public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolder {
+    private static final LoggerWrapper LOG = LoggerWrapper.get(INTERRUPTS, Level.FINE);
 
     @Override
     public List<NodeFactory<? extends AbstractPrimitiveNode>> getFactories() {
@@ -83,14 +87,14 @@ public final class MiscellaneousPrimitives extends AbstractPrimitiveFactoryHolde
         }
 
         protected final void signalAtMilliseconds(final PointersObject semaphore, final long msTime) {
-            LogUtils.INTERRUPTS.fine(() -> "Setting the timer semaphore to @" + Integer.toHexString(semaphore.hashCode()) + " to be signalled in " + msTime + "ms");
+            assert LOG.fine("Setting the timer semaphore to @%s to be signalled in %dms", c -> c.add(Integer.toHexString(semaphore.hashCode())).add(msTime));
             method.image.setSemaphore(SPECIAL_OBJECT.THE_TIMER_SEMAPHORE, semaphore);
             method.image.interrupt.setTimerSemaphore(semaphore);
             method.image.interrupt.setNextWakeupTick(msTime);
         }
 
         protected final void resetTimerSemaphore() {
-            LogUtils.INTERRUPTS.fine(() -> "Resetting the timer semaphore");
+            assert LOG.fine("Resetting the timer semaphore");
             method.image.setSemaphore(SPECIAL_OBJECT.THE_TIMER_SEMAPHORE, NilObject.SINGLETON);
             method.image.interrupt.setTimerSemaphore(null);
             method.image.interrupt.setNextWakeupTick(0);

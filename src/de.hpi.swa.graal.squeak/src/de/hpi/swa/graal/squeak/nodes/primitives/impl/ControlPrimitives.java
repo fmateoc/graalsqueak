@@ -5,6 +5,9 @@
  */
 package de.hpi.swa.graal.squeak.nodes.primitives.impl;
 
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.GC;
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.SCHEDULING;
+
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.util.List;
@@ -75,11 +78,13 @@ import de.hpi.swa.graal.squeak.nodes.process.SignalSemaphoreNode;
 import de.hpi.swa.graal.squeak.nodes.process.WakeHighestPriorityNode;
 import de.hpi.swa.graal.squeak.nodes.process.YieldProcessNode;
 import de.hpi.swa.graal.squeak.util.InterruptHandlerNode;
-import de.hpi.swa.graal.squeak.util.LogUtils;
+import de.hpi.swa.graal.squeak.util.LoggerWrapper;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
 import de.hpi.swa.graal.squeak.util.NotProvided;
 
 public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
+    private static final LoggerWrapper SCHEDULING_LOG = LoggerWrapper.get(SCHEDULING, Level.FINE);
+    private static final LoggerWrapper GC_LOG = LoggerWrapper.get(GC, Level.FINE);
 
     @Override
     public List<NodeFactory<? extends AbstractPrimitiveNode>> getFactories() {
@@ -204,7 +209,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
         protected final Object doSignal(final VirtualFrame frame, final PointersObject receiver,
                         @Cached final StackPushForPrimitivesNode pushNode) {
             pushNode.executeWrite(frame, receiver); // keep receiver on stack
-            LogUtils.SCHEDULING.fine(() -> "Signalling semaphore @" + Integer.toHexString(receiver.hashCode()) + " in primitive 85 signal");
+            assert SCHEDULING_LOG.fine("Signalling semaphore @%s in primitive 85 signal", c -> c.add(Integer.toHexString(receiver.hashCode())));
             signalSemaphoreNode.executeSignal(frame, receiver);
             return AbstractSendNode.NO_RESULT;
         }
@@ -225,7 +230,8 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                         @Shared("pushNode") @Cached final StackPushForPrimitivesNode pushNode) {
             pushNode.executeWrite(frame, receiver); // keep receiver on stack
             final long excessSignals = pointersReadNode.executeLong(receiver, SEMAPHORE.EXCESS_SIGNALS);
-            LogUtils.SCHEDULING.fine(() -> "Wait sent to empty semaphore @" + Integer.toHexString(receiver.hashCode()) + " with initially " + excessSignals + " excessSignals in primitive 86 wait");
+            assert SCHEDULING_LOG.fine("Wait sent to empty semaphore @%s with initially %d excessSignals in primitive 86 wait",
+                            c -> c.add(Integer.toHexString(receiver.hashCode())).add(excessSignals));
             writeNode.execute(receiver, SEMAPHORE.EXCESS_SIGNALS, excessSignals - 1);
             return AbstractSendNode.NO_RESULT;
         }
@@ -238,8 +244,8 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             pushNode.executeWrite(frame, receiver); // keep receiver on stack
             final PointersObject activeProcess = method.image.getActiveProcess(pointersReadNode);
             linkProcessToListNode.executeLink(activeProcess, receiver);
-            LogUtils.SCHEDULING.fine(
-                            () -> "Blocking active process @" + Integer.toHexString(activeProcess.hashCode()) + " on semaphore @" + Integer.toHexString(receiver.hashCode()) + " in primitive 86 wait");
+            assert SCHEDULING_LOG.fine("Blocking active process @%s on semaphore @%s in primitive 86 wait",
+                            c -> c.add(Integer.toHexString(activeProcess.hashCode())).add(Integer.toHexString(receiver.hashCode())));
             wakeHighestPriorityNode.executeWake(frame);
             return AbstractSendNode.NO_RESULT;
         }
@@ -270,7 +276,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             }
             // keep receiver on stack before resuming other process
             pushNode.executeWrite(frame, receiver);
-            LogUtils.SCHEDULING.fine(() -> "Attempting to resume process @" + Integer.toHexString(receiver.hashCode()) + " in primitive 87 Resume");
+            assert SCHEDULING_LOG.fine("Attempting to resume process @%s in primitive 87 Resume", c -> c.add(Integer.toHexString(receiver.hashCode())));
             resumeProcessNode.executeResume(frame, receiver);
             return AbstractSendNode.NO_RESULT;
         }
@@ -290,7 +296,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                         @Cached final StackPushForPrimitivesNode pushNode,
                         @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
             pushNode.executeWrite(frame, NilObject.SINGLETON);
-            LogUtils.SCHEDULING.fine(() -> "Suspending active process @" + Integer.toHexString(receiver.hashCode()) + " in primitive 88 suspend");
+            assert SCHEDULING_LOG.fine("Suspending active process @%s in primitive 88 suspend", c -> c.add(Integer.toHexString(receiver.hashCode())));
             wakeHighestPriorityNode.executeWake(frame);
             return AbstractSendNode.NO_RESULT; // result already pushed above
         }
@@ -301,7 +307,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                         @Cached final AbstractPointersObjectWriteNode writeNode) {
             final PointersObject oldList = readNode.executePointers(receiver, PROCESS.LIST);
             writeNode.execute(receiver, PROCESS.LIST, NilObject.SINGLETON);
-            LogUtils.SCHEDULING.fine(() -> "Suspending non-active process @" + Integer.toHexString(receiver.hashCode()) + " in primitive 88 suspend");
+            assert SCHEDULING_LOG.fine("Suspending non-active process @%s in primitive 88 suspend", c -> c.add(Integer.toHexString(receiver.hashCode())));
             removeProcessNode.executeRemove(receiver, oldList);
             return oldList;
         }
@@ -585,7 +591,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                 count++;
                 element = queue.poll();
             }
-            LogUtils.GC.log(Level.FINE, "Number of garbage collected WeakPointersObjects: {0}", count);
+            assert GC_LOG.fine("Number of garbage collected WeakPointersObjects: %d", count);
             return count > 0;
         }
     }
@@ -680,7 +686,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             pushNode.executeWrite(frame, mutex); // keep receiver on stack
             final PointersObject owningProcess = mutex.removeFirstLinkOfList(readNode, writeNode);
             writeNode.execute(mutex, MUTEX.OWNER, owningProcess);
-            LogUtils.SCHEDULING.fine(() -> "Attempting to resume process @" + Integer.toHexString(owningProcess.hashCode()) + " in primitive 185 ExitCriticalSection");
+            assert SCHEDULING_LOG.fine("Attempting to resume process @%s in primitive 185 ExitCriticalSection", c -> c.add(Integer.toHexString(owningProcess.hashCode())));
             resumeProcessNode.executeResume(frame, owningProcess);
             return AbstractSendNode.NO_RESULT;
         }
@@ -716,7 +722,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
             pushNode.executeWrite(frame, BooleanObject.FALSE);
             final PointersObject activeProcess = method.image.getActiveProcess(readNode);
             linkProcessToListNode.executeLink(activeProcess, mutex);
-            LogUtils.SCHEDULING.fine(() -> "Blocking active process @" + Integer.toHexString(activeProcess.hashCode()) + " on mutex in primitive 186 EnterCriticalSection");
+            assert SCHEDULING_LOG.fine("Blocking active process @%s on mutex in primitive 186 EnterCriticalSection", c -> c.add(Integer.toHexString(activeProcess.hashCode())));
             wakeHighestPriorityNode.executeWake(frame);
             return AbstractSendNode.NO_RESULT;
         }
@@ -741,7 +747,7 @@ public final class ControlPrimitives extends AbstractPrimitiveFactoryHolder {
                         @Shared("wakeHighestPriorityNode") @Cached("create(method)") final WakeHighestPriorityNode wakeHighestPriorityNode) {
             pushNode.executeWrite(frame, BooleanObject.FALSE);
             linkProcessToListNode.executeLink(effectiveProcess, mutex);
-            LogUtils.SCHEDULING.fine(() -> "Blocking active process @" + Integer.toHexString(effectiveProcess.hashCode()) + " on mutex in primitive 186 EnterCriticalSection");
+            assert SCHEDULING_LOG.fine("Blocking active process @%s on mutex in primitive 186 EnterCriticalSection", c -> c.add(Integer.toHexString(effectiveProcess.hashCode())));
             wakeHighestPriorityNode.executeWake(frame);
             return AbstractSendNode.NO_RESULT;
         }

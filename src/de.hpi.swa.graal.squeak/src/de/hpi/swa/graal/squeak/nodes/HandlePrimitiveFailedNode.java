@@ -5,6 +5,10 @@
  */
 package de.hpi.swa.graal.squeak.nodes;
 
+import static de.hpi.swa.graal.squeak.util.LoggerWrapper.Name.PRIMITIVES;
+
+import java.util.logging.Level;
+
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
@@ -17,10 +21,14 @@ import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.ERROR_TABLE;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.context.frame.FrameStackPushNode;
-import de.hpi.swa.graal.squeak.util.LogUtils;
+import de.hpi.swa.graal.squeak.util.ArrayUtils;
+import de.hpi.swa.graal.squeak.util.FrameAccess;
+import de.hpi.swa.graal.squeak.util.LoggerWrapper;
 
 @NodeInfo(cost = NodeCost.NONE)
 public abstract class HandlePrimitiveFailedNode extends AbstractNodeWithCode {
+    private static final LoggerWrapper LOG = LoggerWrapper.get(PRIMITIVES, Level.FINER);
+
     @Child protected ArrayObjectSizeNode sizeNode = ArrayObjectSizeNode.create();
 
     private static final ERROR_TABLE[] errors = ERROR_TABLE.values();
@@ -46,20 +54,27 @@ public abstract class HandlePrimitiveFailedNode extends AbstractNodeWithCode {
                     @Cached("create(code)") final FrameStackPushNode pushNode,
                     @Cached final ArrayObjectReadNode readNode) {
         final Object reason = readNode.execute(code.image.primitiveErrorTable, reasonCode);
-        LogUtils.PRIMITIVES.finer("Primitive failed in method " + code + " with reason " + reason);
+        /*
+         * Same toString() methods may throw compilation warnings, this is expected and ok for
+         * primitive failure logging purposes.
+         */
+        assert LOG.finer("Primitive failed in method %s (arguments: %s) with reason %s",
+                        c -> c.add(code).add(ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(frame))).add(reason));
         pushNode.execute(frame, reason);
     }
 
     @Specialization(guards = {"followedByExtendedStore(code)", "reasonCode >= sizeNode.execute(code.image.primitiveErrorTable)"})
     protected final void doHandleRawValue(final VirtualFrame frame, final int reasonCode,
                     @Cached("create(code)") final FrameStackPushNode pushNode) {
-        LogUtils.PRIMITIVES.finer("Primitive failed in method " + code + " with reason " + errors[reasonCode]);
+        assert LOG.finer("Primitive failed in method %s (arguments: %s) with reason %s",
+                        c -> c.add(code).add(ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(frame))).add(errors[reasonCode]));
         pushNode.execute(frame, reasonCode);
     }
 
     @Specialization(guards = "!followedByExtendedStore(code)")
-    protected final void doNothing(@SuppressWarnings("unused") final int reasonCode) {
-        LogUtils.PRIMITIVES.finer("Primitive failed in method " + code + " with reason " + errors[reasonCode]);
+    protected final void doNothing(final VirtualFrame frame, final int reasonCode) {
+        assert LOG.finer("Primitive failed in method %s (arguments: %s) with reason %s",
+                        c -> c.add(code).add(ArrayUtils.toJoinedString(", ", FrameAccess.getReceiverAndArguments(frame))).add(errors[reasonCode]));
     }
 
     protected static final boolean followedByExtendedStore(final CompiledCodeObject codeObject) {
