@@ -14,7 +14,6 @@ import de.hpi.swa.graal.squeak.exceptions.PrimitiveExceptions.PrimitiveFailed;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.FloatObject;
-import de.hpi.swa.graal.squeak.model.LargeIntegerObject;
 import de.hpi.swa.graal.squeak.model.NativeObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
 import de.hpi.swa.graal.squeak.model.PointersObject;
@@ -1323,9 +1322,9 @@ public final class BitBlt {
         endBits = (dx + bbW - 1 & pixPerM1) + 1;
         if (destMSB) {
             mask1 = (int) shr(ALL_ONES, 32 - startBits * destDepth);
-            mask2 = (int) shl(ALL_ONES, 32 - endBits * destDepth);
+            mask2 = (int) shl(ALL_ONES, 32 - endBits * destDepth) & ALL_ONES;
         } else {
-            mask1 = (int) shl(ALL_ONES, 32 - startBits * destDepth);
+            mask1 = (int) shl(ALL_ONES, 32 - startBits * destDepth) & ALL_ONES;
             mask2 = (int) shr(ALL_ONES, 32 - endBits * destDepth);
         }
         if (bbW <= startBits) {
@@ -1529,14 +1528,9 @@ public final class BitBlt {
             return floatToLong(((FloatObject) fieldOop).getValue());
         } else if (fieldOop instanceof Double) {
             return floatToLong((double) fieldOop);
-        } else if (fieldOop instanceof LargeIntegerObject) {
-            final LargeIntegerObject fieldLarge = (LargeIntegerObject) fieldOop;
-            if (fieldLarge.fitsIntoInt()) {
-                return fieldLarge.intValueExact();
-            }
-            PrimitiveFailed.andTransferToInterpreter(); // Fail because value is too big.
         }
-        throw SqueakException.create("Should not be reached:", fieldOop);
+        /* Fail if the value is not an int or float (e.g. Fraction). */
+        throw PrimitiveFailed.andTransferToInterpreter();
     }
 
     private static int floatToLong(final double floatValue) {
@@ -1568,14 +1562,9 @@ public final class BitBlt {
             return floatToLong((double) fieldOop);
         } else if (fieldOop instanceof FloatObject) {
             return floatToLong(((FloatObject) fieldOop).getValue());
-        } else if (fieldOop instanceof LargeIntegerObject) {
-            final LargeIntegerObject fieldLarge = (LargeIntegerObject) fieldOop;
-            if (fieldLarge.fitsIntoInt()) {
-                return fieldLarge.intValueExact();
-            }
-            PrimitiveFailed.andTransferToInterpreter(); // Fail because value is too big.
         }
-        throw SqueakException.create("Should not be reached:", fieldOop);
+        /* Fail if the value is not an int or float (e.g. Fraction). */
+        throw PrimitiveFailed.andTransferToInterpreter();
     }
 
     /*
@@ -3485,8 +3474,8 @@ public final class BitBlt {
         final int sxLowBits = sx & pixPerM11;
         /* how many pixels in first word */
         final int dxLowBits = dx & pixPerM11;
-        final int startBits1 = hDir > 0 ? sourcePPW - (sx & pixPerM11) : (sx + bbW - 1 & pixPerM11) + 1;
-        final long m1 = destMSB ? ALL_ONES >> 32 - startBits1 * destDepth : ALL_ONES << 32 - startBits1 * destDepth;
+        final int startBits1 = hDir > 0 ? sourcePPW - (sx & pixPerM11) : (sx & pixPerM11) + 1;
+        final long m1 = destMSB == hDir > 0 ? ALL_ONES >> 32 - startBits1 * destDepth : ALL_ONES << 32 - startBits1 * destDepth & ALL_ONES;
         /* i.e. there are some missing bits */
         /* calculate right-shift skew from source to dest */
         preload = bbW > startBits1 && (m1 & mask1) != mask1;
@@ -3496,7 +3485,7 @@ public final class BitBlt {
             skew = skew < 0 ? skew + 32 : skew - 32;
         }
         /* calculate increments from end of 1 line to start of next */
-        sourceIndex = sy * sourcePitch + sx / (32 / sourceDepth) * 4;
+        sourceIndex = sy * sourcePitch + sx / sourcePPW * 4;
         sourceDelta = sourcePitch * vDir - 4 * (nWords * hDir);
         if (preload) {
             /* Compensate for extra source word fetched */

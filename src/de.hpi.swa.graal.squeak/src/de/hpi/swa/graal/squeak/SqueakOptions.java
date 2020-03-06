@@ -41,6 +41,9 @@ public final class SqueakOptions {
     @Option(name = SqueakLanguageOptions.STACK_DEPTH_PROTECTION, category = OptionCategory.INTERNAL, stability = OptionStability.EXPERIMENTAL, help = SqueakLanguageOptions.STACK_DEPTH_PROTECTION_HELP)//
     public static final OptionKey<Boolean> StackDepthProtection = new OptionKey<>(false);
 
+    @Option(name = SqueakLanguageOptions.STARTUP, category = OptionCategory.INTERNAL, stability = OptionStability.EXPERIMENTAL, help = SqueakLanguageOptions.STARTUP_HELP)//
+    public static final OptionKey<Boolean> Startup = new OptionKey<>(false);
+
     @Option(name = SqueakLanguageOptions.STORAGE_STRATEGIES, category = OptionCategory.INTERNAL, stability = OptionStability.EXPERIMENTAL, help = SqueakLanguageOptions.STORAGE_STRATEGIES_HELP)//
     public static final OptionKey<Boolean> StorageStrategies = new OptionKey<>(true);
 
@@ -60,6 +63,7 @@ public final class SqueakOptions {
         public final boolean isHeadless;
         public final boolean isQuiet;
         public final boolean disableInterruptHandler;
+        public final boolean disableStartup;
         public final boolean enableStackDepthProtection;
         public final boolean enableStorageStrategies;
         public final boolean isTesting;
@@ -72,6 +76,7 @@ public final class SqueakOptions {
             isHeadless = options.get(Headless);
             isQuiet = options.get(Quiet);
             disableInterruptHandler = options.get(Interrupts);
+            disableStartup = options.get(Startup);
             signalInputSemaphore = options.get(SignalInputSemaphore);
             enableStackDepthProtection = options.get(StackDepthProtection);
             enableStorageStrategies = options.get(StorageStrategies);

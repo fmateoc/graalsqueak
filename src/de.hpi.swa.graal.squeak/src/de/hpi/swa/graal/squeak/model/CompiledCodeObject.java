@@ -33,8 +33,8 @@ import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.nodes.EnterCodeNode;
 import de.hpi.swa.graal.squeak.nodes.ResumeContextNode.ResumeContextRootNode;
 import de.hpi.swa.graal.squeak.shared.SqueakLanguageConfig;
-import de.hpi.swa.graal.squeak.util.CompiledCodeObjectPrinter;
 import de.hpi.swa.graal.squeak.util.MiscUtils;
+import de.hpi.swa.graal.squeak.util.SqueakBytecodeDecoder;
 
 @ExportLibrary(InteropLibrary.class)
 public abstract class CompiledCodeObject extends AbstractSqueakObjectWithHash {
@@ -113,7 +113,7 @@ public abstract class CompiledCodeObject extends AbstractSqueakObjectWithHash {
             String contents;
             try {
                 name = toString();
-                contents = CompiledCodeObjectPrinter.getString(this);
+                contents = SqueakBytecodeDecoder.decodeToString(this);
             } catch (final RuntimeException e) {
                 if (name == null) {
                     name = SOURCE_UNAVAILABLE_NAME;

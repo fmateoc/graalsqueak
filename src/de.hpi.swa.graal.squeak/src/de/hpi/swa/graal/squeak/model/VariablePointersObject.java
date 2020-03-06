@@ -13,11 +13,11 @@ import com.oracle.truffle.api.profiles.ConditionProfile;
 import de.hpi.swa.graal.squeak.image.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.SqueakImageWriter;
-import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectIdentityNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.UpdateSqueakObjectHashNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
+import de.hpi.swa.graal.squeak.util.ObjectGraphUtils.ObjectTracer;
 import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
 public final class VariablePointersObject extends AbstractPointersObject {
@@ -103,7 +103,8 @@ public final class VariablePointersObject extends AbstractPointersObject {
         return new VariablePointersObject(this);
     }
 
-    public void traceObjects(final ObjectTracer tracer) {
+    @Override
+    public void tracePointers(final ObjectTracer tracer) {
         super.traceLayoutObjects(tracer);
         for (final Object object : variablePart) {
             tracer.addIfUnmarked(object);

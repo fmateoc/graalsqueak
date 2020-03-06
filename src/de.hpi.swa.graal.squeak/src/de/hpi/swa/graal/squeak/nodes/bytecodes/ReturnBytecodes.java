@@ -13,6 +13,7 @@ import com.oracle.truffle.api.frame.VirtualFrame;
 
 import de.hpi.swa.graal.squeak.exceptions.Returns.NonLocalReturn;
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
+import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
 import de.hpi.swa.graal.squeak.model.NilObject;
@@ -155,10 +156,10 @@ public final class ReturnBytecodes {
     public abstract static class ReturnTopFromBlockNode extends AbstractReturnNode {
         @Child private FrameStackPopNode popNode;
         @Child private SendSelectorNode cannotReturnNode;
-        @Child private AbstractPointersObjectReadNode readNode = AbstractPointersObjectReadNode.create();
 
         protected ReturnTopFromBlockNode(final CompiledCodeObject code, final int index) {
             super(code, index);
+            assert code instanceof CompiledBlockObject : "blockReturn can only occure in CompiledBlockObject";
             popNode = FrameStackPopNode.create(code);
         }
 
@@ -171,14 +172,9 @@ public final class ReturnBytecodes {
             return getReturnValue(frame);
         }
 
-        @Specialization(guards = {"isCompiledMethodObject(code)", "hasModifiedSender(frame)"})
-        protected final Object doNonLocalReturn(final VirtualFrame frame) {
-            assert FrameAccess.getSender(frame) instanceof ContextObject : "Sender must be a materialized ContextObject";
-            throw new NonLocalReturn(getReturnValue(frame), FrameAccess.getSender(frame));
-        }
-
-        @Specialization(guards = {"isCompiledBlockObject(code)", "hasModifiedSender(frame)"})
-        protected final Object doNonLocalReturnClosure(final VirtualFrame frame) {
+        @Specialization(guards = {"hasModifiedSender(frame)"})
+        protected final Object doNonLocalReturnClosure(final VirtualFrame frame,
+                        @Cached final AbstractPointersObjectReadNode readNode) {
             // Target is sender of closure's home context.
             final ContextObject homeContext = FrameAccess.getClosure(frame).getHomeContext();
             final ContextObject currentContext = FrameAccess.getContext(frame);

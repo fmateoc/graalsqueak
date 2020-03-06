@@ -68,12 +68,11 @@ public final class SendBytecodes {
 
         @Override
         public final void executeVoid(final VirtualFrame frame) {
-            final Object result;
+            final Object[] rcvrAndArgs = popNNode.execute(frame);
+            final ClassObject rcvrClass = lookupClassNode.executeLookup(rcvrAndArgs[0]);
+            final Object lookupResult = lookupMethodNode.executeLookup(rcvrClass);
             try {
-                final Object[] rcvrAndArgs = popNNode.execute(frame);
-                final ClassObject rcvrClass = lookupClassNode.executeLookup(rcvrAndArgs[0]);
-                final Object lookupResult = lookupMethodNode.executeLookup(rcvrClass);
-                result = dispatchSendNode.executeSend(frame, selector, lookupResult, rcvrClass, rcvrAndArgs);
+                final Object result = dispatchSendNode.executeSend(frame, selector, lookupResult, rcvrClass, rcvrAndArgs);
                 assert result != null : "Result of a message send should not be null";
                 if (noResultProfile.profile(result != NO_RESULT)) {
                     getPushNode().execute(frame, result);
@@ -186,8 +185,8 @@ public final class SendBytecodes {
         }
     }
 
-    public static final class SendSelfSelector extends AbstractSendNode {
-        public SendSelfSelector(final CompiledCodeObject code, final int index, final int numBytecodes, final Object selector, final int numArgs) {
+    public static final class SendSelfSelectorNode extends AbstractSendNode {
+        public SendSelfSelectorNode(final CompiledCodeObject code, final int index, final int numBytecodes, final Object selector, final int numArgs) {
             super(code, index, numBytecodes, selector, numArgs);
         }
     }

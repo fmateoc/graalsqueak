@@ -24,11 +24,11 @@ import de.hpi.swa.graal.squeak.image.SqueakImageConstants;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.SqueakImageWriter;
 import de.hpi.swa.graal.squeak.interop.WrapToSqueakNode;
-import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectSizeNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.ArrayObjectNodes.ArrayObjectWriteNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
+import de.hpi.swa.graal.squeak.util.ObjectGraphUtils.ObjectTracer;
 import de.hpi.swa.graal.squeak.util.LoggerWrapper;
 import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
@@ -362,7 +362,8 @@ public final class ArrayObject extends AbstractSqueakObjectWithClassAndHash {
         storage = objects;
     }
 
-    public void traceObjects(final ObjectTracer tracer) {
+    @Override
+    public void tracePointers(final ObjectTracer tracer) {
         if (isObjectType()) {
             for (final Object value : getObjectStorage()) {
                 tracer.addIfUnmarked(value);

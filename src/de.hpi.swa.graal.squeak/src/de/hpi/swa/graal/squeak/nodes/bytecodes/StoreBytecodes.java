@@ -23,7 +23,6 @@ import de.hpi.swa.graal.squeak.util.FrameAccess;
 public final class StoreBytecodes {
 
     private abstract static class AbstractStoreIntoAssociationNode extends AbstractStoreIntoNode {
-        @Child private SqueakObjectAt0Node at0Node;
         protected final long variableIndex;
 
         private AbstractStoreIntoAssociationNode(final CompiledCodeObject code, final int index, final int numBytecodes, final long variableIndex) {
@@ -35,10 +34,7 @@ public final class StoreBytecodes {
         @Override
         public final String toString() {
             CompilerAsserts.neverPartOfCompilation();
-            if (at0Node == null) {
-                at0Node = insert(SqueakObjectAt0Node.create());
-            }
-            return getTypeName() + "IntoLit: " + at0Node.execute(code.getLiteral(variableIndex), ASSOCIATION.KEY);
+            return getTypeName() + "IntoLit: " + SqueakObjectAt0Node.getUncached().execute(code.getLiteral(variableIndex), ASSOCIATION.KEY);
         }
     }
 

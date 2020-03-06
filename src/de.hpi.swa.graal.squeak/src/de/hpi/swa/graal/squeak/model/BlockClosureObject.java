@@ -24,9 +24,9 @@ import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.SqueakImageWriter;
 import de.hpi.swa.graal.squeak.interop.WrapToSqueakNode;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.BLOCK_CLOSURE;
-import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
+import de.hpi.swa.graal.squeak.util.ObjectGraphUtils.ObjectTracer;
 
 @ExportLibrary(InteropLibrary.class)
 public final class BlockClosureObject extends AbstractSqueakObjectWithHash {
@@ -240,7 +240,8 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithHash {
         return new BlockClosureObject(this);
     }
 
-    public void traceObjects(final ObjectTracer tracer) {
+    @Override
+    public void tracePointers(final ObjectTracer tracer) {
         tracer.addIfUnmarked(getReceiver());
         tracer.addIfUnmarked(getOuterContext());
         for (final Object value : getCopied()) {
@@ -285,7 +286,10 @@ public final class BlockClosureObject extends AbstractSqueakObjectWithHash {
     public Object execute(final Object[] arguments,
                     @Exclusive @Cached final WrapToSqueakNode wrapNode) throws ArityException {
         if (getNumArgs() == arguments.length) {
-            final Object[] frameArguments = FrameAccess.newClosureArguments(this, NilObject.SINGLETON, wrapNode.executeObjects(arguments));
+            final Object[] frameArguments = FrameAccess.newClosureArgumentsTemplate(this, NilObject.SINGLETON, arguments.length);
+            for (int i = 0; i < arguments.length; i++) {
+                frameArguments[FrameAccess.getArgumentStartIndex() + i] = wrapNode.executeWrap(arguments[i]);
+            }
             return getCompiledBlock().getCallTarget().call(frameArguments);
         } else {
             throw ArityException.create((int) getNumArgs(), arguments.length);

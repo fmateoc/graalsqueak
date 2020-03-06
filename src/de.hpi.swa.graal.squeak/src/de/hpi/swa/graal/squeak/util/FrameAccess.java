@@ -17,10 +17,12 @@ import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.FrameSlot;
 import com.oracle.truffle.api.frame.FrameSlotKind;
 import com.oracle.truffle.api.frame.FrameUtil;
+import com.oracle.truffle.api.profiles.ConditionProfile;
 
 import de.hpi.swa.graal.squeak.exceptions.SqueakExceptions.SqueakException;
 import de.hpi.swa.graal.squeak.model.AbstractSqueakObject;
 import de.hpi.swa.graal.squeak.model.BlockClosureObject;
+import de.hpi.swa.graal.squeak.model.CompiledBlockObject;
 import de.hpi.swa.graal.squeak.model.CompiledCodeObject;
 import de.hpi.swa.graal.squeak.model.CompiledMethodObject;
 import de.hpi.swa.graal.squeak.model.ContextObject;
@@ -164,13 +166,13 @@ public final class FrameAccess {
     }
 
     /* Gets context or marker, lazily initializes the latter if necessary. */
-    public static Object getContextOrMarker(final Frame frame, final CompiledCodeObject blockOrMethod) {
+    public static Object getContextOrMarker(final Frame frame, final CompiledCodeObject blockOrMethod, final ConditionProfile hasContextProfile, final ConditionProfile hasMarkerProfile) {
         final ContextObject context = getContext(frame, blockOrMethod);
-        if (context != null) {
+        if (hasContextProfile.profile(context != null)) {
             return context;
         } else {
             final FrameMarker marker = getMarker(frame, blockOrMethod);
-            if (marker != null) {
+            if (hasMarkerProfile.profile(marker != null)) {
                 return marker;
             } else {
                 final FrameMarker newMarker = new FrameMarker();
@@ -268,20 +270,19 @@ public final class FrameAccess {
         return frameArguments;
     }
 
-    public static Object[] newClosureArguments(final BlockClosureObject closure, final Object senderOrMarker, final Object[] closureArguments) {
-        final int numClosureArguments = closureArguments.length;
-        final Object[] arguments = newClosureArgumentsTemplate(closure, senderOrMarker, numClosureArguments);
-        System.arraycopy(closureArguments, 0, arguments, ArgumentIndicies.ARGUMENTS_START.ordinal(), numClosureArguments);
-        return arguments;
+    /* Template because closure arguments still need to be filled in. */
+    public static Object[] newClosureArgumentsTemplate(final BlockClosureObject closure, final Object senderOrMarker, final int numArgs) {
+        return newClosureArgumentsTemplate(closure, closure.getCompiledBlock(), senderOrMarker, numArgs);
     }
 
     /* Template because closure arguments still need to be filled in. */
-    public static Object[] newClosureArgumentsTemplate(final BlockClosureObject closure, final Object senderOrMarker, final int numArgs) {
+    public static Object[] newClosureArgumentsTemplate(final BlockClosureObject closure, final CompiledBlockObject block, final Object senderOrMarker, final int numArgs) {
+        assert closure.getCompiledBlock() == block;
         final Object[] copied = closure.getCopied();
         final int numCopied = copied.length;
-        assert closure.getCompiledBlock().getNumArgs() == numArgs : "number of required and provided block arguments do not match";
+        assert block.getNumArgs() == numArgs : "number of required and provided block arguments do not match";
         final Object[] arguments = new Object[ArgumentIndicies.ARGUMENTS_START.ordinal() + numArgs + numCopied];
-        arguments[ArgumentIndicies.METHOD.ordinal()] = closure.getCompiledBlock().getMethod();
+        arguments[ArgumentIndicies.METHOD.ordinal()] = block.getMethod();
         // Sender is thisContext (or marker)
         arguments[ArgumentIndicies.SENDER_OR_SENDER_MARKER.ordinal()] = senderOrMarker;
         arguments[ArgumentIndicies.CLOSURE_OR_NULL.ordinal()] = closure;

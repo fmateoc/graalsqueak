@@ -32,13 +32,13 @@ import de.hpi.swa.graal.squeak.image.SqueakImageWriter;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.CONTEXT;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.PROCESS;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.PROCESS_SCHEDULER;
-import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectReadNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.MiscellaneousBytecodes.CallPrimitiveNode;
 import de.hpi.swa.graal.squeak.util.FrameAccess;
 import de.hpi.swa.graal.squeak.util.FramesAndContextsIterator;
 import de.hpi.swa.graal.squeak.util.LoggerWrapper;
+import de.hpi.swa.graal.squeak.util.ObjectGraphUtils.ObjectTracer;
 
 public final class ContextObject extends AbstractSqueakObjectWithHash {
     private static final LoggerWrapper LOG = LoggerWrapper.get(SCHEDULING, Level.FINER);
@@ -617,7 +617,6 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
     }
 
     public void traceObjects(final ObjectTracer tracer) {
-        tracer.addIfUnmarked(process);
         if (hasTruffleFrame()) {
             final Object[] args = truffleFrame.getArguments();
             for (final Object arg : args) {
@@ -646,32 +645,61 @@ public final class ContextObject extends AbstractSqueakObjectWithHash {
     }
 
     @Override
-    public void trace(final SqueakImageWriter writerNode) {
-        super.trace(writerNode);
+    public void trace(final SqueakImageWriter writer) {
+        super.trace(writer);
         if (hasTruffleFrame()) {
-            writerNode.traceIfNecessary(getSender()); /* May materialize sender. */
-            writerNode.traceIfNecessary(getMethod());
-            writerNode.traceIfNecessary(getClosure());
-            writerNode.traceIfNecessary(getReceiver());
-            for (int i = 0; i < getBlockOrMethod().getNumStackSlots(); i++) {
-                writerNode.traceIfNecessary(atTemp(i));
+            final Object[] args = truffleFrame.getArguments();
+            for (final Object arg : args) {
+                writer.traceIfNecessary(arg);
+            }
+            final CompiledCodeObject code = args[2] != null ? ((BlockClosureObject) args[2]).getCompiledBlock() : (CompiledMethodObject) args[0];
+            final int stackp = FrameUtil.getIntSafe(truffleFrame, code.getStackPointerSlot());
+            final FrameSlot[] stackSlots = code.getStackSlotsUnsafe();
+            final FrameDescriptor frameDescriptor = code.getFrameDescriptor();
+            for (int i = 0; i < stackp; i++) {
+                final FrameSlot slot = stackSlots[i];
+                if (slot == null) {
+                    break; // Stop here, slot has not (yet) been created.
+                }
+                if (truffleFrame.isObject(slot)) {
+                    final Object stackObject = FrameUtil.getObjectSafe(truffleFrame, slot);
+                    if (stackObject == null) {
+                        break;
+                    }
+                    writer.traceIfNecessary(stackObject);
+                } else if (frameDescriptor.getFrameSlotKind(slot) == FrameSlotKind.Illegal) {
+                    break; // Stop here, because this slot and all following are not
+                           // used.traceIfNecessary
+                }
             }
         }
     }
 
     @Override
-    public void write(final SqueakImageWriter writerNode) {
-        if (!writeHeader(writerNode)) {
+    public void write(final SqueakImageWriter writer) {
+        if (!writeHeader(writer)) {
             throw SqueakException.create("ContextObject must have slots:", this);
         }
-        writerNode.writeObject(getSender());
-        writerNode.writeObject(getInstructionPointer(ConditionProfile.getUncached()));
-        writerNode.writeSmallInteger(getStackPointer());
-        writerNode.writeObject(getMethod());
-        writerNode.writeObject(NilObject.nullToNil(getClosure()));
-        writerNode.writeObject(getReceiver());
-        for (int i = 0; i < getBlockOrMethod().getNumStackSlots(); i++) {
-            writerNode.writeObject(atTemp(i));
+        writer.writeObject(getSender());
+        writer.writeObject(getInstructionPointer(ConditionProfile.getUncached()));
+        writer.writeSmallInteger(getStackPointer());
+        writer.writeObject(getMethod());
+        writer.writeObject(NilObject.nullToNil(getClosure()));
+        writer.writeObject(getReceiver());
+        assert getBlockOrMethod().getStackSlotsUnsafe().length == getBlockOrMethod().getNumStackSlots();
+        final FrameSlot[] stackSlots = getBlockOrMethod().getStackSlotsUnsafe();
+        for (int i = 0; i < stackSlots.length; i++) {
+            final FrameSlot slot = stackSlots[i];
+            if (slot == null) {
+                writer.writeNil();
+            } else {
+                final Object stackValue = truffleFrame.getValue(slot);
+                if (stackValue == null) {
+                    writer.writeNil();
+                } else {
+                    writer.writeObject(stackValue);
+                }
+            }
         }
     }
 

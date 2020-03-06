@@ -182,6 +182,10 @@ public final class SqueakImageContext {
         if (!loaded()) {
             // Load image.
             SqueakImageReader.load(this);
+            if (options.disableStartup) {
+                printToStdOut("Skipping startup routine...");
+                return;
+            }
             printToStdOut("Preparing image for headless execution...");
             assert LOG.fine(() -> "Fresh after load" + DebugUtils.currentState(SqueakImageContext.this));
             // Remove active context.

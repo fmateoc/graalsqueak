@@ -15,7 +15,7 @@ import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodes.PushLiteralConstant
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodes.PushLiteralVariableNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodes.PushReceiverVariableNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.PushBytecodes.PushTemporaryLocationNode;
-import de.hpi.swa.graal.squeak.nodes.bytecodes.SendBytecodes.SendSelfSelector;
+import de.hpi.swa.graal.squeak.nodes.bytecodes.SendBytecodes.SendSelfSelectorNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.SendBytecodes.SingleExtendedSuperNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.StoreBytecodes.PopIntoAssociationNode;
 import de.hpi.swa.graal.squeak.nodes.bytecodes.StoreBytecodes.PopIntoReceiverVariableNode;
@@ -68,7 +68,7 @@ public final class MiscellaneousBytecodes {
             final int opType = second >> 5;
             switch (opType) {
                 case 0:
-                    return new SendSelfSelector(code, index, numBytecodes, code.getLiteral(third), second & 31);
+                    return new SendSelfSelectorNode(code, index, numBytecodes, code.getLiteral(third), second & 31);
                 case 1:
                     return new SingleExtendedSuperNode(code, index, numBytecodes, third, second & 31);
                 case 2:
@@ -161,11 +161,11 @@ public final class MiscellaneousBytecodes {
             }
         }
 
-        private static byte variableIndex(final int i) {
+        public static byte variableIndex(final int i) {
             return (byte) (i & 63);
         }
 
-        private static byte variableType(final int i) {
+        public static byte variableType(final int i) {
             return (byte) (i >> 6 & 3);
         }
     }

@@ -36,10 +36,13 @@ BASE_VM_ARGS_TESTING = [
     # GARBAGE COLLECTOR (optimized for Travis CI)
     '-Xms4G',                   # Initial heap size
     '-XX:MetaspaceSize=32M',    # Initial size of Metaspaces
-
-    # JVMCI
-    '-XX:-UseJVMCIClassLoader',
 ]
+
+
+# Disable JVMCI class loader if not on Windows
+if sys.platform != 'win32':
+    BASE_VM_ARGS_TESTING.append('-XX:-UseJVMCIClassLoader')
+
 
 _suite = mx.suite('graalsqueak')
 _compiler = mx.suite('compiler', fatalIfMissing=False)
@@ -159,6 +162,10 @@ def _squeak(args, extra_vm_args=None, env=None, jdk=None, **kwargs):
     parser.add_argument('-d', '--disable-interrupts',
                         help='disable interrupt handler',
                         dest='disable_interrupts',
+                        action='store_true', default=False)
+    parser.add_argument('--disable-startup',
+                        help='disable startup routine in headless mode',
+                        dest='disable_startup',
                         action='store_true', default=False)
     parser.add_argument('-etf', '--enable-transcript-forwarding',
                         help='Forward stdio to Transcript',
@@ -300,6 +307,10 @@ def _squeak(args, extra_vm_args=None, env=None, jdk=None, **kwargs):
     if parsed_args.disable_interrupts:
         squeak_arguments.append(
             '--%s.disable-interrupts' % LANGUAGE_ID)
+    if parsed_args.disable_startup:
+        squeak_arguments.extend([
+            '--experimental-options',
+            '--%s.disable-startup' % LANGUAGE_ID])
     if parsed_args.headless:
         squeak_arguments.append('--%s.headless' % LANGUAGE_ID)
     if parsed_args.code:
@@ -461,7 +472,7 @@ def _get_jacoco_agent_args():
     agentOptions = {
         'append': 'true',
         'includes': '%s.*' % PACKAGE_NAME,
-        'destfile': mx_gate.JACOCO_EXEC,
+        'destfile': mx_gate.get_jacoco_dest_file(),
     }
     return ['-javaagent:' + mx_gate.get_jacoco_agent_path(True) + '=' +
             ','.join([k + '=' + v for k, v in agentOptions.items()])]

@@ -16,11 +16,11 @@ import com.oracle.truffle.api.profiles.ConditionProfile;
 import de.hpi.swa.graal.squeak.image.SqueakImageChunk;
 import de.hpi.swa.graal.squeak.image.SqueakImageContext;
 import de.hpi.swa.graal.squeak.image.SqueakImageWriter;
-import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
 import de.hpi.swa.graal.squeak.nodes.SqueakGuards;
 import de.hpi.swa.graal.squeak.nodes.accessing.AbstractPointersObjectNodes.AbstractPointersObjectWriteNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectIdentityNode;
 import de.hpi.swa.graal.squeak.nodes.accessing.UpdateSqueakObjectHashNode;
+import de.hpi.swa.graal.squeak.util.ObjectGraphUtils.ObjectTracer;
 import de.hpi.swa.graal.squeak.util.UnsafeUtils;
 
 public final class WeakVariablePointersObject extends AbstractPointersObject {
@@ -133,7 +133,8 @@ public final class WeakVariablePointersObject extends AbstractPointersObject {
         return new WeakVariablePointersObject(this);
     }
 
-    public void traceObjects(final ObjectTracer tracer) {
+    @Override
+    public void tracePointers(final ObjectTracer tracer) {
         super.traceLayoutObjects(tracer);
         /* Weak pointers excluded from tracing. */
     }

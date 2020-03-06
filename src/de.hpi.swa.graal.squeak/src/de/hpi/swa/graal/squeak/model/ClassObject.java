@@ -13,6 +13,7 @@ import com.oracle.truffle.api.Assumption;
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
+import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.interop.ArityException;
@@ -34,9 +35,9 @@ import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.CLASS;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.CLASS_DESCRIPTION;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.CLASS_TRAIT;
 import de.hpi.swa.graal.squeak.model.layout.ObjectLayouts.METACLASS;
-import de.hpi.swa.graal.squeak.nodes.ObjectGraphNode.ObjectTracer;
 import de.hpi.swa.graal.squeak.nodes.accessing.SqueakObjectNewNode;
 import de.hpi.swa.graal.squeak.util.ArrayUtils;
+import de.hpi.swa.graal.squeak.util.ObjectGraphUtils.ObjectTracer;
 import de.hpi.swa.graal.squeak.util.SqueakMessageInterceptor;
 
 /*
@@ -57,7 +58,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
     private PointersObject organization;
     private Object[] pointers;
 
-    private ObjectLayout layout;
+    @CompilationFinal private ObjectLayout layout;
 
     public ClassObject(final SqueakImageContext image) {
         super(image);
@@ -94,7 +95,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
 
     public ObjectLayout getLayout() {
         if (layout == null) {
-            CompilerDirectives.transferToInterpreter();
+            CompilerDirectives.transferToInterpreterAndInvalidate();
             layout = new ObjectLayout(this, getBasicInstanceSize());
         }
         return layout;
@@ -102,6 +103,7 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
 
     public void updateLayout(final ObjectLayout newLayout) {
         assert layout == null || !layout.isValid() : "Old layout not invalidated";
+        CompilerDirectives.transferToInterpreterAndInvalidate();
         layout = newLayout;
     }
 
@@ -401,8 +403,8 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         this.methodDict = methodDict;
     }
 
-    public Object[] listMethods() {
-        CompilerAsserts.neverPartOfCompilation("This is only for the interop API.");
+    @TruffleBoundary
+    public Object[] listInteropMembers() {
         final List<String> methodNames = new ArrayList<>();
         ClassObject lookupClass = this;
         while (lookupClass != null) {
@@ -532,7 +534,8 @@ public final class ClassObject extends AbstractSqueakObjectWithClassAndHash {
         return this == image.smallIntegerClass;
     }
 
-    public void traceObjects(final ObjectTracer tracer) {
+    @Override
+    public void tracePointers(final ObjectTracer tracer) {
         tracer.addIfUnmarked(getSuperclass());
         tracer.addIfUnmarked(getMethodDict());
         tracer.addIfUnmarked(getInstanceVariables());
