@@ -9,6 +9,7 @@ import java.util.Arrays;
 
 import com.oracle.truffle.api.CompilerAsserts;
 import com.oracle.truffle.api.CompilerDirectives;
+import com.oracle.truffle.api.CompilerDirectives.CompilationFinal;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.profiles.ConditionProfile;
 
@@ -38,7 +39,7 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
     public static final long OBJECT_1_ADDRESS = UnsafeUtils.getAddress(AbstractPointersObject.class, "object1");
     public static final long OBJECT_2_ADDRESS = UnsafeUtils.getAddress(AbstractPointersObject.class, "object2");
 
-    private ObjectLayout layout;
+    @CompilationFinal private ObjectLayout layout;
 
     public int primitiveUsedMap;
     public long primitive0;
@@ -56,9 +57,20 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         super(image);
     }
 
+    protected AbstractPointersObject(final SqueakImageContext image, final ClassObject classObject, final ObjectLayout layout) {
+        super(image, classObject);
+        assert classObject.getLayout() == layout : "Layout mismatch";
+        CompilerAsserts.partialEvaluationConstant(layout);
+        this.layout = layout;
+        primitiveExtension = layout.getFreshPrimitiveExtension();
+        objectExtension = layout.getFreshObjectExtension();
+    }
+
     protected AbstractPointersObject(final SqueakImageContext image, final ClassObject classObject) {
         super(image, classObject);
-        initializeLayoutAndExtensionsUnsafe();
+        layout = classObject.getLayout();
+        primitiveExtension = layout.getFreshPrimitiveExtension();
+        objectExtension = layout.getFreshObjectExtension();
     }
 
     protected AbstractPointersObject(final SqueakImageContext image, final long hash, final ClassObject classObject) {
@@ -103,7 +115,7 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
         }
     }
 
-    protected final void initializeLayoutAndExtensionsUnsafe() {
+    protected final void fillInLayoutAndExtensions() {
         layout = getSqueakClass().getLayout();
         primitiveExtension = layout.getFreshPrimitiveExtension();
         objectExtension = layout.getFreshObjectExtension();
@@ -203,6 +215,8 @@ public abstract class AbstractPointersObject extends AbstractSqueakObjectWithCla
     public final void becomeLayout(final AbstractPointersObject other) {
         assert getClass() == other.getClass();
         becomeOtherClass(other);
+
+        CompilerDirectives.transferToInterpreterAndInvalidate();
 
         // Copy all values.
         final ObjectLayout otherLayout = other.layout;

@@ -187,8 +187,8 @@ public final class StoragePrimitives extends AbstractPrimitiveFactoryHolder {
 
     @GenerateNodeFactory
     @SqueakPrimitive(indices = 70)
-    protected abstract static class PrimNewNode extends AbstractPrimitiveNode implements UnaryPrimitive {
-        protected static final int NEW_CACHE_SIZE = 3;
+    public abstract static class PrimNewNode extends AbstractPrimitiveNode implements UnaryPrimitive {
+        public static final int NEW_CACHE_SIZE = 6;
         @Child private SqueakObjectNewNode newNode;
 
         protected PrimNewNode(final CompiledMethodObject method) {
